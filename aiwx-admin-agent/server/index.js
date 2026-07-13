@@ -94,7 +94,52 @@ const GCP_LOCATION = process.env.GCP_LOCATION || "us-central1";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Resilient fetch for the Supabase PostgREST transport. Node 20's global fetch
+// (undici) already pools/keep-alives connections; this wrapper adds a bounded
+// timeout plus exponential-backoff retry on transient socket errors and 5xx /
+// 429 responses so a dropped or momentarily unavailable database connection is
+// recovered transparently instead of surfacing as a hard failure.
+const SUPABASE_MAX_RETRIES = parseInt(process.env.SUPABASE_MAX_RETRIES, 10) || 3;
+const SUPABASE_TIMEOUT_MS = parseInt(process.env.SUPABASE_REQUEST_TIMEOUT_MS, 10) || 15000;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function resilientFetch(url, options = {}) {
+    let lastErr;
+    for (let attempt = 0; attempt <= SUPABASE_MAX_RETRIES; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+        try {
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            // Retry transient server-side conditions
+            if ((res.status >= 500 || res.status === 429) && attempt < SUPABASE_MAX_RETRIES) {
+                clearTimeout(timer);
+                const backoff = Math.min(500 * 2 ** attempt, 8000);
+                console.warn(`[Supabase] HTTP ${res.status}, retry ${attempt + 1}/${SUPABASE_MAX_RETRIES} in ${backoff}ms`);
+                await sleep(backoff);
+                continue;
+            }
+            clearTimeout(timer);
+            return res;
+        } catch (err) {
+            clearTimeout(timer);
+            lastErr = err;
+            // AbortError (timeout) and undici network errors are transient
+            const transient = err.name === 'AbortError' || err.name === 'TypeError' || ['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EPIPE', 'EAI_AGAIN', 'ENOTFOUND'].includes(err.cause?.code);
+            if (!transient || attempt === SUPABASE_MAX_RETRIES) throw err;
+            const backoff = Math.min(500 * 2 ** attempt, 8000);
+            console.warn(`[Supabase] Transient fetch error (${err.cause?.code || err.name}), retry ${attempt + 1}/${SUPABASE_MAX_RETRIES} in ${backoff}ms`);
+            await sleep(backoff);
+        }
+    }
+    throw lastErr;
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: resilientFetch }
+});
 
 // Initialize the Google Cloud Run client
 const runClient = new ServicesClient();
