@@ -1,0 +1,148 @@
+{
+  "name": "P2P Invoice Ingestion & Match Audit",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "read": "unread",
+          "subject": "Invoice"
+        }
+      },
+      "id": "e2ba82df-e1de-46c2-bf72-882298bc61df",
+      "name": "Email Inbound Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "parse",
+        "binaryPropertyName": "attachment_0"
+      },
+      "id": "42aa881b-5e92-411a-abdf-9922c222fffa",
+      "name": "Document OCR Parse",
+      "type": "n8n-nodes-base.googleDocumentAI",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM purchase_orders WHERE po_number = :po LIMIT 1",
+        "additionalFields": {
+          "queryParams": "po={{$node[\"Document OCR Parse\"].json[\"extracted_po\"]}}"
+        }
+      },
+      "id": "18ac820a-e2bb-41ff-8ad3-921cbbd2919d",
+      "name": "Lookup PO in DB",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{Math.abs($node[\"Document OCR Parse\"].json[\"total\"] - $node[\"Lookup PO in DB\"].json[\"total\"])}}",
+              "operation": "lessThan",
+              "value2": "={{$node[\"Lookup PO in DB\"].json[\"total\"] * 0.05}}"
+            }
+          ]
+        }
+      },
+      "id": "78da829c-cbf2-4d22-829d-922c98ff99b0",
+      "name": "Verify Match Limits",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO hitl_queue (id, tenant_id, vertical, task_type, details, status, action_code) VALUES ('T-' || floor(random() * 9000 + 1000)::text, :tenant, 'finance', 'Procure-to-Pay Invoice', :details, 'pending', 'Release ACH Payment & Post to QuickBooks')",
+        "additionalFields": {
+          "queryParams": "tenant={{$node[\"Lookup PO in DB\"].json[\"tenant_id\"]}}&details=Supplier invoice received from Acmax Corp. Amount: ${{$node[\"Document OCR Parse\"].json[\"total\"]}}. Match status: PO #{{$node[\"Document OCR Parse\"].json[\"extracted_po\"]}} matched. Ready for ledger posting."
+        }
+      },
+      "id": "52ba921b-c1de-4ff2-bc10-928cbfa32dfa",
+      "name": "Insert HITL Queue",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1050, 420]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": "quickbooks_invoices",
+        "fields": "invoice_id,total,status"
+      },
+      "id": "92da82b2-cc3a-442b-bfe1-99cbaf1291ef",
+      "name": "Post to QuickBooks",
+      "type": "n8n-nodes-base.quickbooks",
+      "typeVersion": 1,
+      "position": [1150, 200]
+    }
+  ],
+  "connections": {
+    "Email Inbound Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document OCR Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document OCR Parse": {
+      "main": [
+        [
+          {
+            "node": "Lookup PO in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup PO in DB": {
+      "main": [
+        [
+          {
+            "node": "Verify Match Limits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Match Limits": {
+      "main": [
+        [
+          {
+            "node": "Post to QuickBooks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert HITL Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

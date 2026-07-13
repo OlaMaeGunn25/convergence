@@ -1,0 +1,117 @@
+{
+  "name": "Twilio Inbound Call Routing & Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "twilio-voice-webhook",
+        "options": {}
+      },
+      "id": "a1ba92ef-c1ee-43ff-adff-882200bdc012",
+      "name": "Twilio Voice Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "prompt": "Analyze this call transcript: \"{{$node[\"Twilio Voice Webhook\"].json[\"SpeechResult\"]}}\". Classify the customer's intent into one of: 'reschedule', 'general_faq', or 'emergency'. Return ONLY a JSON object: { \"intent\": \"...\", \"is_emergency\": true/false }"
+      },
+      "id": "72ba881b-5e22-41ab-abfe-9922c222fffa",
+      "name": "LLM Intent Audit",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"LLM Intent Audit\"].json[\"is_emergency\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "18ca820a-e2bb-41ff-8ad3-921cbbd2919d",
+      "name": "Is Emergency?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "hitl_queue",
+        "fields": "id,tenant_id,vertical,task_type,details,status,action_code",
+        "additionalFields": {
+          "queryParams": "id=T-{{$node[\"Twilio Voice Webhook\"].json[\"CallSid\"].substring(0,8)}}&tenant_id=a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11&vertical=medical&task_type=Emergency Call Triage&details=Caller {{$node[\"Twilio Voice Webhook\"].json[\"From\"]}} transcript: \"{{$node[\"Twilio Voice Webhook\"].json[\"SpeechResult\"]}}\"&status=frozen&action_code=Supervisor Escalation Dispatch"
+        }
+      },
+      "id": "52ba921b-c1de-4ff2-bc10-928cbfa32dfa",
+      "name": "Route to Emergency Queue",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [800, 420]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "hitl_queue",
+        "fields": "id,tenant_id,vertical,task_type,details,status,action_code",
+        "additionalFields": {
+          "queryParams": "id=T-{{$node[\"Twilio Voice Webhook\"].json[\"CallSid\"].substring(0,8)}}&tenant_id=a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11&vertical=medical&task_type=Patient Scheduling Dispute&details=Caller {{$node[\"Twilio Voice Webhook\"].json[\"From\"]}} transcript: \"{{$node[\"Twilio Voice Webhook\"].json[\"SpeechResult\"]}}\"&status=pending&action_code=Reschedule Calendar & Email Confirmation"
+        }
+      },
+      "id": "92da82b2-cc3a-442b-bfe1-99cbaf1291ef",
+      "name": "Route to Standard Queue",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [800, 180]
+    }
+  ],
+  "connections": {
+    "Twilio Voice Webhook": {
+      "main": [
+        [
+          {
+            "node": "LLM Intent Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Intent Audit": {
+      "main": [
+        [
+          {
+            "node": "Is Emergency?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Emergency?": {
+      "main": [
+        [
+          {
+            "node": "Route to Standard Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route to Emergency Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

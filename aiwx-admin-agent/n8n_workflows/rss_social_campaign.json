@@ -1,0 +1,66 @@
+{
+  "name": "RSS Blog Campaign Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://zdkwrglsqrueolrshukh.supabase.co/functions/v1/blog-rss",
+        "feedHeaders": {}
+      },
+      "id": "b1ba92ef-c1ee-43ff-adff-882200bdc012",
+      "name": "RSS Blog Feed Trigger",
+      "type": "n8n-nodes-base.rssFeedTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "prompt": "Read this blog post description: \"{{$node[\"RSS Blog Feed Trigger\"].json[\"description\"]}}\". Write a high-converting, professional LinkedIn post promoting the article, using our Human Expansion narrative (avoiding headcount reduction fear). Emphasize upskilling and operational leverage. Link to include: {{$node[\"RSS Blog Feed Trigger\"].json[\"link\"]}}"
+      },
+      "id": "72ba881b-5e22-41ab-abfe-9922c222fffa",
+      "name": "Gemini Social Post Writer",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "hitl_queue",
+        "fields": "id,tenant_id,vertical,task_type,details,status,action_code",
+        "additionalFields": {
+          "queryParams": "id=CP-{{Math.floor(Math.random() * 9000 + 1000)}}&tenant_id=a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11&vertical=professional&task_type=Social Campaign Post - LINKEDIN&details={{$node[\"Gemini Social Post Writer\"].json[\"text\"]}}&status=pending&action_code=Release to LinkedIn Long-Form"
+        }
+      },
+      "id": "52ba921b-c1de-4ff2-bc10-928cbfa32dfa",
+      "name": "Queue in Oversight Table",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [600, 300]
+    }
+  ],
+  "connections": {
+    "RSS Blog Feed Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gemini Social Post Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Social Post Writer": {
+      "main": [
+        [
+          {
+            "node": "Queue in Oversight Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

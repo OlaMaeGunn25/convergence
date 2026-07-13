@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiWorXmiths™ | Social Media Multiposting Hub</title>
+  
+  <!-- Font imports -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* Brand palette - dark blue inverted theme */
+      --bg-primary: #080c1a;
+      --bg-surface: #111a36;
+      --bg-card: #152247;
+      --bg-card-hover: #1c2e5e;
+      --border-color: rgba(0, 158, 230, 0.15);
+      --accent-color: #009ee6;
+      --accent-glow: rgba(0, 158, 230, 0.3);
+      --text-primary: #ffffff;
+      --text-secondary: #94a3b8;
+      
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --danger-color: #ef4444;
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --shadow-glow: 0 0 15px rgba(0, 158, 230, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+      padding-bottom: 2rem;
+      min-height: 100vh;
+    }
+
+    /* Accessibility Focus Outline */
+    input:focus, select:focus, textarea:focus, button:focus-visible {
+      outline: 2px solid var(--accent-color) !important;
+      outline-offset: 1px;
+      box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-card);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--bg-card-hover);
+    }
+
+    /* Global Header */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .logo-container img {
+      height: 57px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 0.6rem 1.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-tab.active {
+      color: var(--text-primary);
+      background: var(--bg-card);
+      border-color: var(--border-color);
+      box-shadow: var(--shadow-glow);
+    }
+
+    /* Main layouts */
+    .container {
+      max-width: 1600px;
+      margin: 1.5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Calendar Tab Layout */
+    .calendar-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      align-items: start;
+      transition: grid-template-columns 0.3s ease;
+    }
+
+    .calendar-layout.with-editor {
+      grid-template-columns: 1fr 380px;
+    }
+
+    /* Sidebar / Form Styles */
+    .sidebar-planning {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .step-section {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 1rem;
+    }
+
+    .step-section:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .step-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .form-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-select, .form-input, .form-textarea {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.35rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-textarea {
+      resize: vertical;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent-color), #00a2ff);
+      color: #ffffff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .primary-btn:hover {
+      opacity: 0.9;
+    }
+
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.6rem 1.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent-color);
+    }
+
+    .danger-btn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger-color);
+      padding: 0.6rem 1.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .danger-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Calendar styles */
+    .channel-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .filter-btn.active {
+      background: var(--bg-card);
+      border-color: var(--accent-color);
+      color: var(--text-primary);
+      box-shadow: 0 0 10px rgba(0, 158, 230, 0.15);
+    }
+
+    .calendar-navigation {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .calendar-title-group h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .calendar-title-group span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .calendar-month-selector {
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .month-btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 0.25rem;
+      cursor: pointer;
+    }
+
+    .month-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-color: var(--accent-color);
+    }
+
+    .calendar-days-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 0.5rem;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+    }
+
+    .calendar-cell {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      min-height: 100px;
+      padding: 0.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      min-width: 0; /* Prevents overflow inside grid items */
+    }
+
+    .calendar-cell:hover {
+      background: rgba(0, 158, 230, 0.03);
+      border-color: rgba(0, 158, 230, 0.3);
+    }
+
+    .calendar-cell.selected-day {
+      box-shadow: 0 0 10px rgba(0, 158, 230, 0.2);
+      border-color: var(--accent-color);
+    }
+
+    .cell-day-num {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-align: right;
+      margin-bottom: 0.2rem;
+    }
+
+    .active-post-day .cell-day-num {
+      color: var(--accent-color);
+    }
+
+    /* Badges */
+    .post-indicator {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .post-indicator:hover {
+      transform: scale(1.03);
+    }
+
+    .post-indicator.selected-badge {
+      outline: 2px solid #ffffff;
+      outline-offset: 1px;
+    }
+
+    .post-indicator.linkedin { background: #0077b5; }
+    .post-indicator.facebook { background: #1877f2; }
+    .post-indicator.instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+    .post-indicator.threads { background: #000000; border: 1px solid rgba(255,255,255,0.15); }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .status-dot.PENDING { background: #94a3b8; }
+    .status-dot.APPROVED { background: #f59e0b; }
+    .status-dot.PUBLISHING { background: #3b82f6; }
+    .status-dot.PUBLISHED { background: #10b981; }
+    .status-dot.FAILED { background: #ef4444; }
+
+    /* Preview Editor Drawer style */
+    .preview-editor-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .preview-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.6rem;
+    }
+
+    .preview-editor-header h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .platform-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .platform-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .editor-image-preview-container {
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .editor-image-preview {
+      width: 100%;
+      height: auto;
+      max-height: 200px;
+      object-fit: contain;
+    }
+
+    /* GA4 analytics tab styles */
+    .ga4-status-banner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      border: 1px solid var(--border-color);
+      background: rgba(0, 158, 230, 0.05);
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .ga4-status-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .status-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success-color);
+      display: inline-block;
+      box-shadow: 0 0 10px var(--success-color);
+      animation: pulse 1.5s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 1.2rem;
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-top: 0.25rem;
+      color: var(--text-primary);
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Table styles */
+    .ga4-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    .ga4-table th {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      color: var(--text-secondary);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    .ga4-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    /* Activity monitor tab */
+    .activity-row {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+    }
+
+    .inbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 550px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .inbox-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    .inbox-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-color);
+    }
+
+    .inbox-item.active {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 10px rgba(0, 158, 230, 0.1);
+    }
+
+    .avatar-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .comment-preview-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      overflow: hidden;
+    }
+
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .comment-author {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .comment-snippet {
+      font-size: 0.8rem;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    /* Toast container */
+    #toastContainer {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .toast-notification {
+      background: #0f172a;
+      border: 1px solid rgba(0, 158, 230, 0.3);
+      border-radius: 0.75rem;
+      padding: 1rem 1.5rem;
+      color: #ffffff;
+      box-shadow: var(--shadow-lg), 0 0 15px rgba(0, 158, 230, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transform: translateY(150%);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      backdrop-filter: blur(20px);
+      max-width: 380px;
+    }
+
+    .toast-notification.show {
+      transform: translateY(0);
+    }
+
+    .badge-icon-wrap {
+      background: var(--accent-color);
+      color: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================
+       RESPONSIVE DESIGN (Usability Enhancements)
+       ========================================== */
+    
+    /* Desktop Large (Adjust max container) */
+    @media (max-width: 1400px) {
+      .calendar-layout.with-editor {
+        grid-template-columns: 1fr 340px;
+      }
+    }
+
+    /* Tablet Landscape & Small Desktop */
+    @media (max-width: 1024px) {
+      .calendar-layout.with-editor {
+        grid-template-columns: 1fr; /* Stack editor below calendar */
+      }
+      .sidebar-planning {
+        grid-template-columns: 1fr;
+      }
+      #planningTab > .card > div {
+        grid-template-columns: 1fr !important; /* Stack planning card columns */
+        gap: 1.5rem;
+      }
+      .charts-row {
+        grid-template-columns: 1fr; /* Stack SVG charts vertically */
+      }
+      .activity-row {
+        grid-template-columns: 1fr; /* Stack Inbox and Responder vertically */
+      }
+    }
+
+    /* Tablet Portrait */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        text-align: center;
+      }
+      .nav-tabs {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .nav-tab {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+      }
+      .container {
+        padding: 0 0.5rem;
+        margin: 1rem auto;
+      }
+      .card {
+        padding: 1rem;
+      }
+      .calendar-cell {
+        min-height: 80px;
+      }
+      .post-indicator {
+        font-size: 0.55rem;
+        padding: 0.15rem 0.25rem;
+      }
+      .post-indicator strong {
+        display: none; /* Hide label prefix on very small viewports */
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr); /* Two stats cards per row */
+      }
+      
+      /* Make table scrollable on mobile */
+      .card {
+        overflow-x: auto;
+      }
+      .ga4-table {
+        min-width: 500px;
+      }
+    }
+
+    /* Mobile devices */
+    @media (max-width: 480px) {
+      .nav-tabs {
+        gap: 0.25rem;
+      }
+      .nav-tab {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+      }
+      .calendar-navigation {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .calendar-month-selector {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .calendar-days-header {
+        font-size: 0.65rem;
+      }
+      .calendar-cell {
+        min-height: 60px;
+        padding: 0.2rem;
+      }
+      .cell-day-num {
+        font-size: 0.65rem;
+      }
+      .post-indicator {
+        font-size: 0.5rem;
+      }
+      .metrics-grid {
+        grid-template-columns: 1fr; /* Single stat card per row */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <img src="aiwx_logo_transparent.png" alt="AiWorXmiths™ Logo">
+    </div>
+    
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('calendar', this)">Visual Calendar</button>
+      <button class="nav-tab" onclick="switchTab('planning', this)">Campaign Planning</button>
+      <button class="nav-tab" onclick="switchTab('analytics', this)">GA Dashboard</button>
+      <button class="nav-tab" onclick="switchTab('activity', this)">⚡ Social Inbox</button>
+      <button class="nav-tab" onclick="switchTab('help', this)">📖 Help Guide</button>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- Tab 1: Visual Calendar (2-Column Layout with Preview console) -->
+    <div id="calendarTab" class="tab-content active">
+      <div class="calendar-layout" id="calendarLayoutContainer">
+        
+        <!-- Left: Calendar Container -->
+        <section class="calendar-main card">
+          
+          <!-- Channel Filters tabs -->
+          <div class="channel-filters">
+            <button class="filter-btn active" onclick="setChannelFilter('all')">All Channels</button>
+            <button class="filter-btn" onclick="setChannelFilter('linkedin')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93zM6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37z"/></svg>
+              LinkedIn
+            </button>
+            <button class="filter-btn" onclick="setChannelFilter('facebook')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.8c4.56-.93 8-4.96 8-9.8"/></svg>
+              Facebook
+            </button>
+            <button class="filter-btn" onclick="setChannelFilter('instagram')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+              Instagram
+            </button>
+            <button class="filter-btn" onclick="setChannelFilter('threads')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.87 12.04c-.38.74-.93 1.25-1.63 1.54-.42.17-.87.26-1.34.26-.64 0-1.24-.16-1.8-.49-.52-.31-.93-.76-1.22-1.33-.28-.56-.42-1.23-.42-2 0-.78.14-1.46.42-2.03.29-.58.7-.1.22-.31s.52.28 1.21.28c.68 0 1.28.16 1.8.49 .52.31.93.76 1.22 1.33.28.56.42 1.23.42 2a4.4 4.4 0 0 1-.22.95c-.17.38-.41.67-.72.87-.31.2-.67.3-1.07.3s-.76-.1-1.07-.3c-.31-.2-.55-.49-.72-.87a4.4 4.4 0 0 1-.22-.95c0-1.12.38-1.92 1.14-2.4.52-.33 1.13-.5 1.83-.5.48 0 .93.08 1.35.24.42.16.78.4 1.08.72l.96-.96c-.44-.47-1-.83-1.67-1.08C14.77 9.1 13.9 9 13 9c-1.1 0-2.1.25-3 .75s-1.6 1.18-2.1 2.05S7.15 13.73 7.15 15c0 1.27.25 2.37.75 3.3.5.93 1.2 1.63 2.1 2.13s1.9.75 3 .75c1.45 0 2.7-.4 3.75-1.2 1.05-.8 1.75-1.9 2.1-3.3l-1.38-.3c-.2.95-.65 1.7-1.35 2.25-.7.55-1.55.83-2.52.83-.8 0-1.53-.17-2.18-.51-.65-.34-1.15-.83-1.5-1.47-.35-.64-.52-1.4-.52-2.28s.17-1.64.52-2.28c.35-.64.85-1.13 1.5-1.47.65-.34 1.38-.51 2.18-.51.45 0 .87.06 1.26.18.39.12.72.3 1 .54.28.24.49.53.63.87.14.34.21.72.21 1.14 0 .42-.07.8-.21 1.14-.14.34-.35.63-.63.87-.28.24-.61.42-1 .54-.39.12-.81.18-1.26.18zm-2.87-2.04c.17.38.41.67.72.87.31.2.67.3c.31.2.67.3c.31.2.67.3 1.07.3s.76-.1 1.07-.3c.31-.2.55-.49.72-.87a4.4 4.4 0 0 1 .22-.95c0-1.12-.38-1.92-1.14-2.4-.52-.33-1.13-.5-1.83-.5-.48 0-.93.08-1.35.24-.42.16-.78.4-1.08.72l-.96.96c.44.47 1 .83 1.67 1.08.67.25 1.54.38 2.62.38z"/></svg>
+            </button>
+          </div>
+          
+          <!-- Month selector navigation -->
+          <div class="calendar-navigation">
+            <div class="calendar-title-group">
+              <h2 id="calendarMonthLabel">July 2026</h2>
+              <span id="calendarSublabel">Cadence: Tuesday, Thursday, Friday</span>
+            </div>
+            
+            <div class="calendar-month-selector">
+              <button class="month-btn" id="btnJune" onclick="setCalendarMonth('June')">June 2026</button>
+              <button class="month-btn active" id="btnJuly" onclick="setCalendarMonth('July')">July 2026</button>
+              <button class="month-btn" id="btnAugust" onclick="setCalendarMonth('August')">August 2026</button>
+            </div>
+          </div>
+          
+          <!-- Days header -->
+          <div class="calendar-days-header">
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+          </div>
+          
+          <!-- Grid -->
+          <div class="calendar-grid" id="calendarGrid">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+        
+        <!-- Column 3: Preview/Editor Drawer -->
+        <aside class="preview-editor-panel card" id="previewConsole" style="display: none;">
+          <div class="preview-editor-header">
+            <h3>Preview/Editor</h3>
+            <button class="close-btn" onclick="closeEditor()">&times;</button>
+          </div>
+          
+          <div class="platform-header">
+            <div class="platform-header-left" id="editorPlatformLabel">
+              <!-- Rendered dynamically -->
+            </div>
+            <span id="postStatusBadge" class="asset-tag" style="background: rgba(245, 158, 11, 0.15); color: var(--warning-color); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px;">PENDING</span>
+          </div>
+          
+          <div class="form-group">
+            <span class="form-label" id="editorDateLabel">Date: July 9, 2026</span>
+            <span class="form-label" id="editorCampaignLabel" style="margin-top: 0.2rem; font-weight: 500;">Campaign: consultancy_sprints</span>
+          </div>
+          
+          <div class="form-group">
+            <span class="form-label">Post Content Copy</span>
+            <textarea id="postCopyBox" class="form-textarea" style="height: 180px;"></textarea>
+          </div>
+          
+          <div class="form-group" id="editorImageSection" style="display: none;">
+            <span class="form-label">Attached Visual Preview</span>
+            <div class="editor-image-preview-container">
+              <img id="previewImg" class="editor-image-preview" src="" alt="Post Visual">
+            </div>
+            <p id="previewImgName" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem; font-weight: 600; text-align: center;"></p>
+          </div>
+          
+          <div class="form-group">
+            <span class="form-label">Calculated UTM Redirect Link</span>
+            <div class="form-input" id="utmBox" style="font-size: 0.75rem; word-break: break-all; background: rgba(0,0,0,0.1); color: var(--accent-color);">
+              https://AiWorXmiths.com/...
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <button class="primary-btn" id="btnApprovePost" onclick="approvePost()">Approve Campaign Post</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <button class="secondary-btn" style="font-size: 0.8rem;" onclick="postponePost()">Postpone</button>
+              <button class="danger-btn" style="font-size: 0.8rem;" onclick="deletePost()">Delete</button>
+            </div>
+            <button class="primary-btn" style="background: linear-gradient(135deg, #a855f7, #6366f1); margin-top: 0.5rem;" onclick="publishDirectly()">⚡ Direct Publish</button>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem;">
+            <input type="checkbox" id="chkDryRun" checked style="cursor: pointer;">
+            <label for="chkDryRun" class="form-label" style="margin-bottom: 0; cursor: pointer; text-transform: none; font-size: 0.75rem; font-weight: 500;">Dry-run mode (do not commit final click)</label>
+          </div>
+          
+          <!-- Logs console -->
+          <div id="publishLogsContainer" style="display:none; margin-top: 1rem; border: 1px solid var(--border-color); border-radius:0.5rem; overflow:hidden;">
+            <div style="background: rgba(0, 0, 0, 0.2); padding:0.4rem 0.6rem; font-size:0.75rem; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+              <span>Posting Agent Log</span>
+              <button onclick="document.getElementById('publishLogsContainer').style.display='none'" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">&times;</button>
+            </div>
+            <pre id="publishLogs" style="background:#05070a; color:#10b981; font-family:monospace; font-size:0.7rem; padding:0.6rem; max-height:120px; overflow-y:auto; white-space:pre-wrap;"></pre>
+          </div>
+        </aside>
+        
+      </div>
+    </div>
+
+    <!-- Tab 2: Campaign Planning (Strategy + Generator + Scheduler Combined Console) -->
+    <div id="planningTab" class="tab-content">
+      <div class="card">
+        <div class="card-title">🎯 Campaign Planning Console</div>
+        <div style="display: grid; grid-template-columns: 310px 1fr; gap: 2rem;" id="planningGridContainer">
+          
+          <!-- Left Column: Planning controls -->
+          <div class="sidebar-planning">
+            <!-- Step 1: Select Active Campaign -->
+            <div class="step-section">
+              <div class="step-title">1. Select Active Campaign</div>
+              <select id="campaignSelectPlanning" class="form-select" onchange="selectCampaign(this.value)">
+                <option value="" disabled selected>-- Select Campaign --</option>
+                <option value="consultancy_sprints">Consultancy Sprints</option>
+              </select>
+              
+              <!-- AI Generator brief inside Step 1 -->
+              <div id="planningGeneratorBox" style="margin-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 1rem; display: none;">
+                <span class="form-label">🤖 AI Brief Generator</span>
+                <textarea id="generatorBrief" class="form-textarea" style="height: 100px;" placeholder="e.g. Focus on B2B operational audits for dental clinics..."></textarea>
+                <button class="primary-btn" style="width: 100%; margin-top: 0.5rem;" onclick="generateCampaignBrief()">Generate Campaign Posts</button>
+                <div id="generatorLogsContainer" style="display:none; margin-top: 0.5rem;">
+                  <pre id="generatorLogs" style="background:#000; color:#10b981; font-size:0.7rem; padding:0.4rem; max-height:80px; overflow-y:auto; font-family:monospace;"></pre>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Step 2: Strategy Settings -->
+            <div class="step-section">
+              <div class="step-title">2. Strategy & UTM Settings</div>
+              <div style="margin-bottom: 0.75rem;">
+                <span class="form-label">Operational Objective</span>
+                <textarea id="strategyObjective" class="form-textarea" style="height: 60px;" placeholder="Objective"></textarea>
+              </div>
+              <div style="margin-bottom: 0.75rem;">
+                <span class="form-label">UTM source / Campaign</span>
+                <input type="text" id="strategyUTM" class="form-input" placeholder="UTM source">
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <input type="checkbox" id="chkAutoScheduler" style="cursor: pointer;" onchange="toggleAutoSchedulerCheckbox(this.checked)">
+                <label for="chkAutoScheduler" class="form-label" style="margin-bottom: 0; cursor: pointer; text-transform: none; font-size: 0.8rem; font-weight: 500;">Auto-Scheduler ⓘ</label>
+              </div>
+            </div>
+            
+            <!-- Step 3: Scheduler Settings -->
+            <div class="step-section">
+              <div class="step-title">3. Scheduler Settings</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="form-label" style="margin-bottom: 0;">Status:</span>
+                <span id="schedulerStatusBadge" class="post-indicator pending" style="border-radius: 2rem; padding: 0.15rem 0.6rem; font-size: 0.65rem;">INACTIVE</span>
+              </div>
+              <div style="margin-bottom: 0.75rem;">
+                <span class="form-label">Scan Frequency</span>
+                <select id="schedulerFrequency" class="form-select" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;">
+                  <option value="180000">Normal (Every 3 mins)</option>
+                  <option value="60000">Rapid (Every 60 secs)</option>
+                </select>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                <button id="btnScheduleCampaign" class="primary-btn" style="width: 100%; font-size: 0.8rem;" onclick="syncAndStartScheduler()">Schedule & Start Campaign</button>
+                <button id="btnToggleScheduler" class="secondary-btn" style="width: 100%; font-size: 0.8rem;" onclick="toggleSchedulerState()">Toggle Scheduler State</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column: Campaign Brief Preview -->
+          <div class="card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 1.2rem;">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+              📋 Active Campaign Brief
+            </div>
+            <div>
+              <span class="form-label">Campaign Name</span>
+              <p id="briefCampaignName" style="font-weight: 700; font-size: 1.1rem; color: var(--accent-color);">No campaign selected</p>
+            </div>
+            <div>
+              <span class="form-label">Strategic Objective</span>
+              <p id="briefObjective" style="font-size: 0.9rem; font-style: italic; color: var(--text-secondary);">Select a campaign to load objective details.</p>
+            </div>
+            <div>
+              <span class="form-label">GA UTM Parameter Source</span>
+              <p id="briefUTM" style="font-family: monospace; font-size: 0.85rem; color: var(--success-color);">N/A</p>
+            </div>
+            <div>
+              <span class="form-label">Target Channels</span>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                <span class="post-indicator linkedin" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">LinkedIn</span>
+                <span class="post-indicator facebook" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Facebook</span>
+                <span class="post-indicator instagram" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Instagram</span>
+                <span class="post-indicator threads" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Threads</span>
+              </div>
+            </div>
+            <div style="margin-top: auto; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.05); font-size: 0.75rem; color: var(--text-secondary);">
+              ℹ️ After selecting a campaign and setting the objective, click "Schedule & Start Campaign" to synchronize the posting plan directly with the Visual Calendar.
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: GA4 Dashboard -->
+    <div id="analyticsTab" class="tab-content">
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="ga4-status-banner" id="analyticsStatusBanner">
+          <div class="ga4-status-left">
+            <span class="status-pulse"></span>
+            <div>
+              <p style="font-weight: 700; font-size: 0.95rem;" id="analyticsStatusText">Live GA4 Reporting Property Connected</p>
+              <p style="font-size: 0.75rem; color: var(--text-secondary);" id="analyticsStatusSubtext">Connected: Property ID 521873458 (aiwx-sandbox-prod-88)</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stats cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Impressions</div>
+            <div class="metric-value" id="ga4Impressions">72,750</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Clicks</div>
+            <div class="metric-value" id="ga4Clicks">1,455</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Click-Through-Rate (CTR)</div>
+            <div class="metric-value" id="ga4Ctr">2.00%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Goal Conversions</div>
+            <div class="metric-value" id="ga4Conversions">29</div>
+          </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <div class="card" style="padding: 1rem; min-height: 300px;">
+            <div class="card-title" style="font-size: 0.95rem;">📈 Click Traffic Trend (Live GA4 Timeline)</div>
+            <div id="clicksTrendContainer" style="width:100%; height:230px; display:flex; justify-content:center; align-items:center;">
+              <!-- Rendered as SVG -->
+            </div>
+          </div>
+          
+          <div class="card" style="padding: 1rem; min-height: 300px;">
+            <div class="card-title" style="font-size: 0.95rem;">📊 Platform Breakdown (Live Clicks by Source)</div>
+            <div id="platformBreakdownContainer" style="width:100%; height:230px; display:flex; justify-content:center; align-items:center;">
+              <!-- Rendered as SVG -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="card" style="padding: 1rem;">
+          <div class="card-title" style="font-size: 0.95rem;">UTM Campaign Details</div>
+          <table class="ga4-table">
+            <thead>
+              <tr>
+                <th>Campaign / Source</th>
+                <th>Medium</th>
+                <th>UTM Clicks (Users)</th>
+                <th>Sessions</th>
+                <th>Conversions</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Social Inbox (Activity Monitor) -->
+    <div id="activityTab" class="tab-content">
+      <div class="card">
+        <div class="card-title">⚡ Social Comments Inbox & Responder</div>
+        
+        <div class="activity-row">
+          <!-- Left: Scanner Inbox -->
+          <div class="inbox-column">
+            <div class="form-label" style="margin-bottom: 0.6rem;">Social Scanner Inbox</div>
+            <div class="inbox-list" id="alertsInboxList">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          
+          <!-- Right: HITL Responder Console -->
+          <div class="responder-column card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03);">
+            <div id="responderEmptyState" style="padding: 3rem; text-align: center; color: var(--text-secondary);">
+              Select a comment alert from the inbox to draft response.
+            </div>
+            
+            <div id="responderActiveConsole" style="display: none; flex-direction: column; gap: 1.2rem;">
+              <div>
+                <span class="form-label">Selected Inbound Comment</span>
+                <div style="background: var(--bg-card); padding: 0.8rem; border-radius: 0.35rem; font-size: 0.9rem; border-left: 3px solid var(--accent-color);">
+                  <p id="responderCommentAuthor" style="font-weight: 700; font-size: 0.8rem; margin-bottom: 0.2rem; color: var(--text-secondary);"></p>
+                  <p id="responderCommentText" style="font-style: italic;"></p>
+                </div>
+              </div>
+              
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <span class="form-label" style="margin-bottom: 0;">AI Generated Draft Response</span>
+                  <button class="secondary-btn" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;" onclick="regenerateAIDraft()">Regenerate Draft</button>
+                </div>
+                <textarea id="responderReplyText" class="form-textarea" style="height: 120px;" placeholder="AI Draft reply..."></textarea>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <input type="checkbox" id="chkApprovePostReply" style="cursor: pointer;" checked>
+                <label for="chkApprovePostReply" class="form-label" style="margin-bottom: 0; cursor: pointer; text-transform: none; font-size: 0.8rem; font-weight: 500;">Approve and Post Reply immediately (Puppeteer fallbacks used when necessary)</label>
+              </div>
+              
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <button class="primary-btn" onclick="submitHITLReply()">Submit Reply</button>
+                <button class="danger-btn" onclick="dismissAlert()">Dismiss Alert</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Help Guide -->
+    <div id="helpTab" class="tab-content">
+      <div class="card">
+        <div class="card-title">📖 Hub Operations & Setup Guide</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+          
+          <div class="card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03);">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem; color: var(--accent-color);">
+              🚀 1. Campaign Planning
+            </div>
+            <ul style="list-style-type: disc; margin-left: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              <li>Select your active campaign (e.g. <strong>Consultancy Sprints</strong>) from the dropdown.</li>
+              <li>Provide a prompt inside the <strong>AI Brief Generator</strong> and click <strong>Generate</strong> to draft the posts queue automatically.</li>
+              <li>Configure your <strong>Operational Objective</strong> and set the <strong>UTM Campaign Label</strong> (e.g. <code>AI_Consulting_Audit</code>).</li>
+              <li>Check the <strong>Auto-Scheduler</strong> checkbox, set the frequency, and click <strong>Schedule & Start Campaign</strong> to activate background auto-posting.</li>
+            </ul>
+          </div>
+          
+          <div class="card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03);">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem; color: var(--accent-color);">
+              📅 2. Visual Calendar & Editor
+            </div>
+            <ul style="list-style-type: disc; margin-left: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              <li>The unified calendar shows all scheduled campaign posts across all platforms. Use the top filters to select by channel.</li>
+              <li>Click any day cell or platform badge to reveal the <strong>Preview/Editor Drawer</strong> on the right.</li>
+              <li>Review the post copy: <strong>UTM redirect parameters</strong> matching your campaign and platform are automatically configured and appended to the links on load!</li>
+              <li>Click <strong>Approve Campaign Post</strong> to queue it for the Auto-Scheduler, or click <strong>⚡ Direct Publish</strong> to post it immediately.</li>
+            </ul>
+          </div>
+          
+          <div class="card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03);">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem; color: var(--accent-color);">
+              ⚡ 3. Social Comments Inbox
+            </div>
+            <ul style="list-style-type: disc; margin-left: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              <li>The system automatically scans social channels in the background for new inbound comments.</li>
+              <li>New comments trigger high-visibility <strong>Windows Toast notifications</strong> inside the dashboard.</li>
+              <li>Click a comment in the inbox list to load it into the responder. Click <strong>Regenerate Draft</strong> to let the AI agent formulate a context-aware reply, then click <strong>Submit Reply</strong>.</li>
+            </ul>
+          </div>
+          
+        </div>
+        
+        <!-- Cookie Setup Section -->
+        <div class="card" style="background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.03); margin-top: 1.5rem;">
+          <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem; color: var(--warning-color);">
+            🔑 LinkedIn Cookie Session Setup (Headless posting fallback)
+          </div>
+          <p style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+            Since LinkedIn does not have a direct posting API setup on our account, the posting agent uses a headless Puppeteer browser profile to publish. To authenticate, you must supply active browser cookies:
+          </p>
+          <ol style="list-style-type: decimal; margin-left: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem; color: var(--text-secondary);">
+            <li>Install a cookie exporter browser extension (e.g. <em>EditThisCookie</em> or <em>Get cookies.txt</em>) in your chrome profile.</li>
+            <li>Log in to LinkedIn on your browser.</li>
+            <li>Export the active session cookies in JSON format.</li>
+            <li>Save the exported cookies as a file named <code>cookies_linkedin.json</code> and place it inside the <code>config/</code> directory of the project.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Constants & Global state
+    const API_PORT = 3003;
+    const API_BASE = 'http://localhost:' + API_PORT;
+    
+    let activeChannelFilter = 'all';
+    let activeMonth = 'July';
+    let selectedPostId = null;
+    let currentPlatform = 'linkedin'; // Active editing tab: linkedin, threads, instagram, facebook
+    
+    // Extracted default B2B posts data
+    const defaultPosts = [
+  {
+    "id": "post_04",
+    "week": "1",
+    "date": "2026-07-09",
+    "dayNum": 9,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "The Invoicing Leak: Streamlining Client Ledgers",
+    "image": "2_operations_director_smb.png",
+    "imgAlt": "The Invoicing Leak: Streamlining Client Ledgers visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Is your invoice reconciliation leaking cash?\n\nEvery hour your accounting team spends manually checking if bank payments match QuickBooks ledger invoices is an hour lost to higher-value financial strategy.\n\nOur **Problem Zero™** consulting sprint surgically targets invoice matching. We build custom, secure ledger connectors that auto-match 90% of recurring payments, flagging only discrepancies for review.\n\nSqueeze invoicing delays down by 80% and accelerate your cash flow cycle.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_04**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "How long does it take for a closed deal to actually get invoiced in your business? Small law firms and design studios delay collections by days due to manual billing queues. Automating the invoice trigger gets you paid same-day. How much cash flow is sitting in your 'waiting to bill' queue right now?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_04**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Reclaim Your Billing Capacity. (Visual: Multicultural female leader analyzing financial charts).\n*   **Slide 2**: Manual invoice matching wastes hours and delays client collections.\n*   **Slide 3**: Problem Zero™ targets the invoicing leak, automating ledger reconciliations.\n*   **Slide 4**: Reclaim 15+ hours weekly and get paid faster.\n*   **Slide 5**: Book your free scoping audit Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Streamlining Ledger Matching: How Automation Protects Cash Flow\n\nDelayed invoicing directly affects business cash flow. Manual ledger entry delays reporting, leaving leaders with stale numbers. Our Problem Zero™ sprint maps out the invoicing workflow, removes the manual copy-paste delay, and enables real-time reporting.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_04)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_05",
+    "week": "1",
+    "date": "2026-07-10",
+    "dayNum": 10,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Safer AI Infrastructure: Transitioning to Human-in-the-Loop Systems (Dynamic AI News Response)",
+    "image": "collaborative_scoping_1779798801153.png",
+    "imgAlt": "Safer AI Infrastructure: Transitioning to Human-in-the-Loop Systems (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: Headcount cuts are a scaling trap. Invest in your people.\n\nThe media often focuses on AI replacing jobs to cut budgets. But treating AI as a headcount replacement tool damages employee trust and operational stability.\n\nAt AiWorXmiths, we only deploy **Human-in-the-Loop (HITL)** systems. We believe AI should expand your business, not shrink your team.\n\nWe help you upskill administrative staff to Growth Coordinators who manage and audit these automated engines. This driving force prioritizes capacity expansion and revenue growth over short-sighted headcount reductions.\n\nBuild sustainable operations with the team you already trust.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_05**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Budget cuts aren't a growth strategy. Buying AI to fire your team damages trust.\n\nWe only build Human-in-the-Loop (HITL) systems, upskilling your employees to oversee the automation. Scale capacity and expand your business, human-first.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_05**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: The Headcount Trap. (Visual: Diverse entrepreneur reviewing scheduling dashboard).\n*   **Slide 2**: Replacing staff with AI damages operational stability and team trust.\n*   **Slide 3**: Our Position: We only build Human-in-the-Loop (HITL) systems.\n*   **Slide 4**: The Roadmap: Upskill administrative staff to Growth Coordinators.\n*   **Slide 5**: Prioritize expansion over headcount cuts Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Human-in-the-Loop Scale: Why Augmentation Outperforms Replacement\n\nDeploying agentic AI systems purely for headcount reduction is a common business error. Augmenting human capability with secure, containerized automation systems upskills team members, keeping humans in control of critical decisions.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_05)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_06",
+    "week": "2",
+    "date": "2026-07-14",
+    "dayNum": 14,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Operational Intakes: From Overwhelm to Automated Flow",
+    "image": "collaborative_scoping_1779798801153.png",
+    "imgAlt": "Operational Intakes: From Overwhelm to Automated Flow visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Squeeze client intake delays out of your system.\n\nWhen a client signs a contract, the onboarding wait begins. Manual agreement checks, CRM updates, folder setups, and welcome emails delay project kickoff.\n\nOur **AI Starter Sprint™** automates client intakes in 24 hours. We connect your contract tools, folders, and CRM natively.\n\nDrop onboarding errors to near zero and start projects faster.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_06**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Does onboarding a new client feel like a chaotic fire drill of folder creation, email templates, and calendar invites? Creative agencies and IT consultants who automate contract-to-folder setup onboard clients 3x faster, building trust immediately. What's the most stressful part of your client onboarding?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_06**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Onboard Clients 3x Faster. (Visual: Diverse project consultants reviewing scoping maps).\n*   **Slide 2**: Manual intake steps create friction and slow project starts.\n*   **Slide 3**: The AI Starter Sprint™ connects contract signatures directly to folders and CRM.\n*   **Slide 4**: Onboarding errors drop to 0% and teams save hours.\n*   **Slide 5**: Get a free scoping call Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Automating Onboarding: Improving Client Retention from Day One\n\nThe period immediately after contract signing defines the client relationship. Manual onboarding delays create anxiety. Connecting your sales CRM, project setup folders, and billing systems automates the flow, ensuring client success from day one.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_06)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_07",
+    "week": "2",
+    "date": "2026-07-16",
+    "dayNum": 16,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Reclaiming Reclaimed Capacity: Where Does the Time Actually Go?",
+    "image": "black_female_founder_consultant.png",
+    "imgAlt": "Reclaiming Reclaimed Capacity: Where Does the Time Actually Go? visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Automating your workflows is only half the battle.\n\nBusiness owners often automate a process — and then watch the reclaimed hours disappear into meetings, emails, and \"catch-up\" work.\n\nIf your team saves 15 hours a week but those hours aren't redirected toward revenue-generating activities, your ROI is purely theoretical.\n\nOur **Problem Zero™** consulting engagement doesn't just automate the bottleneck — it maps where the reclaimed capacity goes next.\n\nWe build a structured upskilling matrix that shifts saved time directly into:\n* Sales pipeline management\n* Client success audits\n* High-value relationship work\n\nWhether you run a pediatric clinic, a law firm, or an accounting practice, reclaim real margins. Not just time on a spreadsheet.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_07**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "When your team members save 10 hours a week through tech, where do those hours go? Without an upskilling plan, reclaimed hours dissolve into unproductive meetings. Shifting that capacity into proactive outreach is how SMBs scale. If you saved 10 hours this week, what would you focus on?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_07**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Are Your Time Savings Actually Real? (Visual: Focused female founder reviewing team workflow metrics).\n*   **Slide 2**: Saving time doesn't help if that capacity evaporates into administrative meetings.\n*   **Slide 3**: Problem Zero™ automates bottlenecks AND maps where reclaimed hours go.\n*   **Slide 4**: Redirect time into client success, sales pipelines, and active business development.\n*   **Slide 5**: Reclaim your capacity today Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Reclaiming Capacity: Auditing Team Redeployment Post-Automation\n\nAutomated software saves hours across organizations. Without a structured upskilling strategy, these hours vanish. A clear transition roadmap — shifting staff from data entry to growth coordination — is the only way to realize true bottom-line ROI. Whether in healthcare, legal services, or financial advisory, the focus must be on redirecting capacity to where it counts.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_07)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_08",
+    "week": "2",
+    "date": "2026-07-17",
+    "dayNum": 17,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Safer Data Centers: Active Solutioning in the AI Age (Dynamic AI News Response)",
+    "image": "diverse_male_entrepreneur_1779798785119.png",
+    "imgAlt": "Safer Data Centers: Active Solutioning in the AI Age (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: Surging data center power demands are real. What is your business doing about it?\n\nWith reports showing data center electricity consumption set to double by 2030, protest alone won't solve the sustainability crisis. We need active solutions.\n\nAt AiWorXmiths, we believe in taking responsibility. We design lean private-cloud environments and align with server entities that actively build safer, greener data centers.\n\nGreen scaling isn't just about opting out; it's about engineering efficient workflows that maximize outcomes per clock cycle.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_08**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Data centers are guzzling water and power, but protesting won't stop the AI shift. Active solutioning will.\n\nWe design lean private-cloud automation and partner with hosting platforms committed to green infrastructure. Clean engineering is the future.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_08**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Sustainable AI: Beyond the Protest. (Visual: Multi-ethnic engineering team scoping strategy).\n*   **Slide 2**: Surging data center footprint is a real crisis. Protesting is not enough; we need solutions.\n*   **Slide 3**: The Fix: Designing lean private-cloud architectures that minimize resource strain.\n*   **Slide 4**: We align with entities committed to building safer, green data centers.\n*   **Slide 5**: Build sustainable automation Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Engineering Sustainable Automation: Our Approach to the Data Center Crisis\n\nSURGING data center resource demands require a shift in business practices. We focus on designing lean, secure private container networks, selecting hosting partners who invest in renewable energy and green cooling solutions.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_08)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_09",
+    "week": "3",
+    "date": "2026-07-21",
+    "dayNum": 21,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Your Phone Answered Every Lead While You Slept",
+    "image": "hispanic_female_retail_owner.png",
+    "imgAlt": "Your Phone Answered Every Lead While You Slept visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: How many client calls went to voicemail after 5PM this week?\n\nFor service businesses — medical clinics, legal practices, HVAC or plumbing providers — an unanswered call is a client walking straight to your competitor.\n\nStaffing a front desk around the clock costs thousands. But leaving calls unanswered costs more.\n\nWe configure automated call-handling systems that:\n* Answer every inbound call 24/7 using conversational voice automation\n* Qualify the lead and capture intake details in real time\n* Book the appointment directly on your live calendar\n* Log contact details to your CRM automatically\n* Escalate true emergency calls to your on-call team immediately\n\nNo voicemail. No missed revenue. No additional headcount.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_09**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "How many emergency service calls or new client inquiries went to your voicemail over the weekend? 67% of customers hang up on voicemail. AI call handling answers 24/7, books appointments, and logs details for HVAC, clinics, and law firms. How much revenue are you losing to voicemail?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_09**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Never Miss an After-Hours Lead. (Visual: Female storefront owner reviewing overnight appointment logs).\n*   **Slide 2**: Unanswered calls go to your competitor. Every single time.\n*   **Slide 3**: The Fix: Automated call-handling that answers, screens, and books — 24/7.\n*   **Slide 4**: Contact details logged. Appointments booked. Emergencies escalated automatically.\n*   **Slide 5**: Free scoping consultation Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# After-Hours Lead Capture: Why Automated Call Handling Beats Voicemail\n\nService businesses lose significant revenue by missing calls outside business hours. Automated call-handling systems qualify intent, book appointments, and log contact data — capturing every opportunity without adding headcount or operational friction.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_09)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_10",
+    "week": "3",
+    "date": "2026-07-23",
+    "dayNum": 23,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "The System That Books Appointments on Your Behalf",
+    "image": "2_operations_director_smb.png",
+    "imgAlt": "The System That Books Appointments on Your Behalf visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Your follow-up email is sitting in drafts. That lead just booked with someone else.\n\nManual follow-up is the biggest hidden revenue leak in any service business. The average lead needs 5–8 touchpoints before converting. Most businesses stop at 2 — not because they don't want to follow up, but because they run out of bandwidth.\n\nWhether you run a real estate agency, a mortgage brokerage, or a digital marketing firm, we deploy automated conversation sequences that:\n* Message every new inquiry within 60 seconds of submission\n* Qualify intent using conversational AI-powered response logic\n* Book discovery calls directly to your calendar based on live availability\n* Send automated reminders 24 and 2 hours before each appointment\n\nThe entire sequence runs while your team focuses on billable work.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_10**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "How fast does your team respond to new website lead submissions? Real estate agents and financial advisors are 9x more likely to close a lead if they follow up within 60 seconds. Our automated systems do it for you, scheduling calls on your live calendar. What's your average response time?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_10**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: 5 Touchpoints to Close. 2 Is What Most Businesses Do. (Visual: Operations director checking CRM funnel metrics).\n*   **Slide 2**: Leads don't close on the first message. Consistent follow-up wins.\n*   **Slide 3**: The Fix: Automated sequences that message, qualify, and book — in 60 seconds.\n*   **Slide 4**: The entire pipeline runs while your team does billable work.\n*   **Slide 5**: Build your follow-up engine. Free consultation Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# The Automated Follow-Up Engine: Turning Inquiries Into Booked Calls\n\nLeads don't close from a single message. Consistent, multi-touchpoint follow-up sequences — automated and personalized — are the single highest-ROI improvement most service businesses can make without adding headcount.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_10)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_11",
+    "week": "3",
+    "date": "2026-07-24",
+    "dayNum": 24,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Safer AI Workflows: Protecting Customer Data Natively (Dynamic AI News Response)",
+    "image": "east_asian_male_founder.png",
+    "imgAlt": "Safer AI Workflows: Protecting Customer Data Natively (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: In the rush to scale AI, who is protecting your client records?\n\nSurging data usage by public AI tools has created a major security compliance crisis for law firms, medical clinics, and financial practices.\n\nAt AiWorXmiths, we don't route your sensitive data to unverified public servers. We deploy containerized systems natively within your secure private firewall.\n\nWe support Human-in-the-Loop security gates so that no critical data leaves your perimeter without a physical human sign-off. Protect your clients, responsibly.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_11**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Public AI tools are leaking sensitive SMB customer data. How are you protecting your records?\n\nWe only build secure private-cloud systems with Human-in-the-Loop approvals, keeping client records behind your own firewall.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_11**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Security in the Age of Public AI. (Visual: Female attorney reviewing client documents).\n*   **Slide 2**: Surging public AI tools are creating massive data leaks for SMBs.\n*   **Slide 3**: The Solution: Deploying containerized environments natively behind your private firewall.\n*   **Slide 4**: Strict Human-in-the-Loop approvals keep sensitive records fully private.\n*   **Slide 5**: Protect your clients today Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Data Privacy in Automation: The Human-in-the-Loop Security Blueprint\n\nSecurity compliance is non-negotiable for service firms. Public APIs expose client data. Standardizing native private-cloud hosting with human exceptions guarantees data security and builds long-term customer trust.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_11)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_12",
+    "week": "4",
+    "date": "2026-07-28",
+    "dayNum": 28,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Your Invoices Shouldn't Wait for a Human",
+    "image": "african_american_female_lawyer.png",
+    "imgAlt": "Your Invoices Shouldn't Wait for a Human visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: When a deal closes, your invoice should be in the client's inbox within minutes. Not days.\n\nMost businesses treat invoicing as a manual task — someone checks the CRM, drafts the invoice, and sends it. That lag delays cash flow and introduces reconciliation errors.\n\nWhether you run a wholesale distributorship, a consulting firm, or a medical practice, we build automated billing pipelines that:\n* Trigger invoice creation the moment a contract status updates\n* Sync payment records in real-time against your accounting ledger\n* Flag unmatched payments automatically for review\n* Route overdue notices without a single manual follow-up\n\nYour accounting team audits. The system does the rest.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_12**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Do you know exactly which client invoices are overdue right now without checking three different spreadsheets? Automated billing tracks, sends, and syncs invoices to QuickBooks, saving bookkeepers 15+ hours a month in professional service firms. How much time does your team spend on collections?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_12**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Close the Deal. Send the Invoice. Automatically. (Visual: Female lawyer reviewing automated invoicing).\n*   **Slide 2**: Manual invoicing = delayed cash flow + human error.\n*   **Slide 3**: Contract closes → invoice triggers → ledger syncs. No humans required.\n*   **Slide 4**: Overdue notices sent on schedule. Discrepancies flagged for review.\n*   **Slide 5**: Build your billing pipeline. Free scoping call Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Closing the Invoicing Gap: Automated Billing From Contract to Ledger\n\nManual invoicing is a bottleneck hiding in plain sight. Every day an invoice sits unsent is a day cash flow is delayed. Automating the trigger from deal close to invoice generation compresses the billing cycle and protects working capital.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_12)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_13",
+    "week": "4",
+    "date": "2026-07-30",
+    "dayNum": 30,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "The Follow-Up That Never Forgets",
+    "image": "latino_male_contractor.png",
+    "imgAlt": "The Follow-Up That Never Forgets visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: The follow-up that never gets busy, never forgets, and never takes a day off.\n\nMost service businesses lose 60–70% of their leads not because the product isn't right — but because follow-up stopped too early.\n\nWhether you are a financial planner, a home remodeling contractor, or a real estate agency, we build automated nurture sequences with a structured cadence:\n* **Day 1**: Personalized intro message the moment an inquiry arrives\n* **Day 3**: Value-based follow-up with a relevant use case\n* **Day 7**: Soft call-to-action with a direct scheduling link\n* **Day 14**: Final check-in before archiving the lead\n\nConfigured inside your secure, private system. Fully auditable. Fully yours.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_13**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Do you have a list of past leads that went quiet, and when was the last time you reached out to them? 80% of sales require 5 follow-up contacts, but 44% of salespeople stop after one. Automated sequences nurture leads for 14 days. How do you keep warm leads from slipping away?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_13**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: The Follow-Up That Never Forgets. (Visual: Latino contractor reviewing scheduling dashboard).\n*   **Slide 2**: 70% of leads are lost to businesses that stop following up after 2 messages.\n*   **Slide 3**: The Fix: A 14-day automated nurture sequence that runs on its own.\n*   **Slide 4**: Day 1 intro → Day 7 CTA → Day 14 final check-in. All automatic.\n*   **Slide 5**: Build your follow-up pipeline. Free consultation Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# The 14-Day Lead Nurture Sequence: Automating Follow-Up Without Losing Authenticity\n\nSales data consistently shows that the majority of leads require sustained, multi-touch follow-up to convert. Most businesses manually follow up 1–2 times before giving up. A structured, automated nurture sequence ensures that no qualified lead goes cold prematurely.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_13)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_14",
+    "week": "4",
+    "date": "2026-07-31",
+    "dayNum": 31,
+    "month": "July",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Upskilling in the Automation Era: Human Capital First (Dynamic AI News Response)",
+    "image": "native_american_female_dentist.png",
+    "imgAlt": "Upskilling in the Automation Era: Human Capital First (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: Is your team anxious about AI? Reframe the roadmap.\n\nThe narrative that AI is a job killer creates massive friction during software rollouts. Success requires reframing the roadmap.\n\nWe only configure Human-in-the-Loop (HITL) pipelines that automate administrative dread—like manual data entry—and upskill your front-desk staff to systems managers.\n\nShift your team focus to customer success and business development. We prioritize business growth over headcount reduction.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_14**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Staff anxiety is the primary cause of failed AI rollouts. Reframe the roadmap.\n\nWe build Human-in-the-Loop systems that automate data-entry dread and upskill employees to systems managers, prioritizing business growth.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_14**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Overcoming AI Rollout Anxiety. (Visual: Female dentist checking digital intake consent forms).\n*   **Slide 2**: Employees resist software when they fear replacement. Reframe the transition.\n*   **Slide 3**: We automate manual data-entry dread and upskill staff to Growth Coordinators.\n*   **Slide 4**: Human-in-the-Loop design keeps your team in control of the systems.\n*   **Slide 5**: Prioritize expansion over headcount cuts Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# The Upskilling Advantage: Why Augmentation Beats Headcount Reduction\n\nStaff anxiety is a major operational risk. We design clean transition roadmaps that upskill administrative assistants to supervise automated pipelines, helping companies scale capacity without reducing headcount.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_14)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_15",
+    "week": "5",
+    "date": "2026-08-04",
+    "dayNum": 4,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "What Happens to a Lead at 11PM?",
+    "image": "african_american_male_advisor.png",
+    "imgAlt": "What Happens to a Lead at 11PM? visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: A potential client filled out your contact form at 11:17PM. What happened next?\n\nIf the answer is \"nothing until Monday morning,\" that lead is already gone.\n\nWhether you run a residential HVAC service, an urgent dental clinic, or a commercial cleaning agency, we configure automated intake systems that respond instantly:\n* Immediate email/SMS confirmation sent within 60 seconds\n* Lead qualified and tagged based on service intent\n* Discovery call or booking scheduled directly on your live calendar\n* Morning briefing sent to your team with all details organized\n\nWake up to a prepped pipeline. No leads left waiting.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_15**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "When someone fills out a contact form at 11:30 PM, what is their experience with your brand? 24/7 automated intake responds instantly, pre-qualifying leads and booking appointments for clinics and plumbers while they sleep. Do you wake up to a booked calendar or a pile of unread emails?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_15**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Your Leads Don't Wait Until 9AM. (Visual: Financial advisor reviewing overnight lead reports).\n*   **Slide 2**: Late-night submissions left until morning = lost opportunities.\n*   **Slide 3**: The Fix: 24/7 automated confirmation, qualification, and scheduling.\n*   **Slide 4**: Wake up to booked calendar slots and organized lead histories.\n*   **Slide 5**: Build your 24/7 engine. Free scoping call Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# The After-Hours Pipeline: Why 24/7 Intake Systems Are a Competitive Necessity\n\nModern buyers expect instant responses. Inquiries submitted after 5PM represent a significant share of leads — and manual response systems leave them cold until the next business day. Automated intake ensures every prospect is qualified and scheduled immediately.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_15)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_16",
+    "week": "5",
+    "date": "2026-08-06",
+    "dayNum": 6,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Capture Every Inbound Call. Automatically.",
+    "image": "hispanic_female_retail_owner.png",
+    "imgAlt": "Capture Every Inbound Call. Automatically. visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Your team is in client sessions. Who is answering the phone?\n\nFor consultancy firms, recruiting agencies, and professional service providers — an inquiry call that goes unanswered doesn't leave a message. It calls your competitor.\n\nOur automated call-fielding systems handle inbound calls around the clock:\n* Transcribes every call and screens for priority intents\n* Logs contact information and inquiry details to your CRM\n* Schedules discovery calls based on live calendar availability\n* Routes priority cases to your team instantly via chat alerts\n\nScreen leads and grow your pipeline without the administrative burden.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_16**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Does your front-desk staff have to choose between answering calls and greeting the client standing in front of them? Physical therapy clinics and dental practices reduce missed call rates to 0% by routing calls to conversational voice assistants. How does your front desk handle the rush hour?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_16**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Answering the Phone While Your Team is Busy. (Visual: Female boutique owner tracking customer messages).\n*   **Slide 2**: Unanswered calls during active sessions = leads handed to competition.\n*   **Slide 3**: The Fix: Automated call handling that transcribes, logs, and books 24/7.\n*   **Slide 4**: Live calendar updated and CRM synced with zero manual entry.\n*   **Slide 5**: Get a free scoping call Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Automated Call-Fielding: Scaling Front Desk Capacity Without Adding Headcount\n\nProfessional service firms face a painful paradox: when they are busiest with clients, they are least available to capture new ones. Automated call-fielding systems eliminate this trade-off — handling inquiries, scheduling appointments, and logging leads whether the team is available or not.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_16)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_17",
+    "week": "5",
+    "date": "2026-08-07",
+    "dayNum": 7,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "The Solution-First Approach to the AI Carbon Footprint (Dynamic AI News Response)",
+    "image": "african_american_female_lawyer.png",
+    "imgAlt": "The Solution-First Approach to the AI Carbon Footprint (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: Protesting data center carbon footprints won't solve the energy crisis. Clean engineering will.\n\nAs data center energy consumption surges, business owners face a choice: avoid AI, or actively build cleaner solutions.\n\nAt AiWorXmiths, we design optimized, low-compute private container environments that minimize resource footprint. We partner with server providers committed to green energy.\n\nEngage in the solution. Build lean, secure, and sustainable automations for your practice.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_17**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Protesting AI's carbon footprint won't stop the technology. Clean engineering will.\n\nWe build lean, low-compute private containers and align with green server providers. Build sustainable, human-first systems for your practice.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_17**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Sustainable AI: Clean Engineering. (Visual: Female attorney drafting emails on laptop).\n*   **Slide 2**: Surging data center footprint is a real crisis. Protesting is not enough; we need clean engineering.\n*   **Slide 3**: The Fix: Designing low-compute private container networks.\n*   **Slide 4**: We align with hosting providers committed to renewable energy options.\n*   **Slide 5**: Reclaim capacity sustainably Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Solution-First Sustainability: Auditing AI Resource Footprints\n\nProtesting data center growth does not address surging AI demand. Business leaders must adopt lean private-cloud architectures, selecting hosting partners committed to renewable energy to build sustainable operations.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_17)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_18",
+    "week": "6",
+    "date": "2026-08-11",
+    "dayNum": 11,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Predictable Revenue Starts With Predictable Follow-Up",
+    "image": "diverse_male_entrepreneur_1779798785119.png",
+    "imgAlt": "Predictable Revenue Starts With Predictable Follow-Up visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Revenue is unpredictable when follow-up is inconsistent.\n\nWhen three team members handle leads three different ways — different timelines, different messaging, different tools — your sales pipeline becomes impossible to forecast.\n\nStandardized, automated follow-up systems fix this:\n* Every lead receives the same quality touchpoints, regardless of who owns the account\n* High-intent prospects are flagged automatically based on engagement behavior\n* Hot leads are routed to your best closers in real time\n* Cold leads receive a final check-in sequence before being archived\n\nBuild it once. Run it consistently. Forecast with confidence.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_18**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Is your sales pipeline a predictable machine or a guessing game based on which rep is handling the lead? Commercial real estate and wealth management firms increase close rates by 22% by standardizing follow-up rules via automation. How do you ensure consistency across your team?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_18**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Consistent Follow-Up = Predictable Revenue. (Visual: Diverse male entrepreneur checking sales metrics).\n*   **Slide 2**: 3 team members handling leads 3 different ways = unpredictable results.\n*   **Slide 3**: The Fix: Automated sequences that treat every lead consistently and score by intent.\n*   **Slide 4**: Hot leads routed instantly. Cold leads managed automatically.\n*   **Slide 5**: Build your pipeline system. Free consultation Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Predictable Revenue: Why Automated Pipeline Consistency Outperforms Individual Effort\n\nRevenue forecasting is only possible when pipeline behavior is consistent. Individual variation in how team members handle leads creates unpredictability that compounds. Standardized, automated follow-up with intent scoring and smart routing creates the conditions for scalable, predictable growth.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_18)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_01",
+    "week": "6",
+    "date": "2026-08-13",
+    "dayNum": 13,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "The Silent Cost of Disconnected Operations",
+    "image": "black_female_founder_consultant.png",
+    "imgAlt": "The Silent Cost of Disconnected Operations visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: The invisible tax on your growing company: Disconnected operations.\n\nIf you are a business owner, your team isn't just executing client tasks. They are manually transferring customer data, re-entering scheduling details, and chasing matching ledger receipts.\n\nThat is a disconnected operation. It feels like \"work,\" but it is pure margin drag.\n\nOur **AI Starter Sprint™** is designed specifically to eliminate these manual bridges in just 24 hours. We audit your existing stack and deploy secure, deterministic automations. No code, no software overhauls. Just direct capacity expansion.\n\nReclaim 10+ hours a week per employee.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "How many tabs do you have open right now just to copy customer details from email to a spreadsheet and then to QuickBooks? It’s estimated that clinic managers spend 10+ hours a week on this manual bridge. Natively syncing these systems gets that time back so you can focus on patient care. What's the most tedious manual task you do daily?\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: The Silent Margin Drain in Your SMB. (Visual: Confident Black female leader in a modern glass office).\n*   **Slide 2**: The copy-paste bridge. Moving data from Gmail to spreadsheet, then to billing ledger.\n*   **Slide 3**: The Cost: 10+ hours wasted every single week per team member.\n*   **Slide 4**: The Solution: AI Starter Sprint™. Same-day, secure integrations using tools you already own.\n*   **Slide 5**: Reclaim your billable hours Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# The Silent Cost of Disconnected Operations in Small Businesses\n\nWhen small business owners look at their profit margins, they focus on sales, cost of goods sold, and payroll. However, one of the largest leaks in any growing business is completely invisible: **disconnected operational bridges**.\n\nEvery time an employee manually checks an invoice, copies email transcripts into a CRM, or reconciles bookings, they are paying an operational tax. This is unbillable work that drains resources and triggers administrative dread.\n\n## The AI Starter Sprint Solution\n\nAt AiWorXmiths, we don't believe in overhauling your entire software stack. We believe in building secure, deterministic connectors. Our AI Starter Sprint™ targets your quickest wins to automate data transfers natively behind your secure firewall.\n\nRead more or schedule a free diagnostics call: [Book Scoping Consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01)\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_02",
+    "week": "6",
+    "date": "2026-08-14",
+    "dayNum": 14,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Sustainable AI Scale: Countering the Footprint & Displacement Hype (Dynamic AI News Response)",
+    "image": "collaborative_scoping_1779798801153.png",
+    "imgAlt": "Sustainable AI Scale: Countering the Footprint & Displacement Hype (Dynamic AI News Response) visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "PENDING",
+    "linkedin": "**Subject**: The real sustainability crisis in AI—and how SMBs solve it.\n\nWith the UN Secretary-General's recent call for transparency over data center footprints, and growing anxiety around AI replacing jobs, business owners face a critical choice.\n\nYou can protest the technology, or you can build the solutions.\n\nAt AiWorXmiths, our position is clear: AI is here to stay, but it must be built responsibly. We combat the resource footprint of data centers not by opting out, but by actively designing lean, private-cloud container environments that run natively on secure, optimized hosting platforms.\n\nMore importantly, we do not build systems to replace humans. We build **Human-in-the-Loop (HITL)** automation. Our frameworks are engineered to upskill your existing team from manual data processors into Growth Coordinators who audit and manage these systems.\n\nWe choose business expansion and growth over headcount reduction. That is how you scale a service practice sustainably.\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_02**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "The UN is calling out AI data center footprints, and workers are anxious about job losses. But protest isn't a strategy—solutions are.\n\nWe build private-cloud systems that run lean, and we strictly design Human-in-the-Loop (HITL) automation. We don’t replace your staff; we upskill them into systems managers.\n\nReclaim capacity and expand your business, responsibly.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_02**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: AI's Double Crisis: Data Centers & Job Losses. (Visual: Diverse business owners in a collaborative meeting).\n*   **Slide 2**: Surging data center power is a real issue. Opting out isn't the solution; choosing optimized private-cloud environments is.\n*   **Slide 3**: The human cost. AI shouldn't replace your team. We only build Human-in-the-Loop (HITL) systems.\n*   **Slide 4**: Upskilling is the roadmap. Shift team members from data-entry dread to Growth Coordinators.\n*   **Slide 5**: Prioritize expansion over headcount cuts Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Responsible AI Scale: Shifting from Displacement to Human-in-the-Loop Growth\n\nAs data center resource consumption surges and workforce anxiety grows, small and medium businesses face operational hurdles. We believe the path forward is not avoidance, but active engagement in building sustainable, human-centric solutions.\n\n## Lean Infrastructure & Safe Hosting\n\nInstead of massive, unchecked cloud footprints, we deploy deterministic private-cloud automation environments. We align with hosting providers committed to safer, greener, and more efficient infrastructure.\n\n## Upskilling Over Headcount Reduction\n\nWe design systems around Human-in-the-Loop (HITL) principles. Our 90-day upskilling roadmap transitions front-desk and back-office staff into Growth Coordinators who manage the automated workflows, driving expansion rather than headcount cuts.\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_02)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  },
+  {
+    "id": "post_03",
+    "week": "7",
+    "date": "2026-08-18",
+    "dayNum": 18,
+    "month": "August",
+    "campaign": "consultancy_sprints",
+    "type": "AI Consulting Audit",
+    "title": "Stop Copy-Pasting: Connecting Your Billing and CRM",
+    "image": "3_empowered_systems_consultant.png",
+    "imgAlt": "Stop Copy-Pasting: Connecting Your Billing and CRM visual representation. (Branded with the AiWorXmiths logo) (Branded with the AiWorXmiths logo)",
+    "status": "APPROVED",
+    "linkedin": "**Subject**: Copy-pasting data between software is not a strategy.\n\nIf your sales team marks a deal closed in your CRM, and your administrative team has to manually copy details into QuickBooks to generate an invoice, you have an operational leak.\n\nIt slow down cash flow and introduces human error.\n\nOur **AI Starter Sprint™** connects your CRM, emails, and invoicing ledger natively and securely behind your private cloud firewall. Complete OAuth 2.0 connectors ensure database synchronization with zero manual copy-pasting.\n\n\n🔗 **Book your Free Consultation: https://AiWorXmiths.com?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_03**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "threads": "Is your bookkeeping team still manually matching ledger lines at the end of the month? Law firms and accounting practices lose hours to invoice reconciliation. Secure native syncing saves time and speeds up cash flow. Why let manual data entry delay your payments? Let's discuss your billing setup.\n\n🔗 **Reclaim your capacity. Book a free scoping call at AiWorXmiths.com: https://AiWorXmiths.com?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_03**\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "instagram": "*   **Slide 1**: Are You Still Copy-Pasting? (Visual: Tech consultant analyzing code logic on screen).\n*   **Slide 2**: Salesforce to QuickBooks to Gmail shouldn't require manual typing.\n*   **Slide 3**: The Cost: Delayed invoices, manual ledger mistakes, slower collections.\n*   **Slide 4**: The Fix: Natively sync systems using secure, self-hosted OAuth 2.0 connectors.\n*   **Slide 5**: Free 15-Minute Scoping Audit. Book your call Book a Free Consultation: Link in Bio (AiWorXmiths.com)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "blog": "# Eliminating the CRM-to-Ledger Delay in Small-to-Medium Businesses\n\nWhen systems do not speak to one another, staff members are forced to act as the human bridge. This is not only incredibly boring and prone to mistakes, but it also creates cash flow delays. Automating invoice generation from CRM status triggers ensures collections are issued immediately.\n\n\n[Book a free diagnostics consultation](https://AiWorXmiths.com?utm_source=blog&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_03)\n\n📞 Contact: 973-718-5161 | ✉️ Email: info@aiworxmiths.com | 🌐 Website: AiWorXmiths.com",
+    "comments": []
+  }
+]
+
+    // Auto-configure link UTMs on-the-fly for platform compliance
+    function autoConfigureUTMLinks(text, platform, campaign, postId) {
+      if (!text) return '';
+      // Regex to match any link pointing to AiWorXmiths.com (with optional subdomains, paths, or query params)
+      const regex = /(https?:\/\/(?:[a-zA-Z0-9-]+\.)?AiWorXmiths\.com[^\s\)*]*)/gi;
+      
+      return text.replace(regex, (match) => {
+        let baseUrl = match.split('?')[0];
+        // Strip trailing markdown bold syntax if attached to URL
+        if (baseUrl.endsWith('**')) baseUrl = baseUrl.slice(0, -2);
+        
+        return `${baseUrl}?utm_source=${platform}&utm_medium=social&utm_campaign=${campaign}&utm_content=${postId}`;
+      });
+    }
+
+    // Initialize posts in localStorage if not already present
+    function getHubPosts() {
+      const stored = localStorage.getItem('aiwx_hub_posts');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.length > 0) return parsed;
+        } catch (e) {}
+      }
+      localStorage.setItem('aiwx_hub_posts', JSON.stringify(defaultPosts));
+      return defaultPosts;
+    }
+
+    function saveHubPosts(posts) {
+      localStorage.setItem('aiwx_hub_posts', JSON.stringify(posts));
+    }
+
+    function getApiUrl(path) {
+      return API_BASE + path;
+    }
+
+    // Tab Switcher
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+      
+      if (tabName === 'calendar') {
+        document.getElementById('calendarTab').classList.add('active');
+        renderCalendar();
+      } else if (tabName === 'planning') {
+        document.getElementById('planningTab').classList.add('active');
+      } else if (tabName === 'analytics') {
+        document.getElementById('analyticsTab').classList.add('active');
+        loadAnalytics();
+      } else if (tabName === 'activity') {
+        document.getElementById('activityTab').classList.add('active');
+        loadActivityAlerts();
+      } else if (tabName === 'help') {
+        document.getElementById('helpTab').classList.add('active');
+      }
+    }
+
+    // Calendar Filtering & Navigation
+    function setChannelFilter(channel) {
+      activeChannelFilter = channel;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.textContent.trim().toLowerCase().includes(channel)) {
+          btn.classList.add('active');
+        } else if (channel === 'all' && btn.textContent.trim() === 'All Channels') {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      renderCalendar();
+    }
+
+    // Switch Platform tab inside Preview Drawer
+    function switchPlatform(platform) {
+      if (selectedPostId) {
+        selectPost(selectedPostId, platform);
+      }
+    }
+
+    function setCalendarMonth(month) {
+      activeMonth = month;
+      document.getElementById('calendarMonthLabel').textContent = month + ' 2026';
+      
+      // Update label cadence
+      const sublabel = document.getElementById('calendarSublabel');
+      if (month === 'June') {
+        sublabel.textContent = 'Cadence: Tuesday, Thursday, Friday (Starting June 9)';
+      } else if (month === 'July') {
+        sublabel.textContent = 'Cadence: Tuesday, Thursday, Friday';
+      } else {
+        sublabel.textContent = 'Cadence: Tuesday, Thursday, Friday';
+      }
+      
+      document.querySelectorAll('.month-btn').forEach(btn => {
+        if (btn.textContent.includes(month)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      renderCalendar();
+    }
+
+    // Render Visual Calendar
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      
+      const posts = getHubPosts();
+      
+      let paddingCells = 3;
+      let totalDays = 31;
+      
+      if (activeMonth === 'June') {
+        paddingCells = 1;
+        totalDays = 30;
+      } else if (activeMonth === 'August') {
+        paddingCells = 6;
+        totalDays = 31;
+      }
+      
+      // Render padding cells
+      for (let i = 0; i < paddingCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        cell.style.opacity = '0.15';
+        cell.style.cursor = 'default';
+        grid.appendChild(cell);
+      }
+      
+      // Render actual days
+      for (let day = 1; day <= totalDays; day++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        
+        // Find posts on this day matching the channel filter
+        const dayPosts = posts.filter(p => p.month === activeMonth && p.dayNum === day);
+        
+        cell.innerHTML = `<div class="cell-day-num">${day}</div>`;
+        
+        let hasVisibleBadge = false;
+        
+        if (dayPosts.length > 0) {
+          cell.classList.add('active-post-day');
+          
+          dayPosts.forEach(post => {
+            // For each post group, we display badges for each platform
+            const platforms = ['linkedin', 'threads', 'instagram', 'facebook'];
+            platforms.forEach(plat => {
+              // Check if filter matches
+              if (activeChannelFilter !== 'all' && activeChannelFilter !== plat) return;
+              // Check if post text exists for this platform
+              if (!post[plat]) return;
+              
+              hasVisibleBadge = true;
+              
+              const badge = document.createElement('div');
+              badge.className = 'post-indicator ' + plat;
+              
+              // Highlight if this badge is currently selected
+              if (selectedPostId === post.id && currentPlatform === plat) {
+                badge.classList.add('selected-badge');
+                cell.classList.add('selected-day');
+              }
+              
+              // Get status color indicator dot
+              const statusStr = post.status || 'PENDING';
+              
+              // Get platform label/symbol
+              let iconSymbol = plat === 'linkedin' ? 'in' : (plat === 'facebook' ? 'f' : (plat === 'instagram' ? 'ig' : '@'));
+              
+              badge.innerHTML = `<span class="status-dot ${statusStr}"></span> <strong>${iconSymbol}</strong>: ${post.title.substring(0, 10)}...`;
+              
+              badge.onclick = (e) => {
+                e.stopPropagation();
+                selectPost(post.id, plat);
+              };
+              
+              cell.appendChild(badge);
+            });
+          });
+        }
+        
+        // If filter is active but no posts match, cell isn't highlighted as active
+        if (!hasVisibleBadge && activeChannelFilter !== 'all') {
+          cell.classList.remove('active-post-day');
+        }
+        
+        // Clicking cell directly opens the first post if available
+        cell.onclick = () => {
+          if (dayPosts.length > 0) {
+            const firstPost = dayPosts[0];
+            const firstPlat = activeChannelFilter === 'all' ? 'linkedin' : activeChannelFilter;
+            selectPost(firstPost.id, firstPlat);
+          }
+        };
+        
+        grid.appendChild(cell);
+      }
+    }
+
+    // Select Post & Load in Review Console
+    function selectPost(id, platform) {
+      selectedPostId = id;
+      currentPlatform = platform || 'linkedin';
+      
+      const posts = getHubPosts();
+      const post = posts.find(p => p.id === id);
+      if (!post) return;
+      
+      // Expand layout to include editor column
+      const layoutContainer = document.getElementById('calendarLayoutContainer');
+      layoutContainer.classList.add('with-editor');
+      
+      // Render Preview Console
+      const drawer = document.getElementById('previewConsole');
+      drawer.style.display = 'flex';
+      
+      // Render Header platform
+      const platLabel = document.getElementById('editorPlatformLabel');
+      let iconHtml = '';
+      if (currentPlatform === 'linkedin') {
+        iconHtml = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#0077b5" style="vertical-align:middle; margin-right:4px;"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93zM6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37z"/></svg>';
+      } else if (currentPlatform === 'facebook') {
+        iconHtml = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#1877f2" style="vertical-align:middle; margin-right:4px;"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.8c4.56-.93 8-4.96 8-9.8"/></svg>';
+      } else if (currentPlatform === 'instagram') {
+        iconHtml = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#e1306c" style="vertical-align:middle; margin-right:4px;"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>';
+      } else {
+        iconHtml = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff" style="vertical-align:middle; margin-right:4px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.87 12.04c-.38.74-.93 1.25-1.63 1.54-.42.17-.87.26-1.34.26-.64 0-1.24-.16-1.8-.49-.52-.31-.93-.76-1.22-1.33-.28-.56-.42-1.23-.42-2 0-.78.14-1.46.42-2.03.29-.58.7-.1.22-.31s.52.28 1.21.28c.68 0 1.28.16 1.8.49 .52.31.93.76 1.22 1.33.28.56.42 1.23.42 2a4.4 4.4 0 0 1-.22.95c-.17.38-.41.67-.72.87-.31.2-.67.3-1.07.3s-.76-.1-1.07-.3c-.31-.2-.55-.49-.72-.87a4.4 4.4 0 0 1-.22-.95c0-1.12.38-1.92 1.14-2.4.52-.33 1.13-.5 1.83-.5.48 0 .93.08 1.35.24.42.16.78.4 1.08.72l.96-.96c-.44-.47-1-.83-1.67-1.08C14.77 9.1 13.9 9 13 9c-1.1 0-2.1.25-3 .75s-1.6 1.18-2.1 2.05S7.15 13.73 7.15 15c0 1.27.25 2.37.75 3.3.5.93 1.2 1.63 2.1 2.13s1.9.75 3 .75c1.45 0 2.7-.4 3.75-1.2 1.05-.8 1.75-1.9 2.1-3.3l-1.38-.3c-.2.95-.65 1.7-1.35 2.25-.7.55-1.55.83-2.52.83-.8 0-1.53-.17-2.18-.51-.65-.34-1.15-.83-1.5-1.47-.35-.64-.52-1.4-.52-2.28s.17-1.64.52-2.28c.35-.64.85-1.13 1.5-1.47.65-.34 1.38-.51 2.18-.51.45 0 .87.06 1.26.18.39.12.72.3 1 .54.28.24.49.53.63.87.14.34.21.72.21 1.14 0 .42-.07.8-.21 1.14-.14.34-.35.63-.63.87-.28.24-.61.42-1 .54-.39.12-.81.18-1.26.18zm-2.87-2.04c.17.38.41.67.72.87.31.2.67.3c.31.2.67.3c.31.2.67.3 1.07.3s.76-.1 1.07-.3c.31-.2.55-.49.72-.87a4.4 4.4 0 0 1 .22-.95c0-1.12-.38-1.92-1.14-2.4-.52-.33-1.13-.5-1.83-.5-.48 0-.93.08-1.35.24-.42.16-.78.4-1.08.72l-.96.96c.44.47 1 .83 1.67 1.08.67.25 1.54.38 2.62.38z"/></svg>';
+      }
+      platLabel.innerHTML = iconHtml + ' ' + currentPlatform.toUpperCase();
+      
+      // Render Platform selection tabs inside drawer based on filter
+      const tabsWrap = document.createElement('div');
+      tabsWrap.className = 'nav-tabs';
+      tabsWrap.style.marginTop = '0.5rem';
+      tabsWrap.style.marginBottom = '0.5rem';
+      
+      const plist = ['linkedin', 'threads', 'instagram', 'facebook'];
+      plist.forEach(p => {
+        if (!post[p]) return;
+        const tbtn = document.createElement('button');
+        tbtn.className = 'nav-tab';
+        tbtn.style.fontSize = '0.75rem';
+        tbtn.style.padding = '0.4rem 0.8rem';
+        if (p === currentPlatform) tbtn.classList.add('active');
+        tbtn.textContent = p.toUpperCase();
+        tbtn.onclick = () => selectPost(id, p);
+        tabsWrap.appendChild(tbtn);
+      });
+      
+      // Update platLabel sub header
+      const subHeader = document.querySelector('.platform-header');
+      const statusBadge = document.getElementById('postStatusBadge');
+      
+      // Clear existing sibling tabs if any
+      const existingTabs = subHeader.querySelector('.platform-tabs-drawer');
+      if (existingTabs) existingTabs.remove();
+      
+      const tabsContainer = document.createElement('div');
+      tabsContainer.className = 'platform-tabs-drawer';
+      tabsContainer.appendChild(tabsWrap);
+      subHeader.insertBefore(tabsContainer, statusBadge);
+      
+      // Render Badge status
+      const statusStr = post.status || 'PENDING';
+      statusBadge.textContent = statusStr;
+      statusBadge.className = 'asset-tag';
+      if (statusStr === 'PENDING') statusBadge.style.color = 'var(--text-secondary)';
+      else if (statusStr === 'APPROVED') statusBadge.style.color = 'var(--warning-color)';
+      else if (statusStr === 'PUBLISHING') statusBadge.style.color = '#3b82f6';
+      else if (statusStr === 'PUBLISHED') statusBadge.style.color = 'var(--success-color)';
+      else if (statusStr === 'FAILED') statusBadge.style.color = 'var(--danger-color)';
+      
+      // Render Date and Campaign
+      document.getElementById('editorDateLabel').textContent = 'Date: ' + post.date;
+      document.getElementById('editorCampaignLabel').textContent = 'Campaign: ' + post.campaign;
+      
+      // Render Copy - auto configure UTM links on load
+      const copyBox = document.getElementById('postCopyBox');
+      let textCopy = post[currentPlatform] || '';
+      textCopy = autoConfigureUTMLinks(textCopy, currentPlatform, post.campaign, post.id);
+      copyBox.value = textCopy;
+      
+      // Save changes back on type (de-bounced)
+      copyBox.oninput = function() {
+        const posts = getHubPosts();
+        const pIdx = posts.findIndex(p => p.id === id);
+        if (pIdx !== -1) {
+          posts[pIdx][currentPlatform] = this.value;
+          saveHubPosts(posts);
+          renderCalendar();
+          syncEditedPostToServer(id, currentPlatform, this.value);
+        }
+      };
+      
+      // Render Image section
+      const imgSec = document.getElementById('editorImageSection');
+      if (post.image) {
+        imgSec.style.display = 'block';
+        document.getElementById('previewImg').src = post.image;
+        document.getElementById('previewImgName').textContent = post.image;
+      } else {
+        imgSec.style.display = 'none';
+      }
+      
+      // Render UTM redirects
+      const utmText = `https://AiWorXmiths.com?utm_source=${currentPlatform}&utm_medium=social&utm_campaign=${post.campaign}&utm_content=${post.id}`;
+      document.getElementById('utmBox').textContent = utmText;
+      
+      // Update approve button text
+      const approveBtn = document.getElementById('btnApprovePost');
+      if (statusStr === 'APPROVED') {
+        approveBtn.textContent = 'Post Already Approved';
+        approveBtn.disabled = true;
+        approveBtn.style.opacity = '0.6';
+      } else {
+        approveBtn.textContent = 'Approve Campaign Post';
+        approveBtn.disabled = false;
+        approveBtn.style.opacity = '1';
+      }
+      
+      renderCalendar();
+    }
+
+    function closeEditor() {
+      document.getElementById('previewConsole').style.display = 'none';
+      const layoutContainer = document.getElementById('calendarLayoutContainer');
+      layoutContainer.classList.remove('with-editor');
+      selectedPostId = null;
+      renderCalendar();
+    }
+
+    // Real-Time Server Sync Debounced
+    let updatePostTimeout = null;
+    function syncEditedPostToServer(postId, platform, text) {
+      clearTimeout(updatePostTimeout);
+      updatePostTimeout = setTimeout(async () => {
+        const serverPostId = `${postId}_${platform}`;
+        try {
+          const res = await fetch(getApiUrl('/api/update-post'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: serverPostId, text: text })
+          });
+          const data = await res.json();
+          if (!data.success) {
+            console.error('[Server Sync] Failed to update post:', data.error);
+          } else {
+            console.log('[Server Sync] Post edited text synced back to server.');
+          }
+        } catch (e) {
+          console.error('[Server Sync] Network error updating post:', e);
+        }
+      }, 1000);
+    }
+
+    // Approve post
+    async function approvePost() {
+      if (!selectedPostId) return;
+      const posts = getHubPosts();
+      const idx = posts.findIndex(p => p.id === selectedPostId);
+      if (idx === -1) return;
+      
+      posts[idx].status = 'APPROVED';
+      saveHubPosts(posts);
+      
+      // Sync status to server
+      const platforms = ['linkedin', 'threads', 'instagram', 'facebook'];
+      for (let plat of platforms) {
+        if (!posts[idx][plat]) continue;
+        const serverPostId = `${selectedPostId}_${plat}`;
+        try {
+          await fetch(getApiUrl('/api/update-post-status'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: serverPostId, status: 'APPROVED' })
+          });
+        } catch (e) {
+          console.error('[Approve Sync] Failed to sync status for ' + serverPostId, e);
+        }
+      }
+      
+      selectPost(selectedPostId, currentPlatform);
+      alert('Post approved successfully and synced to server!');
+    }
+
+    // Postpone post
+    async function postponePost() {
+      if (!selectedPostId) return;
+      const posts = getHubPosts();
+      const idx = posts.findIndex(p => p.id === selectedPostId);
+      if (idx === -1) return;
+      
+      posts[idx].status = 'POSTPONED';
+      saveHubPosts(posts);
+      
+      // Sync status to server
+      const platforms = ['linkedin', 'threads', 'instagram', 'facebook'];
+      for (let plat of platforms) {
+        if (!posts[idx][plat]) continue;
+        const serverPostId = `${selectedPostId}_${plat}`;
+        try {
+          await fetch(getApiUrl('/api/update-post-status'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: serverPostId, status: 'POSTPONED' })
+          });
+        } catch (e) {
+          console.error('[Postpone Sync] Failed to sync status for ' + serverPostId, e);
+        }
+      }
+      
+      selectPost(selectedPostId, currentPlatform);
+      alert('Post postponed successfully!');
+    }
+
+    // Delete post
+    async function deletePost() {
+      if (!selectedPostId) return;
+      if (!confirm('Are you sure you want to delete this campaign post?')) return;
+      
+      const posts = getHubPosts();
+      const idx = posts.findIndex(p => p.id === selectedPostId);
+      if (idx === -1) return;
+      
+      posts.splice(idx, 1);
+      saveHubPosts(posts);
+      closeEditor();
+      alert('Post deleted.');
+    }
+
+    // Direct publish posting trigger
+    async function publishDirectly() {
+      if (!selectedPostId) return;
+      const posts = getHubPosts();
+      const post = posts.find(p => p.id === selectedPostId);
+      if (!post) return;
+      
+      // Auto configure UTM parameter links inside text copy on post execution
+      let textVal = document.getElementById('postCopyBox').value.trim();
+      textVal = autoConfigureUTMLinks(textVal, currentPlatform, post.campaign, post.id);
+      
+      const dryRunVal = document.getElementById('chkDryRun').checked;
+      
+      const logsContainer = document.getElementById('publishLogsContainer');
+      const logsEl = document.getElementById('publishLogs');
+      
+      logsContainer.style.display = 'block';
+      logsEl.textContent = `[Console] Initializing manual direct posting on ${currentPlatform.toUpperCase()}...\n`;
+      
+      // Update local state to publishing
+      post.status = 'PUBLISHING';
+      saveHubPosts(posts);
+      selectPost(selectedPostId, currentPlatform);
+      
+      try {
+        const response = await fetch(getApiUrl('/api/publish-post'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform: currentPlatform,
+            text: textVal,
+            image: post.image || null,
+            dryRun: dryRunVal
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          post.status = 'PUBLISHED';
+          logsEl.textContent += `[Console] SUCCESS: Post successfully published!\n\nLogs:\n${result.log || 'Published successfully.'}`;
+        } else {
+          post.status = 'FAILED';
+          logsEl.textContent += `[Console] ERROR: Posting execution failed.\n\nLogs:\n${result.error || result.log || 'Unknown error occurred.'}`;
+        }
+      } catch (e) {
+        post.status = 'FAILED';
+        logsEl.textContent += `[Console] EXCEPTION: Failed to connect to server: ${e.message}`;
+      }
+      
+      saveHubPosts(posts);
+      selectPost(selectedPostId, currentPlatform);
+    }
+
+    // Select Active Campaign & Load objective / generator details across both consoles
+    function selectCampaign(val) {
+      const campaignSelectPlanning = document.getElementById('campaignSelectPlanning');
+      if (campaignSelectPlanning) campaignSelectPlanning.value = val;
+      
+      const genBox = document.getElementById('planningGeneratorBox');
+      const briefName = document.getElementById('briefCampaignName');
+      const briefObj = document.getElementById('briefObjective');
+      const briefUtm = document.getElementById('briefUTM');
+      
+      if (val === 'consultancy_sprints') {
+        if (genBox) genBox.style.display = 'block';
+        
+        const objectiveText = 'Upskill administrative staff into Growth Coordinators and deploy Human-in-the-Loop containerized automations.';
+        const utmText = 'AI_Consulting_Audit';
+        
+        document.getElementById('strategyObjective').value = objectiveText;
+        document.getElementById('strategyUTM').value = utmText;
+        
+        if (briefName) briefName.textContent = 'Consultancy Sprints';
+        if (briefObj) briefObj.textContent = objectiveText;
+        if (briefUtm) briefUtm.textContent = utmText;
+        
+        // Sync active campaign posts from library
+        syncPostsFromLibrary();
+      } else {
+        if (genBox) genBox.style.display = 'none';
+        document.getElementById('strategyObjective').value = '';
+        document.getElementById('strategyUTM').value = '';
+        if (briefName) briefName.textContent = 'No campaign selected';
+        if (briefObj) briefObj.textContent = 'Select a campaign to load objective details.';
+        if (briefUtm) briefUtm.textContent = 'N/A';
+      }
+    }
+
+    // Sync posts from markdown library via backend
+    async function syncPostsFromLibrary() {
+      try {
+        const response = await fetch(getApiUrl('/api/posts-library'));
+        const data = await response.json();
+        if (data && data.success && data.posts) {
+          saveHubPosts(data.posts);
+          renderCalendar();
+          console.log('[Sync] Campaign posts loaded successfully from markdown library.');
+        }
+      } catch (e) {
+        console.error('[Sync] Failed to fetch markdown posts library:', e);
+      }
+    }
+
+    // Campaign Brief Generator
+    async function generateCampaignBrief() {
+      const brief = document.getElementById('generatorBrief').value.trim();
+      const logsBox = document.getElementById('generatorLogsContainer');
+      const logsText = document.getElementById('generatorLogs');
+      
+      if (!brief) {
+        alert('Please specify a brief objective first.');
+        return;
+      }
+      
+      logsBox.style.display = 'block';
+      logsText.textContent = '[AI Agent] Initializing campaign generator sprint...\n';
+      
+      try {
+        const res = await fetch(getApiUrl('/api/generate-monthly-posts'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brief: brief })
+        });
+        
+        const data = await res.json();
+        if (res.ok && data.success) {
+          logsText.textContent += `[AI Agent] SUCCESS: Generated month campaign posts.\n\n${data.posts ? data.posts.length : 0} post groups generated.`;
+          // Sync fresh posts
+          syncPostsFromLibrary();
+        } else {
+          logsText.textContent += `[AI Agent] ERROR: Generation failed. ${data.error || 'Server error.'}`;
+        }
+      } catch (e) {
+        logsText.textContent += `[AI Agent] EXCEPTION: Connection error: ${e.message}`;
+      }
+    }
+
+    // Toggle Auto-Scheduler Checkbox
+    function toggleAutoSchedulerCheckbox(checked) {
+      const badge = document.getElementById('schedulerStatusBadge');
+      if (checked) {
+        badge.textContent = 'ACTIVE';
+        badge.className = 'post-indicator published';
+      } else {
+        badge.textContent = 'INACTIVE';
+        badge.className = 'post-indicator pending';
+      }
+    }
+
+    // Auto-Scheduler Sync and control APIs
+    async function syncAndStartScheduler() {
+      const chk = document.getElementById('chkAutoScheduler');
+      chk.checked = true;
+      toggleAutoSchedulerCheckbox(true);
+      
+      try {
+        // POST to schedule-campaign
+        const posts = getHubPosts();
+        const schedRes = await fetch(getApiUrl('/api/schedule-campaign'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posts: posts, campaign: 'consultancy_sprints' })
+        });
+        
+        // POST to activate scheduler
+        await fetch(getApiUrl('/api/toggle-scheduler'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: true, frequency: parseInt(document.getElementById('schedulerFrequency').value) })
+        });
+        
+        alert('Campaign queue synchronized and Auto-Scheduler activated!');
+      } catch (e) {
+        console.error('[Scheduler Control] Failed:', e);
+      }
+    }
+
+    async function toggleSchedulerState() {
+      const chk = document.getElementById('chkAutoScheduler');
+      const newState = !chk.checked;
+      chk.checked = newState;
+      toggleAutoSchedulerCheckbox(newState);
+      
+      try {
+        await fetch(getApiUrl('/api/toggle-scheduler'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: newState })
+        });
+      } catch (e) {
+        console.error('[Scheduler Toggle] Failed:', e);
+      }
+    }
+
+    // GA4 Live Analytics Tab Loader
+    async function loadAnalytics() {
+      const clicksContainer = document.getElementById('clicksTrendContainer');
+      const platformContainer = document.getElementById('platformBreakdownContainer');
+      const tableBody = document.getElementById('analyticsTableBody');
+      
+      clicksContainer.innerHTML = 'Loading GA4 charts...';
+      platformContainer.innerHTML = 'Loading GA4 breakdown...';
+      tableBody.innerHTML = '<tr><td colspan="5">Fetching live GA4 reporting metrics...</td></tr>';
+      
+      try {
+        const res = await fetch(getApiUrl('/api/analytics'));
+        const result = await res.json();
+        
+        if (result.success) {
+          // Set stats
+          document.getElementById('ga4Impressions').textContent = result.summary?.impressions || '0';
+          document.getElementById('ga4Clicks').textContent = result.summary?.clicks || '0';
+          document.getElementById('ga4Ctr').textContent = result.summary?.ctr || '0.00%';
+          document.getElementById('ga4Conversions').textContent = result.summary?.conversions || '0';
+          
+          // Draw Trend Line Chart (SVG)
+          drawTrendChart(clicksContainer, result.trend || []);
+          
+          // Draw Platform Bar Chart (SVG)
+          drawPlatformChart(platformContainer, result.breakdown || []);
+          
+          // Populate Table
+          let tableHtml = '';
+          if (result.campaigns && result.campaigns.length > 0) {
+            result.campaigns.forEach(c => {
+              tableHtml += `
+                <tr>
+                  <td><strong>${c.campaign || 'direct'}</strong></td>
+                  <td>social</td>
+                  <td>${c.clicks || 0}</td>
+                  <td>${c.clicks || 0}</td>
+                  <td>${c.conversions || 0}</td>
+                </tr>
+              `;
+            });
+          } else {
+            tableHtml = '<tr><td colspan="5" style="text-align:center;">No campaign traffic data matching UTM parameters found in live GA4 report.</td></tr>';
+          }
+          tableBody.innerHTML = tableHtml;
+          
+        } else {
+          showAnalyticsError(result.error || 'Live GA4 connection returned empty metrics.');
+        }
+      } catch (e) {
+        showAnalyticsError('Failed to fetch analytics from API server: ' + e.message);
+      }
+    }
+
+    function showAnalyticsError(errText) {
+      const clicksContainer = document.getElementById('clicksTrendContainer');
+      const platformContainer = document.getElementById('platformBreakdownContainer');
+      
+      const errorHtml = `<div style="color:var(--danger-color); font-size:0.8rem; text-align:center; padding:1rem; border:1.5px dashed rgba(239,68,68,0.25); border-radius:0.5rem; background:rgba(239,68,68,0.02); max-width:280px;">⚠️ Connection Error:<br><span style="font-size:0.75rem; color:var(--text-secondary);">${errText}</span></div>`;
+      
+      clicksContainer.innerHTML = errorHtml;
+      platformContainer.innerHTML = errorHtml;
+      document.getElementById('analyticsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger-color);">GA4 Property ID Connection Error. Review config/credentials-ga-socialmediahub.json status.</td></tr>';
+    }
+
+    function drawTrendChart(container, trendData) {
+      if (trendData.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem;">No timeline click data.</div>';
+        return;
+      }
+      // Simple SVG chart renderer
+      const width = 450;
+      const height = 180;
+      const maxVal = Math.max(...trendData.map(d => d.clicks), 5);
+      
+      let points = '';
+      let labelsHtml = '';
+      trendData.forEach((d, idx) => {
+        const x = 30 + (idx * (width - 60) / (trendData.length - 1 || 1));
+        const y = height - 30 - (d.clicks * (height - 60) / maxVal);
+        points += `${x},${y} `;
+        
+        if (idx % Math.ceil(trendData.length / 5) === 0) {
+          labelsHtml += `<text x="${x}" y="${height - 10}" fill="var(--text-secondary)" font-size="9" text-anchor="middle">${d.date.substring(5)}</text>`;
+        }
+      });
+      
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:100%;">
+          <!-- Grid lines -->
+          <line x1="30" y1="20" x2="30" y2="${height - 30}" stroke="rgba(255,255,255,0.05)" />
+          <line x1="30" y1="${height - 30}" x2="${width - 30}" y2="${height - 30}" stroke="rgba(255,255,255,0.05)" />
+          <!-- Trend line -->
+          <polyline fill="none" stroke="var(--accent-color)" stroke-width="2.5" points="${points.trim()}" />
+          <!-- Trend area -->
+          <polyline fill="rgba(0,158,230,0.05)" stroke="none" points="30,${height - 30} ${points.trim()} ${width - 30},${height - 30}" />
+          ${labelsHtml}
+        </svg>
+      `;
+    }
+
+    function drawPlatformChart(container, breakdown) {
+      if (breakdown.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem;">No platform breakdown click data.</div>';
+        return;
+      }
+      const width = 450;
+      const height = 180;
+      const maxVal = Math.max(...breakdown.map(b => b.clicks), 5);
+      
+      let barsHtml = '';
+      breakdown.forEach((b, idx) => {
+        const x = 60 + (idx * (width - 80) / breakdown.length);
+        const barHeight = b.clicks * (height - 70) / maxVal;
+        const y = height - 35 - barHeight;
+        
+        let color = '#0077b5'; // linkedin
+        if (b.platform === 'threads') color = '#9333ea';
+        else if (b.platform === 'instagram') color = '#e1306c';
+        else if (b.platform === 'facebook') color = '#1877f2';
+        
+        barsHtml += `
+          <rect x="${x}" y="${y}" width="25" height="${barHeight}" fill="${color}" rx="2" />
+          <text x="${x + 12.5}" y="${y - 8}" fill="#fff" font-size="9" text-anchor="middle">${b.clicks}</text>
+          <text x="${x + 12.5}" y="${height - 15}" fill="var(--text-secondary)" font-size="9" text-anchor="middle" font-weight="700">${b.platform.toUpperCase()}</text>
+        `;
+      });
+      
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:100%;">
+          ${barsHtml}
+          <line x1="30" y1="${height - 30}" x2="${width - 30}" y2="${height - 30}" stroke="rgba(255,255,255,0.05)" />
+        </svg>
+      `;
+    }
+
+    // Activity Monitor Tab Loader (Social Inbox & Responder)
+    let selectedAlertId = null;
+    let loadedAlerts = [];
+    
+    async function loadActivityAlerts() {
+      const inboxList = document.getElementById('alertsInboxList');
+      inboxList.innerHTML = '<div style="color:var(--text-secondary); padding:1.5rem; text-align:center;">Scanning activity inbox...</div>';
+      
+      try {
+        const res = await fetch(getApiUrl('/api/activity-alerts'));
+        const result = await res.json();
+        
+        if (result.success && result.alerts) {
+          loadedAlerts = result.alerts;
+          renderAlertsList();
+        } else {
+          inboxList.innerHTML = '<div style="color:var(--danger-color); padding:1rem;">Failed to fetch active alerts.</div>';
+        }
+      } catch (e) {
+        inboxList.innerHTML = '<div style="color:var(--danger-color); padding:1rem;">Scanner Connection Error: ' + e.message + '</div>';
+      }
+    }
+
+    function renderAlertsList() {
+      const inboxList = document.getElementById('alertsInboxList');
+      inboxList.innerHTML = '';
+      
+      if (loadedAlerts.length === 0) {
+        inboxList.innerHTML = '<div style="color:var(--text-secondary); padding:1.5rem; text-align:center;">No active inbound comments. Inbox clean!</div>';
+        return;
+      }
+      
+      loadedAlerts.forEach(alert => {
+        const item = document.createElement('div');
+        item.className = 'inbox-item';
+        if (alert.id === selectedAlertId) item.classList.add('active');
+        
+        let platIcon = alert.platform === 'linkedin' ? 'in' : (alert.platform === 'threads' ? '@' : 'ig');
+        
+        let timeLabel = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Recent';
+        
+        item.innerHTML = `
+          <div class="avatar-icon">${platIcon}</div>
+          <div class="comment-preview-info">
+            <div class="comment-meta">
+              <span class="comment-author">${alert.userName}</span>
+              <span>${timeLabel}</span>
+            </div>
+            <p class="comment-snippet" title="${alert.commentText}">${alert.commentText}</p>
+          </div>
+        `;
+        
+        item.onclick = () => selectAlert(alert.id);
+        inboxList.appendChild(item);
+      });
+    }
+
+    function selectAlert(id) {
+      selectedAlertId = id;
+      renderAlertsList();
+      
+      const alert = loadedAlerts.find(a => a.id === id);
+      if (!alert) return;
+      
+      document.getElementById('responderEmptyState').style.display = 'none';
+      const consoleEl = document.getElementById('responderActiveConsole');
+      consoleEl.style.display = 'flex';
+      
+      document.getElementById('responderCommentAuthor').textContent = `${alert.userName} on ${alert.platform.toUpperCase()}:`;
+      document.getElementById('responderCommentText').textContent = `"${alert.commentText}"`;
+      
+      const replyBox = document.getElementById('responderReplyText');
+      replyBox.value = alert.replyDraft || `Hello ${alert.userName}! Thank you for sharing your thoughts. We would love to discuss how our sprints automate B2B ledger reconciliation. You can book a free audit session: https://AiWorXmiths.com/`;
+    }
+
+    async function regenerateAIDraft() {
+      if (!selectedAlertId) return;
+      const replyBox = document.getElementById('responderReplyText');
+      replyBox.value = 'Generating new draft...';
+      
+      try {
+        const res = await fetch(getApiUrl('/api/generate-reply'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commentId: selectedAlertId, alertId: selectedAlertId })
+        });
+        const result = await res.json();
+        if (result.success && result.replyDraft) {
+          replyBox.value = result.replyDraft;
+          const alert = loadedAlerts.find(a => a.id === selectedAlertId);
+          if (alert) alert.replyDraft = result.replyDraft;
+        } else {
+          replyBox.value = 'Failed to generate draft. Please edit manually.';
+        }
+      } catch (e) {
+        replyBox.value = 'Connection error generating draft: ' + e.message;
+      }
+    }
+
+    async function submitHITLReply() {
+      if (!selectedAlertId) return;
+      const replyText = document.getElementById('responderReplyText').value.trim();
+      const approvePost = document.getElementById('chkApprovePostReply').checked;
+      
+      if (!replyText) {
+        alert('Reply draft cannot be empty.');
+        return;
+      }
+      
+      try {
+        const res = await fetch(getApiUrl('/api/post-reply'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            commentId: selectedAlertId,
+            alertId: selectedAlertId,
+            replyText: replyText,
+            approve: approvePost
+          })
+        });
+        
+        const result = await res.json();
+        if (res.ok && result.success) {
+          alert('Reply posted successfully!');
+          loadedAlerts = loadedAlerts.filter(a => a.id !== selectedAlertId);
+          selectedAlertId = null;
+          document.getElementById('responderActiveConsole').style.display = 'none';
+          document.getElementById('responderEmptyState').style.display = 'block';
+          renderAlertsList();
+        } else {
+          alert('Failed to post reply: ' + (result.error || 'Server error.'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function dismissAlert() {
+      if (!selectedAlertId) return;
+      if (!confirm('Are you sure you want to dismiss this inbound comment alert?')) return;
+      
+      try {
+        const res = await fetch(getApiUrl('/api/activity-alerts/resolve'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedAlertId, alertId: selectedAlertId })
+        });
+        
+        if (res.ok) {
+          loadedAlerts = loadedAlerts.filter(a => a.id !== selectedAlertId);
+          selectedAlertId = null;
+          document.getElementById('responderActiveConsole').style.display = 'none';
+          document.getElementById('responderEmptyState').style.display = 'block';
+          renderAlertsList();
+        }
+      } catch (e) {
+        console.error('Failed to dismiss alert:', e);
+      }
+    }
+
+    // Real active Windows notifications toast trigger inside page on updates
+    let lastSeenInboxAlertId = null;
+    setInterval(async () => {
+      try {
+        const res = await fetch(getApiUrl('/api/activity-alerts'));
+        const result = await res.json();
+        if (result.success && result.alerts && result.alerts.length > 0) {
+          const latest = result.alerts[0];
+          if (latest.id !== lastSeenInboxAlertId) {
+            lastSeenInboxAlertId = latest.id;
+            showToastAlert(latest.platform, latest.userName, latest.commentText);
+            
+            const activeTabContent = document.querySelector('.tab-content.active');
+            if (activeTabContent && activeTabContent.id === 'activityTab') {
+              loadedAlerts = result.alerts;
+              renderAlertsList();
+            }
+          }
+        }
+      } catch (e) {}
+    }, 8000);
+
+    function showToastAlert(platform, userName, text) {
+      let container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        document.body.appendChild(container);
+      }
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast-notification';
+      
+      let color = '#009ee6';
+      if (platform === 'threads') color = '#9333ea';
+      else if (platform === 'instagram') color = '#e1306c';
+      
+      toast.innerHTML = `
+        <div class="badge-icon-wrap" style="background:${color};">⚡</div>
+        <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.15rem;">
+          <p style="font-weight: 700; margin: 0; color: #ffffff;">New Inbound on ${platform.toUpperCase()}</p>
+          <p style="margin: 0; color: #94a3b8; max-width: 250px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+            <strong>${userName}</strong>: "${text}"
+          </p>
+        </div>
+      `;
+      
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 100);
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+      }, 5000);
+    }
+
+    // Document Load Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCalendar();
+      
+      fetch(getApiUrl('/api/scheduler-status'))
+        .then(res => res.json())
+        .then(data => {
+          const chk = document.getElementById('chkAutoScheduler');
+          if (chk) {
+            chk.checked = data.schedulerActive || false;
+            toggleAutoSchedulerCheckbox(data.schedulerActive);
+          }
+          
+          if (data.frequency) {
+            const freq = document.getElementById('schedulerFrequency');
+            if (freq) freq.value = data.frequency;
+          }
+        })
+        .catch(e => console.log('Failed to fetch initial scheduler status', e));
+    });
+  </script>
+</body>
+</html>

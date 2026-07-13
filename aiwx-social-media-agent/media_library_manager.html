@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CONVERGENCE-Ai™ | Media Library Manager</title>
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-surface: rgba(255, 255, 255, 0.85);
+      --border-color: rgba(0, 0, 0, 0.08);
+      --accent-color: #0086EF;
+      --accent-glow: rgba(0, 134, 239, 0.08);
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --success-color: #10b981;
+      --danger-color: #ef4444;
+      --glass-blur: blur(12px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(187, 134, 252, 0.05) 0px, transparent 50%),
+        radial-gradient(at 90% 80%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(10, 12, 16, 0.5);
+      backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.25rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent-color), #00e5ff);
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(187, 134, 252, 0.3);
+    }
+
+    .logo-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text p {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .lovable-badge {
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .lovable-badge span {
+      width: 8px;
+      height: 8px;
+      background: var(--success-color);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success-color);
+    }
+
+    .dashboard-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 2rem;
+      padding: 2rem;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .main-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .search-filter-bar {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .filter-tags {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tag-btn {
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tag-btn:hover, .tag-btn.active {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .assets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .asset-card {
+      background: var(--bg-surface);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .asset-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(187, 134, 252, 0.3);
+      box-shadow: 0 10px 25px rgba(10, 12, 16, 0.5);
+    }
+
+    .image-preview-box {
+      width: 100%;
+      height: 180px;
+      background: #12161e;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .image-preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .asset-card:hover .image-preview-box img {
+      transform: scale(1.05);
+    }
+
+    .asset-info {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .asset-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .asset-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .asset-tags {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .asset-tag {
+      background: rgba(187, 134, 252, 0.1);
+      color: var(--accent-color);
+      padding: 0.25rem 0.6rem;
+      border-radius: 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+
+    .asset-tag.multicultural {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success-color);
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.75rem;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      color: var(--accent-color);
+    }
+
+    .icon-btn.delete:hover {
+      color: var(--danger-color);
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      background: var(--bg-surface);
+      backdrop-filter: var(--glass-blur);
+      border-left: 1px solid var(--border-color);
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      height: fit-content;
+      position: sticky;
+      top: calc(2rem + 70px);
+    }
+
+    .sidebar-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .form-input, .form-textarea {
+      background: rgba(10, 12, 16, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      outline: none;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      border-color: var(--accent-color);
+    }
+
+    .form-textarea {
+      height: 80px;
+      resize: none;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent-color), #8a2be2);
+      border: none;
+      padding: 0.85rem;
+      border-radius: 0.5rem;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(187, 134, 252, 0.2);
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(187, 134, 252, 0.35);
+    }
+
+    .info-card {
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .info-card strong {
+      color: var(--accent-color);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-badge">AiW</div>
+      <div class="logo-text">
+        <h1>CONVERGENCE-Ai™</h1>
+        <p>Operations Suite</p>
+      </div>
+    </div>
+    <div class="lovable-badge">
+      <span></span> Lovable Integration Panel
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    
+    <!-- Main Assets Panel -->
+    <div class="main-panel">
+      <div class="panel-header">
+        <div class="search-filter-bar">
+          <input type="text" id="searchInput" class="search-input" placeholder="Search visual assets by title or description..." oninput="filterAssets()">
+          <div class="filter-tags">
+            <button class="tag-btn active" onclick="setFilter('all', this)">All Assets</button>
+            <button class="tag-btn" onclick="setFilter('multicultural', this)">Multicultural</button>
+            <button class="tag-btn" onclick="setFilter('mockup', this)">Product Mockups</button>
+            <button class="tag-btn" onclick="setFilter('diagram', this)">Tech Diagrams</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="assets-grid" id="assetsGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Right Sidebar Form -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">⚡ Add Visual Asset</h2>
+      
+      <div class="form-group">
+        <label for="imgTitle">Asset Title</label>
+        <input type="text" id="imgTitle" class="form-input" placeholder="e.g. Lead Strategy Consultant">
+      </div>
+
+      <div class="form-group">
+        <label for="imgUrl">Image URL</label>
+        <input type="text" id="imgUrl" class="form-input" placeholder="e.g. https://images.unsplash.com/... or local path">
+      </div>
+
+      <div class="form-group">
+        <label for="imgTags">Primary Category Tag</label>
+        <select id="imgTags" class="form-input" style="background-color:#12161e;">
+          <option value="multicultural">Multicultural Representative Model</option>
+          <option value="mockup">Product Mockup Dashboard</option>
+          <option value="diagram">Process Flow / Technical Diagram</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="imgDesc">Visual Description / Alt Text</label>
+        <textarea id="imgDesc" class="form-textarea" placeholder="Describe the image context..."></textarea>
+      </div>
+
+      <button class="primary-btn" onclick="addAsset()">Save Asset to Library</button>
+
+      <div class="info-card">
+        <strong>Multi-Cultural Alignment Guard:</strong>
+        Ensure all added model visuals reflect the company's Black-Woman owned brand identity by presenting diverse and highly representative personnel in professional business positions.
+      </div>
+    </aside>
+
+  </main>
+
+  <script>
+    // Pre-seeded multi-cultural visual assets
+    const defaultAssets = [
+      {
+        id: "asset_01",
+        title: "Lead Strategy Consultant Portrait",
+        url: "black_female_founder_consultant.png",
+        tag: "multicultural",
+        desc: "Confident Black female AI Strategy Consultant standing in front of a modern glass board sketching neural architectures."
+      },
+      {
+        id: "asset_02",
+        title: "Multi-Ethnic IT Consultants Team",
+        url: "1_aiwx_consultants_team.png",
+        tag: "multicultural",
+        desc: "Diverse IT consultancy team collaborating on setting up secure container instances in modern collaborative workspace."
+      },
+      {
+        id: "asset_03",
+        title: "Operations Director Monitor Station",
+        url: "2_operations_director_smb.png",
+        tag: "multicultural",
+        desc: "Operations Director managing and monitoring automated ledgers and server alerts on unified control board."
+      },
+      {
+        id: "asset_04",
+        title: "Systems Auditor Dashboard Verification",
+        url: "3_empowered_systems_consultant.png",
+        tag: "multicultural",
+        desc: "Multicultural technician reviewing transaction data logs for row-level security audits in local KMS vault."
+      },
+      {
+        id: "asset_05",
+        title: "SMB Dashboard Mockup Overview",
+        url: "smb_operations_hub.png",
+        tag: "mockup",
+        desc: "Interactive Product Mockup dashboard illustrating the automated CRM, scheduling, and billing consoles."
+      },
+      {
+        id: "asset_06",
+        title: "Six Sigma Process Flow Map",
+        url: "collaborative_scoping.png",
+        tag: "diagram",
+        desc: "Interactive swimlane process diagrams scoping automated invoice flows and calendar matching gates."
+      }
+    ];
+
+    let currentFilter = 'all';
+
+    // Get assets from LocalStorage or seed defaults
+    function getLibraryAssets() {
+      const stored = localStorage.getItem('aiwx_media_assets');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      localStorage.setItem('aiwx_media_assets', JSON.stringify(defaultAssets));
+      return defaultAssets;
+    }
+
+    // Render Assets
+    function renderAssets() {
+      const assets = getLibraryAssets();
+      const grid = document.getElementById('assetsGrid');
+      grid.innerHTML = '';
+
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+
+      const filtered = assets.filter(item => {
+        const matchesSearch = item.title.toLowerCase().includes(searchVal) || item.desc.toLowerCase().includes(searchVal);
+        const matchesTag = currentFilter === 'all' || item.tag === currentFilter;
+        return matchesSearch && matchesTag;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-secondary);">
+            <p>No matching visual assets found. Add a new image using the sidebar.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(asset => {
+        const card = document.createElement('div');
+        card.className = 'asset-card';
+        card.innerHTML = `
+          <div class="image-preview-box">
+            <img src="${asset.url}" alt="${asset.title}" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop';">
+          </div>
+          <div class="asset-info">
+            <h3 class="asset-title">${asset.title}</h3>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">${asset.desc}</p>
+            <div class="asset-tags">
+              <span class="asset-tag ${asset.tag}">${asset.tag.toUpperCase()}</span>
+            </div>
+            <div class="action-row">
+              <span style="font-size:0.7rem; color:var(--text-secondary); font-family:monospace;">${asset.url}</span>
+              <button class="icon-btn delete" onclick="deleteAsset('${asset.id}')">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Add new asset
+    function addAsset() {
+      const title = document.getElementById('imgTitle').value.trim();
+      const url = document.getElementById('imgUrl').value.trim();
+      const tag = document.getElementById('imgTags').value;
+      const desc = document.getElementById('imgDesc').value.trim();
+
+      if (!title || !url) {
+        alert("Please complete the Title and URL fields before saving.");
+        return;
+      }
+
+      const assets = getLibraryAssets();
+      const newAsset = {
+        id: 'asset_' + Date.now(),
+        title,
+        url,
+        tag,
+        desc: desc || "No description provided."
+      };
+
+      assets.unshift(newAsset);
+      localStorage.setItem('aiwx_media_assets', JSON.stringify(assets));
+
+      // Reset form
+      document.getElementById('imgTitle').value = '';
+      document.getElementById('imgUrl').value = '';
+      document.getElementById('imgDesc').value = '';
+
+      renderAssets();
+      alert("Visual asset added successfully!");
+    }
+
+    // Delete asset
+    function deleteAsset(id) {
+      if (!confirm("Are you sure you want to delete this visual asset from the library?")) return;
+      let assets = getLibraryAssets();
+      assets = assets.filter(item => item.id !== id);
+      localStorage.setItem('aiwx_media_assets', JSON.stringify(assets));
+      renderAssets();
+    }
+
+    // Filters
+    function setFilter(tag, elem) {
+      currentFilter = tag;
+      document.querySelectorAll('.tag-btn').forEach(btn => btn.classList.remove('active'));
+      elem.classList.add('active');
+      renderAssets();
+    }
+
+    function filterAssets() {
+      renderAssets();
+    }
+
+    // Initialize
+    window.onload = renderAssets;
+  </script>
+</body>
+</html>

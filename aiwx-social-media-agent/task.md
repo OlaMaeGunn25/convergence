@@ -1,0 +1,6 @@
+- [x] Implement local JSON schedule storage (`config/campaign_schedule.json`)
+- [x] Add campaign scheduling endpoints and background loop (with node-notifier/notifications) in `server.js`
+- [x] Add Auto-Scheduler UI controls and status indicator in `social_media_hub.html`
+- [x] Synchronize updated files to local server directories
+- [x] Restart Express server and test background scheduling workflow
+- [x] Fix stored XSS vulnerability in audit history ledger rendering

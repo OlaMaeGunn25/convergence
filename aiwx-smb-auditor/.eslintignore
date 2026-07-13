@@ -1,0 +1,18 @@
+# Ignore frontend browser scripts and legacy uploads
+public/
+lovable-07-05-2026/
+lovable-2026-07-05/
+lovable-7-5/
+node_modules/
+dist/
+build/
+*.html
+*.json
+*.md
+
+# Ignore standalone utility scripts
+aiwx_google_workspace_sync.js
+scheduler_daemon.js
+compose_banner.py
+generate_assets.py
+google_sync.py

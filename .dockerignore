@@ -1,0 +1,38 @@
+# Dependencies (reinstalled inside the image)
+**/node_modules
+
+# Secrets — never bake credentials into an image layer
+**/.env
+**/.env.*
+!**/.env.example
+**/config/cookies_*.json
+**/config/credentials-ga*.json
+**/config/meta_credentials.json
+**/config/linkedin_credentials.json
+**/config/supabase_credentials.json
+**/credentials.json
+**/id_rsa_github*
+
+# Runtime state and caches
+**/audits_cache
+**/logs
+**/temp_profile
+**/chrome_junction
+**/__pycache__
+**/*.log
+
+# Build output (rebuilt in stage 1)
+aiwx-admin-agent/dist
+
+# Heavy non-runtime assets
+**/Todays Lovabled Uploads
+**/backups
+**/*.pdf
+**/*.mp4
+**/product-videos
+**/n8n_workflows
+
+# VCS / editor
+.git
+.gitignore
+docs

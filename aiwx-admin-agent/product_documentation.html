@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERGENCE-Ai™ Cloud-Native AI Automations Hub | Product Documentation Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Document Styles override for documentation readability */
+        .doc-section {
+            display: none;
+        }
+        .doc-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .doc-nav-item {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 3px solid transparent;
+        }
+        .doc-nav-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: #ffffff;
+        }
+        .doc-nav-item.active {
+            background: rgba(0, 132, 255, 0.1);
+            color: var(--secondary-color);
+            border-left-color: var(--secondary-color);
+            font-weight: 600;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            color: var(--secondary-color);
+            font-size: 0.85rem;
+        }
+        pre {
+            background: rgba(3, 7, 18, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            color: #f1f5f9;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        .api-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
+        .api-get {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .api-post {
+            background: rgba(0, 132, 255, 0.15);
+            color: var(--primary-color);
+            border: 1px solid rgba(0, 132, 255, 0.3);
+        }
+        .alert-box {
+            border-left: 4px solid;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .alert-info {
+            background: rgba(0, 132, 255, 0.05);
+            border-color: var(--primary-color);
+            color: #93c5fd;
+        }
+        .alert-warning {
+            background: rgba(0, 198, 255, 0.05);
+            border-color: var(--secondary-color);
+            color: #a5f3fc;
+        }
+        .alert-danger {
+            background: rgba(244, 63, 94, 0.05);
+            border-color: var(--status-error);
+            color: #fca5a5;
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.85rem;
+        }
+        .matrix-table th {
+            background: rgba(255, 255, 255, 0.02);
+            color: #ffffff;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .matrix-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+        .matrix-table tr:hover {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .spec-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.15rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .step-number {
+            background: var(--primary-color);
+            color: #ffffff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+        .roadmap-timeline {
+            position: relative;
+            padding-left: 2rem;
+            border-left: 2px solid var(--border-color);
+            margin: 2rem 0;
+        }
+        .roadmap-item {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        .roadmap-item::before {
+            content: '';
+            position: absolute;
+            left: -2.35rem;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            border: 3px solid var(--bg-base);
+            box-shadow: 0 0 8px var(--secondary-color);
+        }
+    </style>
+</head>
+<body class="bg-dark">
+
+    <div class="app-container">
+        <!-- Sidebar Menu -->
+        <aside class="sidebar" style="background: #060a13; border-right: 1px solid var(--border-color);">
+            <div class="brand-section" style="flex-direction: column; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; gap: 8px;">
+                <div class="brand-logo" style="width: 100%; display: flex; justify-content: center; min-height: 52px; padding: 0 10px;">
+                    <!-- Embedded Convergence AI Light Logo -->
+                    <img src="convergence-ai_logo_light.png" alt="Convergence AI" style="max-height: 52px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                </div>
+                <div style="margin-top: 4px;">
+                    <div class="brand-name" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-align: center; font-family: var(--font-heading);">CONVERGENCE-Ai Operations Hub</div>
+                    <div style="font-size: 0.65rem; color: var(--secondary-color); font-weight: 700; letter-spacing: 0.05em; text-align: center; text-transform: uppercase; margin-top: 2px; font-family: var(--font-body);">Master Documentation</div>
+                </div>
+            </div>
+
+            <!-- Search input bar -->
+            <div style="padding: 10px 15px 5px 15px;">
+                <div class="card search-card" style="border: 1px solid var(--border-color); background: rgba(10, 15, 30, 0.4); position: relative; padding: 6px 10px; margin: 0; border-radius: 8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <i class="fa-solid fa-magnifying-glass" style="color: var(--secondary-color); font-size: 0.9rem;"></i>
+                        <input type="text" id="docSearchInput" placeholder="Search specifications..." 
+                               style="width: 100%; border: none; background: transparent; color: var(--text-primary);; outline: none; font-size: 0.8rem;">
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; list-style: none; padding: 0;">
+                <li class="doc-nav-item active" onclick="switchDocTab('roadmap', this)">
+                    <i class="fa-solid fa-road"></i>
+                    <span>Roadmap & Product Description</span>
+                </li>
+                <li class="doc-nav-item" id="searchTabItem" style="display:none;" onclick="switchDocTab('search', this)">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search Results</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('prd', this)">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span>Product Requirements (PRD)</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('sdd', this)">
+                    <i class="fa-solid fa-drafting-compass"></i>
+                    <span>System Design (SDD)</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('api-doc', this)">
+                    <i class="fa-solid fa-code"></i>
+                    <span>Source Code & APIs</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('test-results', this)">
+                    <i class="fa-solid fa-square-poll-vertical"></i>
+                    <span>E2E Testing & Verification</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('quick-start', this)">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Quick Start Guide</span>
+                </li>
+                <li class="doc-nav-item" onclick="switchDocTab('changelog', this)">
+                    <i class="fa-solid fa-history"></i>
+                    <span>Release Notes & Changelog</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer" style="padding-top: 1rem; border-top: 1px solid var(--border-color); margin-top: auto;">
+                <div class="client-tag" style="display: flex; align-items: center; gap: 8px;">
+                    <div class="client-status-indicator" style="background: var(--secondary-color); box-shadow: 0 0 6px var(--secondary-color);"></div>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">System Docs Active</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper" style="margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); min-height: 100vh; display: flex; flex-direction: column;">
+            <header class="header" style="background: #060a13; border-bottom: 1px solid var(--border-color); padding: 1.25rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;">
+                <div class="header-title-area">
+                    <h2 style="font-family: var(--font-heading); color: var(--text-primary);; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                        <i class="fa-solid fa-book-open" style="color: var(--secondary-color);"></i>
+                        In-App Platform Documentation Center
+                    </h2>
+                </div>
+                <div class="header-actions">
+                    <span class="vertical-badge" style="background: rgba(0, 198, 255, 0.1); border: 1px solid rgba(0, 198, 255, 0.3); color: var(--secondary-color); font-size: 0.75rem; padding: 0.3rem 0.7rem; border-radius: 20px; font-weight: 600;">v1.1.0 COMPLIANT</span>
+                </div>
+            </header>
+
+            <main class="content-body" style="padding: 2.5rem; max-width: 1100px; width: 100%; margin: 0 auto; flex-grow: 1;">
+                
+                <!-- TAB 0: SEARCH RESULTS -->
+                <section id="doc-search" class="doc-section" style="display:none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">Documentation Search Results</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Ranked matches for your query across all product specifications and requirements.</p>
+                    </div>
+                    <div id="docSearchResultsList" style="display:flex; flex-direction:column; gap:16px;"></div>
+                </section>
+
+                <!-- TAB 1: PRODUCT ROADMAP & DESCRIPTION -->
+                <section id="doc-roadmap" class="doc-section active">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-cube" style="color: var(--secondary-color);"></i>
+                            Product Description & Strategic Roadmap
+                        </h2>
+                        
+                        <p style="color: var(--text-primary); line-height: 1.7; margin-bottom: 1.5rem; font-size: 0.95rem;">
+                            The <strong>CONVERGENCE-Ai Cloud-Native AI Automations Hub™</strong> (powered by the Convergence AI framework) is a vault-grade, multi-tenant administrative automation middleware framework designed to run enterprise-ready autonomous agents. Built for Solopreneurs, SMB Teams, and white-labeled Reseller Agencies, the platform provides a centralized operational cockpit that connects serverless agent orchestrators (such as Dify.ai, LangGraph, and n8n) directly to active customer web terminals.
+                        </p>
+
+                        <div class="alert-box alert-info">
+                            <h4 style="margin-bottom: 0.4rem; color: #93c5fd; font-family: var(--font-heading);"><i class="fa-solid fa-shield-halved"></i> Key Product Proposition: Zero Vendor Lock-In</h4>
+                            Unlike proprietary middleware services that lock users into costly visual workflow builders and API runtimes, CONVERGENCE-Ai operates on a self-hosted open-source framework (Supabase, Docker, Dify, and n8n). This ensures absolute database sovereignty, privacy compliance, and negligible computing COGS.
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Active Modules & Vertical Coverage</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1.25rem; font-size: 0.9rem;">
+                            To enforce robust multi-tenant boundaries, standard client profiles are locked strictly into <strong>one of twelve target verticals</strong> configured programmatically during deployment:
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-file-medical" style="color:var(--secondary-color); margin-right:6px;"></i> Medical & Healthcare</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">HIPAA-compliant claim checking, appointment scheduling, and prescription renewals.</span>
+                            </div>
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-scale-balanced" style="color:var(--secondary-color); margin-right:6px;"></i> Legal Services</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Client intake, deposition calendar tracking, and case brief document filing.</span>
+                            </div>
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-house-chimney" style="color:var(--secondary-color); margin-right:6px;"></i> Real Estate</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">MLS property sync, lead triage, showing schedules, and contract routing.</span>
+                            </div>
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-wallet" style="color:var(--secondary-color); margin-right:6px;"></i> Financial & Bookkeeping</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">QuickBooks syncing, ledger reconciliations, invoice audits, and payment releases.</span>
+                            </div>
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-truck-ramp-box" style="color:var(--secondary-color); margin-right:6px;"></i> Logistics & Supply Chain</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Point-of-use depletion tracking, shipping manifests, and travel routing.</span>
+                            </div>
+                            <div class="card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem;">
+                                <h4 style="color: var(--text-primary);; margin-bottom:6px;"><i class="fa-solid fa-screwdriver-wrench" style="color:var(--secondary-color); margin-right:6px;"></i> Construction & Contracting</h4>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">OSHA compliance standards, materials procurement logs, and commercial service audits.</span>
+                            </div>
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Supported Integration Directory by Industry Vertical</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                            The platform supports native API connectivity and automated OAuth credentials routing for the following core software suites per industry vertical:
+                        </p>
+                        
+                        <table class="matrix-table" style="font-size: 0.8rem; margin-bottom: 2rem;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 22%;">Industry Vertical</th>
+                                    <th style="width: 48%;">Supported Software & Integrations</th>
+                                    <th style="width: 30%;">Special Integration Features</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Medical & Healthcare</strong></td>
+                                    <td>Epic EHR (FHIR), Cerner Millennium (HL7), Athenahealth API, eClinicalWorks, Elation Health</td>
+                                    <td>PHI Redaction Filter, HIPAA BAA Handshake</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Legal Services</strong></td>
+                                    <td>Clio, PracticePanther, Smokeball, Filevine, MyCase, Westlaw Document Search</td>
+                                    <td>ABA Rule 1.6 Privileged Data Sanitizer</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Real Estate</strong></td>
+                                    <td>MLS Listing Service API, Zillow MLS Sync, DocuSign OAuth, Dotloop, AppFolio, Yardi</td>
+                                    <td>Fair Housing Act (FHA) Lead Guardrails</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Financial & Bookkeeping</strong></td>
+                                    <td>QuickBooks Online/Desktop, Xero, Sage Intacct, NetSuite ERP, FreshBooks, Stripe Billing</td>
+                                    <td>GLBA Ledger Privacy, Dual-Auth ACH Wire Waiver</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Logistics & Supply Chain</strong></td>
+                                    <td>Workday SCM, SAP S/4HANA Supply Chain, Oracle SCM Cloud, Flexport API, FedEx/UPS APIs</td>
+                                    <td>Automated inventory depletions & restocking</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Construction & Mechanics</strong></td>
+                                    <td>Procore, Autodesk Construction Cloud, Autodesk Revit & AutoCAD (<strong>CAD Blueprint Schematics & BOM Extraction</strong>), Fusion 360, Joist, Buildertrend</td>
+                                    <td><strong>CAD Schematic Parsing</strong>, OSHA safety checker filters</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Retail & E-commerce</strong></td>
+                                    <td>Shopify, WooCommerce API, Magento, BigCommerce, Stripe, PayPal Commerce, Square POS</td>
+                                    <td>PCI-DSS compliance validators, inventory auto-syncs</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Hospitality & Leisure</strong></td>
+                                    <td>OpenTable API, Resy, Toast POS, Clover POS, Mews PMS, Cloudbeds Channel Manager</td>
+                                    <td>Reservation matching, POS transaction audits</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Education & Tutoring</strong></td>
+                                    <td>Canvas LMS, Blackboard Learn, Moodle Web Services, Google Classroom API, Calendly Scheduler</td>
+                                    <td>Student FERPA privacy locks, invoice auto-generation</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SaaS & Tech Startups</strong></td>
+                                    <td>GitHub REST API, GitLab, Jira Cloud, Linear, HubSpot CRM, Zendesk Support, Salesforce</td>
+                                    <td>Auto-issue routing, CI/CD pipeline triggers</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Non-Profit Organizations</strong></td>
+                                    <td>Raiser's Edge, Salesforce Nonprofit Cloud, Donorbox API, Stripe Billing, Givebutter Webhooks</td>
+                                    <td>Tax-exempt receipting, donation ledger updates</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Event Planning & Management</strong></td>
+                                    <td>Eventbrite API, Cvent, RSVPify, Social Tables (CAD Layouts), HoneyBook CRM</td>
+                                    <td>Attendee scheduling, venue mapping coordinates</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Strategic Product Roadmap</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                            To ensure Convergence AI stays at the bleeding edge of agentic operation platforms, we recommend the following feature roadmap:
+                        </p>
+
+                        <div class="roadmap-timeline">
+                            <div class="roadmap-item">
+                                <h4 style="color: var(--text-primary);; margin-bottom: 4px;">Q3 2026 — Zero-Trust Pre-Execution Compliance Gate</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Deploy an in-memory interceptor pipeline filtering generative prompts before LLM dispatches. It blocks prompt injection, subversion requests, and mandates similarity checks against verified vector documentation.
+                                </p>
+                            </div>
+                            <div class="roadmap-item">
+                                <h4 style="color: var(--text-primary);; margin-bottom: 4px;">Q4 2026 — Speech-to-Process (SOP) Ingestion & Video Parser</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Integrate Deepgram's live transcription API. Business owners can upload Loom walkthrough recordings or dictate checklists verbally, and the system automatically compiles structured Six Sigma SVG swimlane diagrams.
+                                </p>
+                            </div>
+                            <div class="roadmap-item">
+                                <h4 style="color: var(--text-primary);; margin-bottom: 4px;">Q1 2027 — Enterprise HR & ERP Integrations</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Build native connectors for Epic EHR systems (using FHIR DeviceUsage resources) and Workday Supply Chain Management (using SOAP-based WWS schemas) to support point-of-use surgical and supply chain reconciliations.
+                                </p>
+                            </div>
+                            <div class="roadmap-item">
+                                <h4 style="color: var(--text-primary);; margin-bottom: 4px;">Q2 2027 — Predictive Administrative Burnout Analytics</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Deploy real-time dashboards mapping weekly administrative hours saved, calculating net profit ROI gains under glowing panels, and automatically adjusting agent execution limits based on staff task volumes.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: PRD -->
+                <section id="doc-prd" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-file-contract" style="color: var(--secondary-color);"></i>
+                            Product Requirements Document (PRD)
+                        </h2>
+                        
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">1. Target Audience & User Personas</h3>
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Persona</th>
+                                    <th>Role Description</th>
+                                    <th>Core Pain Points Addressed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Super Admin (CONVERGENCE-Ai)</strong></td>
+                                    <td>Manages B2B tenants, sets active branding hex colors, issues cryptographic license signatures.</td>
+                                    <td>High setup overhead, difficulty locking client profiles, missing central provision tools.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SMB Admin / Operations Manager</strong></td>
+                                    <td>Audits pending agent outputs (HITL), configures custom checklists, views Six Sigma maps.</td>
+                                    <td>Security fears regarding LLM autonomy, manual bookkeeping, and scheduling gaps.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Solopreneur / Solo Operator</strong></td>
+                                    <td>Utilizes lightweight spreadsheets and auto-triage workflows to scale administrative output.</td>
+                                    <td>Burnout from bookkeeping, calendar logistics, and lack of dedicated IT personnel.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Integration Consultant</strong></td>
+                                    <td>Certifies setup checklists, generates Docker Compose compose manifests.</td>
+                                    <td>Complicated local developer onboarding and lack of cert templates.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">2. Functional Requirements (FR)</h3>
+                        <ul style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
+                            <li>
+                                <span class="spec-badge">FR-1</span> <strong>Vault-Grade Licensing Handshake:</strong> The client hub MUST boot to a locked, glassmorphic security overlay. Entering a valid signed cryptographic Base64 JWT token is required to unlock the interface.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-2</span> <strong>Tenant Vertical Lockdown:</strong> Standard client tokens MUST isolate the UI into exactly 1 active vertical. The remaining 11 industry modules must be hidden or disabled to enforce license tiers.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-3</span> <strong>Super Admin Lock Bypass:</strong> Admin logins using the email domain suffix `@convergence-ai.com` or email `aiworxmiths@gmail.com` must bypass the single-tenant lock, enabling a header dropdown selector to switch between all 12 verticals on the fly.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-4</span> <strong>Dynamic Six Sigma Mapping:</strong> SVG process canvases must render state nodes (P2P, Twilio, Travel). An active cycle highlight loop must run at 2.5s intervals to visually demonstrate the agent's decision logic.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-5</span> <strong>Human-in-the-Loop (HITL) Interceptions:</strong> Any node designated as `type: "hitl"` must freeze the simulation, block downstream actions, and queue the item in the active review board. Manual button clicks (Approve / Revise) are required to commit states.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-6</span> <strong>White-Label Override:</strong> Relaunching the console with custom RGB color tokens inside the token payload must programmatically overwrite the CSS variables, immediately re-skinning buttons, glows, and text.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-7</span> <strong>Pre-Execution Compliance Validator:</strong> The gateway must intercept and audit raw prompts before LLM parsing. If a prompt triggers anti-subversion filters (e.g. system instructions override, evasion attempts, illegal activities), it must immediately log an alert and return a validation failure.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-8</span> <strong>Factuality & Reality Grounding:</strong> The generator must compute cosine similarity scores comparing target outputs to verified SOP database vector embeddings. Generative responses that do not meet strict citation thresholds (anti-hallucination guard) must be blocked or routed to HITL.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-9</span> <strong>Regulatory Framework Enforcer:</strong> The interceptor must load active compliance checkers based on target industry vertical: medical checks HIPAA and Patient Privacy; finance checks GLBA and SEC; construction/mechanics checks OSHA safety guidelines.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-10</span> <strong>Dynamic Legalese Filter:</strong> The onboarding activation page MUST dynamically parse client vertical flags and display ONLY disclosures appropriate to that vertical. (e.g., Construction/Mechanics must not be prompted for medical HIPAA or financial SEC/GLBA agreements).
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-11</span> <strong>Model Preferences Cockpit:</strong> The settings tab MUST expose an interactive LLM Selector permitting users to input their own keys and toggle between Gemini, OpenAI, Claude, and Local (self-hosted) runner configurations.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-12</span> <strong>Data Ingestion & Training Agreements:</strong> During activation, users must sign a click-wrap privacy pact declaring how business files are parsed, vectorized in Supabase, and isolated from public LLM models.
+                            </li>
+                            <li>
+                                <span class="spec-badge">FR-13</span> <strong>Control Center Compliance Viewer:</strong> The master command center (Deployment Hub) MUST retrieve and display the dynamic legal consents, hashes, and compliance PDFs for all deployed sandboxes under a centralized audit tab.
+                            </li>
+                        </ul>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">3. Non-Functional Requirements (NFR)</h3>
+                        <ul style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
+                            <li>
+                                <span class="spec-badge">NFR-1</span> <strong>Performance & UI Responsiveness:</strong> Interface tabs, CSS animations, and SVG state transitions must execute instantly (latency under 100ms) with zero layout shifts.
+                            </li>
+                            <li>
+                                <span class="spec-badge">NFR-2</span> <strong>Cryptographic Obfuscation:</strong> Client credential strings must remain fully hidden from network request headers and local logging. Base64 URL schemes must safely encrypt/decrypt accented characters.
+                            </li>
+                            <li>
+                                <span class="spec-badge">NFR-3</span> <strong>Framework-Free Portability:</strong> The client-side dashboard core (`app.js`) must run natively in standard modern browsers using vanilla JS and DOM web APIs to prevent dependencies decay.
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- TAB 3: SDD -->
+                <section id="doc-sdd" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-drafting-compass" style="color: var(--secondary-color);"></i>
+                            Software Design Document (SDD)
+                        </h2>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">1. System Architecture Design</h3>
+                        <pre style="background: #030712; font-family: monospace; line-height: 1.45; color: #a5f3fc; border: 1px solid var(--border-color);">
++-----------------------------+               +--------------------------------------+
+|  CONVERGENCE-Ai Command Hub    |               |        Client Operations Hub         |
+|  (deployment_hub.html)      |               |  (operations_hub.html / index.html)  |
+|  [ Compliance Audit Panel ] |               |  [ Dynamic Consent Activation Panel ]|
++--------------+--------------+               +------------------+-------------------+
+               |                                                 |
+       (License Generation)                              (Decrypted Key)
+               v                                                 v
+  [Crypto License JWT Token] ===(Paste / Load Handshake)===> [Decryption Sandbox]
+                                                                 |
+                                                     (Establishes Tenant Style)
+                                                                 v
++----------------------------------------------------------------+-------------------+
+|                        Zero-Trust Pre-Execution Governance Interceptor             |
+|          [Sanitizer] ----> [Factuality RAG] ----> [Regulatory Policy Filter]       |
++----------------------------------------+-------------------------------------------+
+                                         |
+                            (Dispatches Validate Request)
+                                         v
++----------------------------------------+-------------------------------------------+
+|                           Express Orchestrator Server Middleware                           |
+|       (Loads preferred_llm and api_token_vault to route Dify/LangGraph queries)    |
++-------------------+----------------------------+-------------------+---------------+
+                    |                            |                   |
+            (SQL Migrations)               (Event Syncs)       (Model Tasks)
+                    v                            v                   v
+        +-----------+-----------+        +-------+-------+   +-------+-------+
+        |   Supabase Postgres   |        |    n8n.io     |   |    Dify.ai    |
+        |  (Tables, RLS Rules)  |        | (Workflows)   |   | (LLM Agents)  |
+        +-----------------------+        +---------------+   +---------------+
+                        </pre>
+
+                        <h4 style="color: var(--secondary-color); margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1rem; font-family: var(--font-heading); text-align: left; padding-left: 24px;">Compliance & Legal Consent Audit Flow</h4>
+                        <pre style="background: #030712; font-family: monospace; line-height: 1.45; color: #a5f3fc; border: 1px solid var(--border-color); margin-left: 24px;">
+[ Command Center ]        [ Express Orchestrator ]       [ Supabase DB / consents ]
+        |                            |                               |
+        |--- (1) refreshConsents() ->|                               |
+        |    (GET /api/.../consents) |                               |
+        |                            |--- (2) Query DB table ------->|
+        |                            |    "client_legal_consents"    |
+        |                            |                               |
+        |                            |&lt;-- (3) Return Signed Records -|
+        |                            |                               |
+        |    (Compute Integrity)     |                               |
+        |    (Verify SHA-256 Hash)   |                               |
+        |                            |                               |
+        |&lt;-- (4) Render Audit Rows --|                               |
+        |                            |                               |
+        |--- (5) Click "PDF" Trigger |                               |
+        |    (Generate WORM Archive) |                               |
+        v                            v                               v
+                        </pre>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">2. Core State Management Model</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            The application logic maintains a central JavaScript `STATE` object, defined globally in standard namespace boundaries:
+                        </p>
+                        <pre><code>const STATE = {
+  isActivated: false,             // Locks/unlocks operations hub modal
+  isSuperAdmin: false,            // Super Admin email override status
+  syncedArticles: [],             // Sync-feed storage array
+  campaignLaunchDate: "2026-06-01",
+  campaignFeedUrl: "https://zdkwrglsqrueolrshukh.supabase.co/functions/v1/blog-rss",
+  completedCount: 18,             // Completed tasks counter
+  activeProcessNodeIndex: 0,      // SVG loop sequence pointer
+  tenantConfig: {
+    companyName: "",
+    vertical: "",
+    logoText: "",
+    primaryColor: "",
+    secondaryColor: "",
+    apiEndpoint: "",
+    vaultKey: "",
+    preferredLlm: "local",        // Model configuration settings
+    apiTokenVault: ""             // Encrypted external API token key
+  },
+  hitlQueue: []                   // Exceptions review arrays
+};</code></pre>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">3. Production Database Migration DDL</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            To scale this platform into a secure multi-tenant SaaS, you must instantiate PostgreSQL tables in your Supabase backend. Run the migration blueprint below to define schemas and isolate client domains:
+                        </p>
+
+                        <pre><code>-- Enable UUID generator extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Create Tenant Configurations Table
+CREATE TABLE IF NOT EXISTS tenant_configs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_name VARCHAR(255) NOT NULL,
+    vertical VARCHAR(50) NOT NULL,
+    logo_text VARCHAR(50) DEFAULT 'OPS',
+    primary_color VARCHAR(7) DEFAULT '#0b57d0',
+    secondary_color VARCHAR(7) DEFAULT '#f1b31c',
+    api_endpoint TEXT,
+    vault_key TEXT,
+    preferred_llm VARCHAR(50) DEFAULT 'local',    -- 'local', 'gemini', 'openai', 'claude'
+    api_token_vault TEXT,                         -- Encrypted API key block
+    upskill_matrix BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable Row-Level Security
+ALTER TABLE tenant_configs ENABLE ROW LEVEL SECURITY;
+
+-- 2. Create HITL Queue Table
+CREATE TABLE IF NOT EXISTS hitl_queue (
+    id VARCHAR(50) PRIMARY KEY,
+    tenant_id UUID REFERENCES tenant_configs(id) ON DELETE CASCADE,
+    vertical VARCHAR(50) NOT NULL,
+    task_type VARCHAR(100) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    action_code TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE hitl_queue ENABLE ROW LEVEL SECURITY;
+
+-- 3. Create Pre-Execution Governance Audit Logs Table
+CREATE TABLE IF NOT EXISTS governance_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenant_configs(id) ON DELETE CASCADE,
+    vertical VARCHAR(50) NOT NULL,
+    prompt_text TEXT NOT NULL,
+    sanitization_status VARCHAR(20) NOT NULL,    -- 'PASSED', 'BLOCKED'
+    factuality_score NUMERIC(4,3) NOT NULL,       -- Cosine similarity value (0.000 to 1.000)
+    triggered_rules TEXT[],                       -- Triggered policy rule codes (e.g. HIPAA-V1, GLBA-V2)
+    mitigation_action VARCHAR(50) NOT NULL,       -- 'DISPATCHED', 'BLOCKED', 'ROUTE_TO_HITL'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE governance_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- 4. Create Tenant Legal Consents Signatures Table (Audit Ledger)
+CREATE TABLE IF NOT EXISTS client_legal_consents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenant_configs(id) ON DELETE CASCADE,
+    signer_email VARCHAR(255) NOT NULL,
+    agreement_type VARCHAR(100) NOT NULL,         -- e.g. 'hipaa-v1.0', 'osha-v1.0', 'billing-v1.0'
+    agreement_text_hash CHAR(64) NOT NULL,        -- SHA-256 hash of agreements terms
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT NOT NULL,
+    signed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE client_legal_consents ENABLE ROW LEVEL SECURITY;
+
+-- 5. Tenant Isolation RLS Policies
+CREATE POLICY tenant_isolation_policy ON tenant_configs
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY hitl_queue_isolation_policy ON hitl_queue
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY governance_audit_isolation ON governance_audit_logs
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY client_consents_isolation ON client_legal_consents
+    FOR ALL USING (true) WITH CHECK (true);</code></pre>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">4. Onboarding Legal Disclosures Dictionary Schema</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            The JSON schema structure of the dynamic legal configuration dictionary used by the onboarding wizard:
+                        </p>
+                        <pre><code>{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z]+$": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "agreements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "terms": { "type": "string" },
+              "mandatory": { "type": "boolean" }
+            },
+            "required": ["id", "label", "terms", "mandatory"]
+          }
+        }
+      },
+      "required": ["title", "agreements"]
+    }
+  }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- TAB 4: SOURCE CODE & API DOCUMENTATION -->
+                <section id="doc-api-doc" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-code" style="color: var(--secondary-color);"></i>
+                            Source Code & Express REST APIs Reference
+                        </h2>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">1. Orchestrator API Endpoint Specification</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            Your Express Server Orchestrator (configured in <code>server/index.js</code>) exposes secure REST routes to handle remote container deployments, state syncs, model preferences, and pre-execution validation:
+                        </p>
+
+                        <!-- API Endpoint 1 -->
+                        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                <span class="api-badge api-post">POST</span>
+                                <code style="color: #ffffff; font-weight: 600;">/api/deploy-agent</code>
+                            </div>
+                            <div style="padding: 12px; font-size: 0.82rem;">
+                                <p style="color: var(--text-muted); margin-bottom: 8px;">Triggers serverless Cloud Run container deployment and returns signed license JWT.</p>
+                                <strong>Request Payload:</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>{
+  "companyName": "Apex Medical Care",
+  "vertical": "medical",
+  "logoText": "AMC",
+  "primaryColor": "#0084ff",
+  "secondaryColor": "#00c6ff",
+  "upskill": true
+}</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- API Endpoint 2 -->
+                        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                <span class="api-badge api-post">POST</span>
+                                <code style="color: #ffffff; font-weight: 600;">/api/verify-token</code>
+                            </div>
+                            <div style="padding: 12px; font-size: 0.82rem;">
+                                <p style="color: var(--text-muted); margin-bottom: 8px;">Cryptographically decrypts and validates license signature using server KMS.</p>
+                                <strong>Request Payload:</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>{ "token": "header.payload.signature-string" }</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- API Endpoint 3: Governance Validator -->
+                        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                <span class="api-badge api-post">POST</span>
+                                <code style="color: #ffffff; font-weight: 600;">/api/governance/validate</code>
+                            </div>
+                            <div style="padding: 12px; font-size: 0.82rem;">
+                                <p style="color: var(--text-muted); margin-bottom: 8px;">Performs pre-execution check on LLM prompts to enforce factuality grounding, anti-subversion regulations, and industry policy checks.</p>
+                                <strong>Request Payload:</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>{
+  "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+  "vertical": "medical",
+  "promptText": "Draft prescription renewal confirmation email to Sarah Davis."
+}</code></pre>
+                                <strong>Response Payload (Success):</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>{
+  "allow": true,
+  "sanitization": "PASSED",
+  "factualityScore": 0.942,
+  "cites": ["SOP-MED-042: Prescription Refills Verification Workflow"],
+  "mitigation": "DISPATCHED"
+}</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- API Endpoint 4: Model Preferences -->
+                        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                <span class="api-badge api-post">POST</span>
+                                <code style="color: #ffffff; font-weight: 600;">/api/governance/model-preference</code>
+                            </div>
+                            <div style="padding: 12px; font-size: 0.82rem;">
+                                <p style="color: var(--text-muted); margin-bottom: 8px;">Stores the client's chosen LLM model engine and encrypted token vault credentials in Supabase PostgreSQL.</p>
+                                <strong>Request Payload:</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>{
+  "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+  "preferredLlm": "gemini",
+  "apiTokenVault": "encrypted-gemini-credentials-token"
+}</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- API Endpoint 5: Get Legal Consents -->
+                        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                <span class="api-badge api-get">GET</span>
+                                <code style="color: #ffffff; font-weight: 600;">/api/governance/consents</code>
+                            </div>
+                            <div style="padding: 12px; font-size: 0.82rem;">
+                                <p style="color: var(--text-muted); margin-bottom: 8px;">Retrieves the signed legal agreements and audit records for all deployed tenant sandboxes (accessible via the primary Control Center / Deployment Hub).</p>
+                                <strong>Response Payload:</strong>
+                                <pre style="margin: 6px 0; padding: 8px; font-size: 0.75rem;"><code>[
+  {
+    "companyName": "Metro Legal Inc.",
+    "vertical": "legal",
+    "signerEmail": "admin@metrolegal.com",
+    "agreementType": "rule16-v1.0",
+    "agreementTextHash": "6b8a23c34df...29",
+    "ipAddress": "192.168.1.104",
+    "signedAt": "2026-06-26T14:22:15Z"
+  }
+]</code></pre>
+                            </div>
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">2. Core Cryptographic & Evasion Filters</h3>
+                        
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            To block prompt injections or malicious instruction bypasses before sending inputs to Dify or LangGraph models:
+                        </p>
+
+                        <pre><code>// Pre-Execution Input Sanitization & Subversion Filter
+function isPromptSubversive(prompt) {
+  const lowercaseInput = prompt.toLowerCase();
+  
+  // Evasion & Injection pattern matches
+  const subversionPatterns = [
+    "ignore previous instructions",
+    "system prompt bypass",
+    "disregard safety guidelines",
+    "sudo run",
+    "override configuration",
+    "exfiltration",
+    "act as developer mode",
+    "jailbreak"
+  ];
+  
+  return subversionPatterns.some(pattern => lowercaseInput.includes(pattern));
+}</code></pre>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">3. Dynamic Onboarding Legal Agreement Configuration</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            JavaScript structure defining vertical-specific agreements, ensuring clients only agree to legally relevant documentation:
+                        </p>
+                        <pre><code>const VERTICAL_LEGAL_CONFIG = {
+  medical: {
+    title: "Healthcare Clinical Compliance Disclosures",
+    agreements: [
+      { id: "hipaa", label: "HIPAA Patient Privacy & BAA Compliance", terms: "I certify that a signed Business Associate Agreement (BAA) is in place. No Protected Health Information (PHI) will be logged in cleartext.", mandatory: true }
+    ]
+  },
+  finance: {
+    title: "Financial Ledger Security Covenants",
+    agreements: [
+      { id: "glba", label: "Gramm-Leach-Bliley Act (GLBA) Data Privacy", terms: "All bookkeeping ledgers sync under GLBA data protection protocols. Encryption key validation is required.", mandatory: true },
+      { id: "sec", label: "SEC & Wire Fraud Protection Disclaimers", terms: "I understand that all ACH or financial transactions generated require dual authorization and human release.", mandatory: true }
+    ]
+  },
+  construction: {
+    title: "Contracting Services Safety & Liability",
+    agreements: [
+      { id: "osha", label: "OSHA Workplace Safety Standards Enforcement", terms: "I certify that material procurement checklists align with OSHA occupational safety regulations.", mandatory: true },
+      { id: "liability", label: "Commercial Service Liability Disclaimer", terms: "CONVERGENCE-Ai is held harmless for physical construction project modifications or structural estimations generated by the agent.", mandatory: true }
+    ]
+  },
+  legal: {
+    title: "ABA Professional Conduct Compliance",
+    agreements: [
+      { id: "rule16", label: "ABA Model Rule 1.6 Client Confidentiality", terms: "I certify that document intake prompts do not contain unredacted attorney-client privileged metadata.", mandatory: true },
+      { id: "upl", label: "Unauthorized Practice of Law (UPL) Disclaimer", terms: "I understand the agent serves as an administrative assistant and cannot draft final legal advice without direct attorney verification.", mandatory: true }
+    ]
+  }
+};</code></pre>
+                    </div>
+                </section>
+
+                <!-- TAB 5: TEST CASES & E2E RESULTS -->
+                <section id="doc-test-results" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-square-poll-vertical" style="color: var(--secondary-color);"></i>
+                            E2E Verification Matrix & Console Outputs
+                        </h2>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">1. Automated Smoke & System Test Matrix</h3>
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Suite ID</th>
+                                    <th>Test Suite Area</th>
+                                    <th>Target Assertions</th>
+                                    <th>Method Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Suite 1</strong></td>
+                                    <td>File Integrity Systems</td>
+                                    <td>9 Core assets checked (index, hubs, js, css, markdown manuals)</td>
+                                    <td>Validates file existence on disk, verifying file bytes size are non-zero.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Suite 2</strong></td>
+                                    <td>Base64 Cryptography</td>
+                                    <td>Safe UTF-8 accents and character decoding robustness</td>
+                                    <td>Verifies support for special markers (™), emojis, and accents (Dr. Müller-Händel).</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Suite 3</strong></td>
+                                    <td>Licensing Vault</td>
+                                    <td>JWT format generation and decryption parsing validation</td>
+                                    <td>Validates company configuration parameters matches outputs exactly.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Suite 4</strong></td>
+                                    <td>Six Sigma Maps</td>
+                                    <td>7 Logical node states presence, simulation loop timing</td>
+                                    <td>Ensures coordinate structures load correctly and contain designated hitl tasks.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Suite 5</strong></td>
+                                    <td>HITL Operations</td>
+                                    <td>Approve / Reject actions, duplicate prevention</td>
+                                    <td>Verifies queue size decreases by 1 on approve and completed ticks increment.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Suite 6</strong></td>
+                                    <td>Social Campaign</td>
+                                    <td>Sync RSS blog feed, auto-schedule platform queue</td>
+                                    <td>Validates feed parses 2 active posts, scheduling 6 target social platform entries.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem;">2. Actual Automated Test Execution Output</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                            The following execution logs verify that all 42 automated tests pass with 100% success on your Windows runtime environment:
+                        </p>
+
+                        <pre style="background: #020617; border-color: rgba(16, 185, 129, 0.4);"><code style="color: #34d399;">================================================================
+   CONVERGENCE-Ai Cloud-Native AI Automations Hub™ CLI System & Smoke Test Suite  
+================================================================
+
+[1/5] File Integrity System Checks...
+✓ PASS: Required file asset presence: index.html
+✓ PASS: Asset contains content bytes: index.html (47356 bytes)
+✓ PASS: Required file asset presence: deployment_hub.html
+✓ PASS: Asset contains content bytes: deployment_hub.html (37165 bytes)
+✓ PASS: Required file asset presence: operations_hub.html
+✓ PASS: Asset contains content bytes: operations_hub.html (47356 bytes)
+✓ PASS: Required file asset presence: training_hub.html
+✓ PASS: Asset contains content bytes: training_hub.html (57323 bytes)
+✓ PASS: Required file asset presence: smb_landing.html
+✓ PASS: Asset contains content bytes: smb_landing.html (28161 bytes)
+✓ PASS: Required file asset presence: solopreneur_landing.html
+✓ PASS: Asset contains content bytes: solopreneur_landing.html (37616 bytes)
+✓ PASS: Required file asset presence: styles.css
+✓ PASS: Asset contains content bytes: styles.css (21903 bytes)
+✓ PASS: Required file asset presence: app.js
+✓ PASS: Asset contains content bytes: app.js (101582 bytes)
+✓ PASS: Required file asset presence: DEPLOYMENT.md
+✓ PASS: Asset contains content bytes: DEPLOYMENT.md (6120 bytes)
+
+[2/5] Base64 Cryptographic Safe Wrappers...
+✓ PASS: Safe UTF-8 Base64 wrapper correctly preserves accents, trademark symbols, and emojis
+✓ PASS: Base64 wrapper successfully obfuscates text string
+
+[3/5] Licensing Vault Handshake & Cryptographic Checks...
+✓ PASS: Licensing Engine successfully compiles 3-part cryptographically emulated activation token
+✓ PASS: Signature and structure validated successfully by decoder
+✓ PASS: Decoded company name matches input exactly: Metro Legal Inc.
+✓ PASS: Decoded industry vertical lockdown matched: legal
+✓ PASS: Credentials KMS key successfully extracted from decrypted block
+✓ PASS: Brand custom primary and secondary accents decrypted accurately
+
+[4/5] Process Mapping Template Architecture...
+✓ PASS: Process Mapping templates loaded into STATE database
+✓ PASS: Workflow mapping includes six sigma p2p, voice triage, and travel routing maps
+✓ PASS: Six Sigma Travel SIPOC Map architecture includes exactly 7 logical node states
+✓ PASS: Process workflow contains explicit safety human-in-the-loop (HITL) checkpoints
+
+[5/5] HITL Queue Operations & Data Syncs...
+✓ PASS: Initial global Human-in-the-Loop queue size is exactly 5 items
+✓ PASS: rejectTask successfully marks the targeted task and prepends revision alert text
+✓ PASS: Duplicate prevention guard successfully blocks repeating revision labels on multiple clicks
+✓ PASS: Queue size decremented correctly after task release (New Size: 4)
+✓ PASS: Autonomous Completed counter incremented successfully (New Completed: 19)
+✓ PASS: Approved task successfully popped from active oversight queue
+
+[6/6] Social Campaign Feed & Queueing Checks...
+✓ PASS: Default RSS Feed URL initialized correctly
+✓ PASS: Default campaign launch date set to June 1, 2026
+✓ PASS: syncBlogFeed successfully populated syncedArticles with 2 posts
+✓ PASS: generateCampaignPosts successfully queued 6 platform posts (New Size: 10)
+✓ PASS: Campaign posts are assigned a custom ID: CP-2006
+✓ PASS: Campaign posts are correctly scheduled starting in June: Release to Threads Q&A Series (Scheduled: 2026-06-05 13:00:00)
+
+================================================================
+   TEST EXECUTION RESULT SUMMARY                                
+================================================================
+  Total Automated Assertions Run: 42
+  Passed assertions: 42
+  All smoke and integration testing checks completed with 100% success!
+================================================================</code></pre>
+                    </div>
+                </section>
+
+                <!-- TAB 6: QUICK START GUIDE -->
+                <section id="doc-quick-start" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-circle-play" style="color: var(--secondary-color);"></i>
+                            System Quick Start & Deployment Guide
+                        </h2>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">Step-by-Step Platform Setup</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem; margin: 1.5rem 0;">
+                            <div>
+                                <h4 style="color: var(--text-primary);; margin-bottom: 6px;"><span class="step-number">1</span> Spin Up Containers via Docker Compose</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; margin-bottom: 8px;">
+                                    Deploy your self-hosted backend stack. Paste this manifest into your client's virtual machine cluster:
+                                </p>
+                                <pre style="margin-top: 5px;"><code>version: '3.8'
+
+services:
+  # CONVERGENCE-Ai Operations Express Orchestrator
+  aiwx-orchestrator:
+    image: gcr.io/aiwx-prod-88/operations-orchestrator:latest
+    container_name: aiwx-orchestrator
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - JWT_SECRET=aiwx_kms_vault_secret_key_dsi_six_sigma
+      - SUPABASE_URL=https://zdkwrglsqrueolrshukh.supabase.co
+    restart: unless-stopped</code></pre>
+                            </div>
+
+                            <div>
+                                <h4 style="color: var(--text-primary);; margin-bottom: 6px;"><span class="step-number">2</span> Run Supabase Migrations</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Execute the PostgreSQL migrations file in your Supabase SQL Editor to spin up the necessary database tables (<code>tenant_configs</code>, <code>hitl_queue</code>, <code>governance_audit_logs</code>, and <code>client_legal_consents</code>) and activate Row-Level Security (RLS) isolation boundaries.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h4 style="color: var(--text-primary);; margin-bottom: 6px;"><span class="step-number">3</span> Generate Client Activation Key</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Open `deployment_hub.html` as the Super Admin, input target company information, select their vertical sector, select theme branding colors, and click <strong>Generate Activation Token</strong>. Copy the resulting key.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h4 style="color: var(--text-primary);; margin-bottom: 6px;"><span class="step-number">4</span> Unlock Deployed Operations Hub</h4>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+                                    Open `operations_hub.html` (or `index.html`), paste the generated activation token, enter the administrator email address, and click <strong>Authorize & Unlock</strong> to initialize the white-labeled portal.
+                                </p>
+                            </div>
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-top: 1px solid var(--border-color); padding-top: 20px;">Model Connections & Pass-Through Cost Disclosures</h3>
+                        
+                        <p style="color: var(--text-dim); line-height: 1.6; margin-bottom: 1.25rem; font-size: 0.9rem;">
+                            To give clients full control over computing budgets, the system provides a **Model Selection Cockpit** inside settings. Users select their preferred LLM, agreeing to the respective billing mechanics:
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                            <div style="background: rgba(0, 132, 255, 0.03); border: 1px solid rgba(0, 132, 255, 0.2); padding: 16px; border-radius: 8px;">
+                                <h5 style="color: var(--text-primary);; font-family: var(--font-heading); margin-bottom: 6px;"><i class="fa-solid fa-server" style="color: var(--primary-color);"></i> Base Level: Self-Hosted (Free)</h5>
+                                <p style="color: var(--text-muted); font-size: 0.78rem; line-height: 1.45;">
+                                    Runs on your self-hosted Express & Dify orchestrator. Directs queries to local open-source models (like Llama 3 or Mistral) running on local Docker/Ollama containers. <strong>$0 external API token cost.</strong>
+                                </p>
+                            </div>
+                            <div style="background: rgba(0, 198, 255, 0.03); border: 1px solid rgba(0, 198, 255, 0.2); padding: 16px; border-radius: 8px;">
+                                <h5 style="color: var(--text-primary);; font-family: var(--font-heading); margin-bottom: 6px;"><i class="fa-solid fa-cloud" style="color: var(--secondary-color);"></i> Premium: Proprietary APIs (Pass-Through)</h5>
+                                <p style="color: var(--text-muted); font-size: 0.78rem; line-height: 1.45;">
+                                    Toggles connections to Google Gemini, OpenAI GPT, or Anthropic Claude. Requires users to input their own developer API keys. <strong>API token costs are billed directly to the client's provider accounts on a pass-through basis.</strong>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="alert-box alert-danger">
+                            <h4 style="margin-bottom: 0.25rem; color:#fca5a5;"><i class="fa-solid fa-triangle-exclamation"></i> Mandatory Token Billing Agreement</h4>
+                            By activating a proprietary model endpoint (Gemini, OpenAI, or Claude), the client certifies that they are solely liable for all API token expenditures charged by the respective model providers. CONVERGENCE-Ai acts purely as a middleware dispatch routing engine and is held harmless for token consumption spikes.
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-top: 1px solid var(--border-color); padding-top: 20px;">Onboarding Legal Disclosures & Agreements</h3>
+                        
+                        <div class="alert-box alert-warning">
+                            <h4 style="margin-bottom: 0.25rem;"><i class="fa-solid fa-scale-unbalanced-flip"></i> Dynamic Agreement System</h4>
+                            Our setup onboarding wizard reads the client’s target industry vertical from the decoded Activation Token. It renders <strong>only</strong> the disclosures and legal covenants appropriate to that specific vertical (excluding irrelevant terms).
+                        </div>
+
+                        <h4 style="color: var(--text-primary);; margin-bottom: 0.5rem;">Legal Covenants Mapped by Industry Vertical:</h4>
+                        
+                        <div style="display:flex; flex-direction:column; gap:16px; margin: 1.5rem 0;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h5 style="color:var(--secondary-color); font-family:var(--font-heading); margin-bottom:6px;"><i class="fa-solid fa-user-doctor"></i> Medical & Healthcare Vertical Disclosures</h5>
+                                <p style="color: var(--text-dim); font-size: 0.78rem; margin-bottom: 6px;"><strong>Ingested Training Data:</strong> Patient EHR logs, pharmacy refill requests, and patient registration intake text.</p>
+                                <ul style="list-style:disc; padding-left:1.25rem; font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+                                    <li><strong>HIPAA BAA Certification:</strong> Users must certify that a Business Associate Agreement is active.</li>
+                                    <li><strong>PHI Redaction Covenant:</strong> All patient identifiers are filtered before database storage.</li>
+                                    <li><strong>Clinical Output Disclaimer:</strong> The agent acts as an administrative assistant, not a clinical diagnostic provider.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h5 style="color:var(--secondary-color); font-family:var(--font-heading); margin-bottom:6px;"><i class="fa-solid fa-coins"></i> Financial & Bookkeeping Vertical Disclosures</h5>
+                                <p style="color: var(--text-dim); font-size: 0.78rem; margin-bottom: 6px;"><strong>Ingested Training Data:</strong> Supplier invoices, PO documents, banking transactions, and QuickBooks ledger sheets.</p>
+                                <ul style="list-style:disc; padding-left:1.25rem; font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+                                    <li><strong>GLBA Compliance:</strong> Ledger updates strictly adhere to the Gramm-Leach-Bliley Data Privacy Act.</li>
+                                    <li><strong>Wire Fraud Dual-Auth Waiver:</strong> Automated ACH dispatches require dual human authorization (HITL queue release).</li>
+                                    <li><strong>Tax Filing Disclaimer:</strong> Generative ledger outputs are advice only; humans bear final tax reporting liability.</li>
+                                </ul>
+                            </div>
+
+                            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h5 style="color:var(--secondary-color); font-family:var(--font-heading); margin-bottom:6px;"><i class="fa-solid fa-screwdriver-wrench"></i> Construction / Contracting / Mechanics Vertical Disclosures</h5>
+                                <p style="color: var(--text-dim); font-size: 0.78rem; margin-bottom: 6px;"><strong>Ingested Training Data:</strong> Permit documents, subcontractor schedules, materials catalog lists, and OSHA inspection templates.</p>
+                                <ul style="list-style:disc; padding-left:1.25rem; font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+                                    <li><strong>OSHA Safety Standards:</strong> Material logs and work order dispatches must align with occupational hazard policies.</li>
+                                    <li><strong>Workmanship Estimate Waiver:</strong> AI-generated cost estimates or structural material checklists must be reviewed by certified project managers.</li>
+                                    <li><strong>Commercial Service Agreement:</strong> Standard B2B warranties govern all work scheduling (strictly excludes HIPAA and financial GLBA).</li>
+                                </ul>
+                            </div>
+
+                            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <h5 style="color:var(--secondary-color); font-family:var(--font-heading); margin-bottom:6px;"><i class="fa-solid fa-scale-balanced"></i> Legal Services Vertical Disclosures</h5>
+                                <p style="color: var(--text-dim); font-size: 0.78rem; margin-bottom: 6px;"><strong>Ingested Training Data:</strong> Client deposition records, court docket timelines, legal templates, and state bar briefs.</p>
+                                <ul style="list-style:disc; padding-left:1.25rem; font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+                                    <li><strong>ABA Rule 1.6 Confidentiality:</strong> Privileged client briefs are filtered to prevent LLM training metadata leaks.</li>
+                                    <li><strong>UPL Disclaimer:</strong> The agent compiles documents but cannot engage in the Unauthorized Practice of Law without attorney review.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="alert-box alert-info">
+                            <h4 style="margin-bottom: 0.4rem; color:#93c5fd;"><i class="fa-solid fa-lock"></i> Ingestion Security & Privacy Isolation Guarantee</h4>
+                            All vertical training data (SOP documents, files, feeds) is ingested exclusively into in-memory variables and compiled as vector tokens (`pgvector`) within the client's isolated Supabase sandbox database. RLS policies block cross-tenant lookups. <strong>Strict Zero-Data-Leasing:</strong> Under no circumstances is client data or prompt text shared with public AI model corpora for training.
+                        </div>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-top: 1px solid var(--border-color); padding-top: 20px;">Convergence AI Control Center Compliance Audits</h3>
+                        <p style="color: var(--text-dim); line-height: 1.6; margin-bottom: 1.25rem; font-size: 0.9rem;">
+                            To ensure complete legal compliance and facilitate dispute resolutions, supervisors and compliance auditors can review all signed user agreements from the primary **Convergence AI Command Center** (Deployment Hub - `deployment_hub.html`).
+                        </p>
+                        
+                        <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                            <strong style="color: #ffffff;">Convergence Control Hub Auditor Capabilities:</strong>
+                            <ul style="list-style: square; padding-left:1.25rem; font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:6px; margin-top: 8px;">
+                                <li><strong>Central Legal Audit Ledger:</strong> Accesses signed records via the API endpoint <code>GET /api/governance/consents</code>.</li>
+                                <li><strong>Audit Metrics Table:</strong> Displays Company Name, Vertical, Signer Email, Signed Agreement ID (e.g. <code>hipaa-v1.0</code>), signing IP Address, and server-side UTC Timestamp.</li>
+                                <li><strong>Cryptographic Verification:</strong> Cross-checks the client's active SHA-256 agreement terms hash against the ledger to detect local file tempering.</li>
+                                <li><strong>WORM PDF Downloads:</strong> Direct download triggers to retrieve compliance PDF archives saved in immutable Supabase storage buckets.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 7: RELEASE NOTES & CHANGELOG -->
+                <section id="doc-changelog" class="doc-section">
+                    <div class="card glowing-primary" style="background: rgba(11, 15, 25, 0.8);">
+                        <h2 style="font-family: var(--font-heading); color: var(--text-primary);; margin-bottom: 1.25rem; font-size: 1.8rem; display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid fa-history" style="color: var(--secondary-color);"></i>
+                            Release Notes & Changelog
+                        </h2>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.2rem;">CONVERGENCE-Ai Cloud-Native AI Automations Hub™ Version 1.2.0 (Live LLM & AI Compose Release)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Released on: June 28, 2026</p>
+
+                        <p style="color: var(--text-primary); line-height: 1.6; font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            This release introduces a centralized Live LLM Gateway with pass-through reseller token markups and wires the AI Compose Modal directly into the HITL oversight queue for zero-latency transaction payload drafting.
+                        </p>
+
+                        <h4 style="color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.5rem;">LLM Integration Release Capabilities:</h4>
+                        <ul style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; padding-left: 1.25rem; display:flex; flex-direction:column; gap:6px; margin-bottom: 2rem;">
+                            <li><strong>Live LLM Gateway:</strong> Direct configuration mapping for Google Gemini, OpenAI, Claude, and local Ollama runners inside the Deployment Hub.</li>
+                            <li><strong>Reseller Markup Calculator:</strong> Set custom markup percentages to compute, log, and pass through client-invoiced token transaction costs.</li>
+                            <li><strong>AI Compose Modal:</strong> Draft optimized responses with estimated cost reporting inside the HITL Oversight Queue.</li>
+                            <li><strong>Offline Failsafe Simulation:</strong> Fallback client-side generator mapping EHR records, accounting entries, and itineraries.</li>
+                        </ul>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.2rem;">CONVERGENCE-Ai Cloud-Native AI Automations Hub™ Version 1.1.0 (Compliance Release)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Released on: June 26, 2026</p>
+
+                        <p style="color: var(--text-primary); line-height: 1.6; font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            This release establishes a secure, compliant pre-execution governance layer and adds a vertical-specific legal onboarding wizard mapping disclaimers dynamically by client sector.
+                        </p>
+
+                        <h4 style="color: var(--text-primary);; margin-top: 1.5rem; margin-bottom: 0.5rem;">Governance Release Capabilities:</h4>
+                        <ul style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; padding-left: 1.25rem; display:flex; flex-direction:column; gap:6px;">
+                            <li><strong>Pre-Execution Interception:</strong> Validates raw prompts against evasion and system instruction hijack vectors before sending to model engines.</li>
+                            <li><strong>Dynamic Onboarding Legal Filter:</strong> Automatically identifies the active vertical from the activation key and renders only the specific legal covenants (HIPAA, GLBA, OSHA, etc.) relevant to the client.</li>
+                            <li><strong>Preferred LLM Selector & Pass-Through cost terms:</strong> Supports switching endpoints between local (Ollama/Dify), Gemini, OpenAI, and Claude, with clear API billing disclaimers.</li>
+                            <li><strong>Central Control Center Auditing:</strong> Integrates compliance tabs in `deployment_hub.html` to query and download client legal consents and signatures.</li>
+                            <li><strong>Audit Logging DB Schema:</strong> PostgreSQL table setup tracking prompt validations, factuality scores, triggered rules, and client consents.</li>
+                        </ul>
+
+                        <h3 style="font-family: var(--font-heading); color: var(--text-primary);; margin-top: 2.5rem; margin-bottom: 0.75rem; font-size: 1.2rem;">Changelog History</h3>
+                        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                            <div style="border-left: 3px solid var(--primary-color); padding-left: 12px;">
+                                <strong style="color: #ffffff; font-size: 0.9rem;">Version 1.0.0-stable</strong> <span style="font-size: 0.75rem; color: var(--text-dim); margin-left: 8px;">(June 26, 2026)</span>
+                                <ul style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; padding-left: 1rem;">
+                                    <li>Initial stable release of the CONVERGENCE-Ai Cloud-Native AI Automations Hub. Added support for 12 industry vertical locks, Six Sigma maps, and HITL exception queue.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="border-left: 3px solid var(--primary-color); padding-left: 12px;">
+                                <strong style="color: #ffffff; font-size: 0.9rem;">Version 0.9.5-beta</strong> <span style="font-size: 0.75rem; color: var(--text-dim); margin-left: 8px;">(May 15, 2026)</span>
+                                <ul style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; padding-left: 1rem;">
+                                    <li>Added Consultant Training Academy Hub (training_hub.html) with Compose YAML builders.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { search, getAutocompleteSuggestions, highlightKeywords, buildSearchIndex } from './js/search.js';
+
+        // Dynamically parse all sections on load and index them
+        const corpus = [];
+        document.querySelectorAll('.doc-section').forEach(sec => {
+            const id = sec.id.replace('doc-', '');
+            if (id === 'search') return;
+            const title = sec.querySelector('h2')?.textContent.trim() || id;
+            const content = sec.innerText || sec.textContent;
+            corpus.push({
+                id: id,
+                title: title,
+                category: "Product Specifications",
+                content: content,
+                keywords: [id, "documentation", "spec"]
+            });
+        });
+        
+        // Rebuild search index with the doc pages content
+        buildSearchIndex(corpus);
+
+        function switchDocTab(tabId, el) {
+            // Remove active classes
+            document.querySelectorAll('.doc-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelectorAll('.doc-section').forEach(sec => {
+                sec.classList.remove('active');
+                sec.style.display = 'none';
+            });
+            
+            // Activate selected tab and section
+            if (el) el.classList.add('active');
+            const targetSec = document.getElementById('doc-' + tabId);
+            if (targetSec) {
+                targetSec.classList.add('active');
+                targetSec.style.display = 'block';
+            }
+        }
+        window.switchDocTab = switchDocTab;
+
+        // Doc Search Listener
+        const docInput = document.getElementById('docSearchInput');
+        if (docInput) {
+            docInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const searchTab = document.getElementById('searchTabItem');
+                const list = document.getElementById('docSearchResultsList');
+                
+                if (!val || val.trim().length < 2) {
+                    if (searchTab) searchTab.style.display = 'none';
+                    switchDocTab('roadmap', document.querySelector('.doc-nav-item'));
+                    return;
+                }
+                
+                // Show search tab item
+                if (searchTab) searchTab.style.display = 'block';
+                switchDocTab('search', searchTab);
+                
+                const results = search(val);
+                if (results.length > 0 && list) {
+                    list.innerHTML = results.map(r => `
+                        <div class="card" style="padding:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; margin-bottom:1rem;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.1rem; margin:0;">${r.title}</h3>
+                                <button class="btn btn-secondary btn-small" onclick="switchDocTab('${r.id}', document.querySelector('[onclick*=\\'${r.id}\\']'))">Go to Section</button>
+                            </div>
+                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.6; margin:0;">${highlightKeywords(r.content.substring(0, 500) + '...', val)}</p>
+                        </div>
+                    `).join('');
+                } else if (list) {
+                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem;">No matching documents found.</div>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

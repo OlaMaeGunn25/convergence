@@ -1,0 +1,15 @@
+{
+  "name": "aiwx-social-media-agent",
+  "version": "1.0.0",
+  "description": "CONVERGENCE-Ai Social Media Direct Posting Agent",
+  "main": "publish_headless.js",
+  "scripts": {
+    "test-connection": "node test_headless_connection.js",
+    "publish-post": "node publish_headless.js"
+  },
+  "dependencies": {
+    "@google-analytics/data": "^4.5.0",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.10.0"
+  }
+}

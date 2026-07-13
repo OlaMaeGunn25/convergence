@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERGENCE-Ai™ Cloud-Native AI Automations Hub Premium E2E & Smoke Testing Suite</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Interactive Testing Specific Adjustments */
+        .test-status-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        .test-status-box.pending {
+            border-left: 4px solid var(--text-dim);
+        }
+        .test-status-box.running {
+            border-left: 4px solid var(--primary-color);
+            background: rgba(0, 132, 255, 0.05);
+            box-shadow: 0 0 10px rgba(0, 132, 255, 0.1);
+        }
+        .test-status-box.passed {
+            border-left: 4px solid var(--status-success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        .test-status-box.failed {
+            border-left: 4px solid var(--status-error);
+            background: rgba(244, 63, 94, 0.05);
+        }
+        .badge-status {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-status.pending { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+        .badge-status.running { background: rgba(0,132,255,0.2); color: var(--primary-color); animation: pulse-running 1.5s infinite; }
+        .badge-status.passed { background: rgba(16,185,129,0.2); color: var(--status-success); }
+        .badge-status.failed { background: rgba(244,63,94,0.2); color: var(--status-error); }
+
+        .sandbox-iframe-container {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            background: #030712;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .sandbox-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .testing-counter-card {
+            background: linear-gradient(135deg, rgba(0, 198, 255, 0.08) 0%, rgba(17, 24, 39, 0.7) 100%);
+            border: 1px solid rgba(0, 198, 255, 0.2);
+            text-align: center;
+        }
+        @keyframes pulse-running {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body style="background-image: radial-gradient(at 0% 0%, rgba(0, 198, 255, 0.06) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 132, 255, 0.1) 0px, transparent 50%);">
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" style="width: 320px;">
+            <div class="brand-section" style="flex-direction: column; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; gap: 8px;">
+                <div class="brand-logo" style="width: 100%; display: flex; justify-content: center;">
+                    <img src="convergence-ai_logo_light.png" alt="CONVERGENCE-Ai" style="height: 44px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                </div>
+                <div style="font-size: 0.65rem; color: var(--secondary-color); font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;">E2E Testing Console</div>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 1.5rem;">
+                <button class="btn btn-primary" onclick="startE2ETesting()" style="width:100%;"><i class="fa-solid fa-play"></i> Run Visual E2E Suite</button>
+                <button class="btn btn-secondary btn-small" onclick="resetTestSuite()" style="width:100%; font-size:0.75rem;"><i class="fa-solid fa-rotate-left"></i> Reset Console State</button>
+            </div>
+
+            <!-- Testing Progress Mappings -->
+            <div style="overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; padding-right:5px;">
+                <div id="case-0" class="test-status-box pending">
+                    <div>1. Installation Verification</div>
+                    <span id="badge-0" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-1" class="test-status-box pending">
+                    <div>2. Licensing Token Gen</div>
+                    <span id="badge-1" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-2" class="test-status-box pending">
+                    <div>3. Vault Lock Decryption</div>
+                    <span id="badge-2" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-3" class="test-status-box pending">
+                    <div>4. Industry Vertical Lock</div>
+                    <span id="badge-3" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-4" class="test-status-box pending">
+                    <div>5. Super Admin Bypass</div>
+                    <span id="badge-4" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-5" class="test-status-box pending">
+                    <div>6. Process Map Highlight</div>
+                    <span id="badge-5" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-6" class="test-status-box pending">
+                    <div>7. HITL Workflow Pause</div>
+                    <span id="badge-6" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-7" class="test-status-box pending">
+                    <div>8. HITL Approve & Sync</div>
+                    <span id="badge-7" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-8" class="test-status-box pending">
+                    <div>9. HITL Revision Triage</div>
+                    <span id="badge-8" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-9" class="test-status-box pending">
+                    <div>10. White-label Persistence</div>
+                    <span id="badge-9" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-10" class="test-status-box pending">
+                    <div>11. Social Campaigns Sync</div>
+                    <span id="badge-10" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-11" class="test-status-box pending">
+                    <div>12. Analytics Verification</div>
+                    <span id="badge-11" class="badge-status pending">PENDING</span>
+                </div>
+                <div id="case-12" class="test-status-box pending">
+                    <div>13. SOP Search Indexing</div>
+                    <span id="badge-12" class="badge-status pending">PENDING</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="client-tag">
+                    <div class="client-status-indicator" id="testingIndicator" style="background-color: var(--text-dim); box-shadow: none;"></div>
+                    <span id="testingStatusText" style="font-size:0.75rem; color:var(--text-muted);">Status: Ready to Test</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper" style="margin-left: 320px;">
+            <header class="header">
+                <div class="header-title-area">
+                    <h2 style="font-family: var(--font-heading); color: var(--text-primary);;">System & Integration End-to-End Simulation Dashboard</h2>
+                </div>
+                <div class="header-actions">
+                    <span class="vertical-badge" style="background: rgba(0, 198, 255, 0.1); border-color: rgba(0, 198, 255, 0.4); color: var(--secondary-color);">VISUAL TEST RUNNER</span>
+                </div>
+            </header>
+
+            <main class="content-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                
+                <!-- Counters Cards -->
+                <div class="grid-container">
+                    <div class="card testing-counter-card" style="grid-column: span 3;">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Total Test Assertions</div>
+                        <div id="totalTestsCounter" style="font-size: 2rem; font-weight: 700; margin-top: 5px; color: var(--secondary-color);">10</div>
+                    </div>
+                    <div class="card testing-counter-card" style="grid-column: span 3; border-color:rgba(16, 185, 129, 0.3);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Passed Checkpoints</div>
+                        <div id="passedTestsCounter" style="font-size: 2rem; font-weight: 700; margin-top: 5px; color: var(--status-success);">0</div>
+                    </div>
+                    <div class="card testing-counter-card" style="grid-column: span 3; border-color:rgba(244, 63, 94, 0.3);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Failed Checkpoints</div>
+                        <div id="failedTestsCounter" style="font-size: 2rem; font-weight: 700; margin-top: 5px; color: var(--status-error);">0</div>
+                    </div>
+                    <div class="card testing-counter-card" style="grid-column: span 3; border-color:rgba(255,255,255,0.1);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Test Automation Rate</div>
+                        <div id="successRateCounter" style="font-size: 2rem; font-weight: 700; margin-top: 5px; color: var(--text-primary);">0.0%</div>
+                    </div>
+                </div>
+
+                <!-- Simulation Grid -->
+                <div class="grid-container" style="flex-grow:1; align-items: stretch;">
+                    <!-- Sandbox Frame -->
+                    <div class="card" style="grid-column: span 7; display:flex; flex-direction:column;">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-display" style="color:var(--secondary-color); margin-right:8px;"></i> Live Browser Sandbox Environment</span>
+                            <span id="currentLoadedPage" style="font-size:0.75rem; color:var(--text-dim);">No file loaded</span>
+                        </div>
+                        <div class="sandbox-iframe-container" style="flex-grow:1;">
+                            <iframe id="sandboxIframe" class="sandbox-iframe" src="about:blank"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Logs Console -->
+                    <div class="card" style="grid-column: span 5; display:flex; flex-direction:column;">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-terminal" style="color:#38bdf8; margin-right:8px;"></i> Visual Test Execution Audit Log</span>
+                            <span style="font-size:0.75rem; color:var(--text-dim);">Live Assertions</span>
+                        </div>
+                        <div id="logTerminal" class="log-terminal" style="flex-grow:1; height: 480px;">
+                            <div class="log-entry info"><span style="color: var(--text-dim)">[System]</span> E2E Test Suite initialized. Click 'Run Visual E2E Suite' to start programmatically scripting sandbox modules.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        const iframe = document.getElementById('sandboxIframe');
+        const term = document.getElementById('logTerminal');
+        const totalCases = 13;
+        let activeCaseIndex = 0;
+        let testPassed = 0;
+        let testFailed = 0;
+        let testingActive = false;
+        let generatedToken = '';
+
+        function logTest(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.innerHTML = `<span style="color: var(--text-dim)">[${time}]</span> <span style="font-weight: 600">${type.toUpperCase()}:</span> ${message}`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function updateCounters() {
+            document.getElementById('passedTestsCounter').textContent = testPassed;
+            document.getElementById('failedTestsCounter').textContent = testFailed;
+            const rate = ((testPassed / totalCases) * 100).toFixed(1);
+            document.getElementById('successRateCounter').textContent = `${rate}%`;
+        }
+
+        function markCase(index, status) {
+            const box = document.getElementById(`case-${index}`);
+            const badge = document.getElementById(`badge-${index}`);
+            
+            box.className = `test-status-box ${status}`;
+            badge.className = `badge-status ${status}`;
+            badge.textContent = status;
+            
+            if (status === 'passed') {
+                testPassed++;
+            } else if (status === 'failed') {
+                testFailed++;
+            }
+            updateCounters();
+        }
+
+        function resetTestSuite() {
+            if (testingActive) return;
+            localStorage.clear();
+            iframe.src = 'about:blank';
+            document.getElementById('currentLoadedPage').textContent = 'No file loaded';
+            
+            testPassed = 0;
+            testFailed = 0;
+            updateCounters();
+            
+            for (let i = 0; i < totalCases; i++) {
+                const box = document.getElementById(`case-${i}`);
+                const badge = document.getElementById(`badge-${i}`);
+                box.className = 'test-status-box pending';
+                badge.className = 'badge-status pending';
+                badge.textContent = 'PENDING';
+            }
+            
+            const indicator = document.getElementById('testingIndicator');
+            indicator.style.backgroundColor = 'var(--text-dim)';
+            indicator.style.boxShadow = 'none';
+            document.getElementById('testingStatusText').textContent = 'Status: Ready to Test';
+            
+            term.innerHTML = '<div class="log-entry info"><span style="color: var(--text-dim)">[System]</span> E2E Test Suite initialized. Click \'Run Visual E2E Suite\' to start programmatically scripting sandbox modules.</div>';
+        }
+
+        // Start E2E execution sequence
+        function startE2ETesting() {
+            if (testingActive) return;
+            testingActive = true;
+            localStorage.clear();
+            
+            const indicator = document.getElementById('testingIndicator');
+            indicator.style.backgroundColor = 'var(--primary-color)';
+            indicator.style.boxShadow = '0 0 10px var(--primary-color)';
+            document.getElementById('testingStatusText').textContent = 'Status: Tests Running...';
+            
+            logTest('Starting visual E2E automated test pipeline...', 'info');
+            
+            // Sequential execution timeouts simulating real user behavior
+            executeStep0();
+        }
+
+        // 1. Installation Verification
+        function executeStep0() {
+            const index = 0;
+            markCase(index, 'running');
+            logTest('Executing Case 1: Checking client locked container activation state...', 'info');
+            
+            iframe.src = 'index.html';
+            document.getElementById('currentLoadedPage').textContent = 'index.html';
+            
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const modal = iframeDoc.getElementById('activationModal');
+                    const mainApp = iframeDoc.getElementById('mainApp');
+                    
+                    if (modal && modal.style.display !== 'none' && mainApp && mainApp.style.display === 'none') {
+                        logTest('Assertion Success: Vault Activation Lock blocks initial container access perfectly.', 'success');
+                        markCase(index, 'passed');
+                        executeStep1();
+                    } else {
+                        throw new Error('Lock modal not blocking app.');
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 1: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep1();
+                }
+            }, 1500);
+        }
+
+        // 2. Licensing Token Generation
+        function executeStep1() {
+            const index = 1;
+            markCase(index, 'running');
+            logTest('Executing Case 2: Generating secure licensing token in Deployment Hub...', 'info');
+            
+            iframe.src = 'deployment_hub.html';
+            document.getElementById('currentLoadedPage').textContent = 'deployment_hub.html';
+            
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    // Modify some parameters programmatically to test encoding
+                    iframeDoc.getElementById('deployCompany').value = "Apex Medical Care™ & Dr. Müller 😊";
+                    iframeDoc.getElementById('deployLogo').value = "AMC";
+                    iframeDoc.getElementById('deployColor1').value = "#0084ff";
+                    iframeDoc.getElementById('deployColor2').value = "#00c6ff";
+                    
+                    // Dispatch inputs to trigger pre-rendering checks
+                    const event = new Event('input', { bubbles: true });
+                    iframeDoc.getElementById('deployCompany').dispatchEvent(event);
+                    
+                    // Simulate physical click
+                    const buttons = iframeDoc.querySelectorAll('button');
+                    let deployBtn = null;
+                    buttons.forEach(btn => {
+                        if (btn.textContent.includes('Activate') || btn.textContent.includes('Token')) {
+                            deployBtn = btn;
+                        }
+                    });
+                    
+                    if (deployBtn) {
+                        deployBtn.click();
+                        
+                        setTimeout(() => {
+                            generatedToken = iframeDoc.getElementById('activationTokenResult').value;
+                            if (generatedToken && generatedToken.includes('.')) {
+                                logTest('Assertion Success: Licensing engine compiled secure Base64 deployment token with special characters without crashing!', 'success');
+                                logTest(`Generated Token: ${generatedToken.substring(0, 30)}...`, 'info');
+                                markCase(index, 'passed');
+                                executeStep2();
+                            } else {
+                                throw new Error('Token generation returned blank.');
+                            }
+                        }, 1000);
+                    } else {
+                        throw new Error('Generate button not located.');
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 2: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep2();
+                }
+            }, 1800);
+        }
+
+        // 3. Vault Lock Decryption
+        function executeStep2() {
+            const index = 2;
+            markCase(index, 'running');
+            logTest('Executing Case 3: Simulating client vault key decryption handshake...', 'info');
+            
+            iframe.src = 'index.html';
+            document.getElementById('currentLoadedPage').textContent = 'index.html';
+            
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const input = iframeDoc.getElementById('activationInput');
+                    const email = iframeDoc.getElementById('activationEmail');
+                    
+                    if (input && generatedToken) {
+                        input.value = generatedToken;
+                        email.value = "admin@apexmedical.com"; // Normal admin login
+                        
+                        const buttons = iframeDoc.querySelectorAll('button');
+                        let unlockBtn = null;
+                        buttons.forEach(btn => {
+                            if (btn.textContent.includes('Authorize') || btn.textContent.includes('Unlock')) {
+                                unlockBtn = btn;
+                            }
+                        });
+                        
+                        if (unlockBtn) {
+                            unlockBtn.click();
+                            
+                            setTimeout(() => {
+                                const modal = iframeDoc.getElementById('activationModal');
+                                const mainApp = iframeDoc.getElementById('mainApp');
+                                
+                                if (modal && modal.style.display === 'none' && mainApp && mainApp.style.display !== 'none') {
+                                    logTest('Assertion Success: Secure Vault decrypts licensing activation token and grants access.', 'success');
+                                    markCase(index, 'passed');
+                                    executeStep3();
+                                } else {
+                                    throw new Error('App remained locked.');
+                                }
+                            }, 1000);
+                        } else {
+                            throw new Error('Unlock button not located.');
+                        }
+                    } else {
+                        throw new Error('Activation inputs not visible.');
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 3: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep3();
+                }
+            }, 1800);
+        }
+
+        // 4. Industry Vertical Lock
+        function executeStep3() {
+            const index = 3;
+            markCase(index, 'running');
+            logTest('Executing Case 4: Verifying secure tenant industry vertical lockdown boundary...', 'info');
+            
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const badge = iframeDoc.getElementById('activeVerticalBadge');
+                    
+                    // Asserts lock mapped medical vertical correctly
+                    if (badge && badge.textContent === "Medical & Healthcare") {
+                        logTest('Assertion Success: Multi-tenant boundary successfully restricts dashboard container exclusively to Medical & Healthcare.', 'success');
+                        markCase(index, 'passed');
+                        executeStep4();
+                    } else {
+                        throw new Error(`Vertical mismatch. Badge is: ${badge ? badge.textContent : 'not found'}`);
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 4: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep4();
+                }
+            }, 1000);
+        }
+
+        // 5. Super Admin Bypass
+        function executeStep4() {
+            const index = 4;
+            markCase(index, 'running');
+            logTest('Executing Case 5: Authenticating Super Admin bypass login with @convergence-ai.com domain...', 'info');
+            
+            // Relock to test bypass sequence
+            iframe.contentWindow.lockEnvironment();
+            
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    iframeDoc.getElementById('activationInput').value = generatedToken;
+                    iframeDoc.getElementById('activationEmail').value = "testing-admin@convergence-ai.com"; // Super Admin bypass email
+                    
+                    const buttons = iframeDoc.querySelectorAll('button');
+                    let unlockBtn = null;
+                    buttons.forEach(btn => {
+                        if (btn.textContent.includes('Authorize')) unlockBtn = btn;
+                    });
+                    
+                    if (unlockBtn) {
+                        unlockBtn.click();
+                        
+                        setTimeout(() => {
+                            const iframeDoc2 = iframe.contentDocument || iframe.contentWindow.document;
+                            const selector = iframeDoc2.getElementById('superAdminVertSelector');
+                            
+                            if (selector) {
+                                logTest('Assertion Success: Domain-validated login bypasses lockdown, rendering active vertical selector console.', 'success');
+                                markCase(index, 'passed');
+                                executeStep5();
+                            } else {
+                                throw new Error('Multi-vertical switcher dropdown failed to render.');
+                            }
+                        }, 1000);
+                    } else {
+                        throw new Error('Unlock button not found.');
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 5: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep5();
+                }
+            }, 1800);
+        }
+
+        // 6. Process Map Highlight
+        function executeStep5() {
+            const index = 5;
+            markCase(index, 'running');
+            logTest('Executing Case 6: Verifying Six Sigma interactive simulation workflow highlight sequence...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Navigate to tab programmatically using the safe switchMainTab
+                const menuItems = iframeDoc.querySelectorAll('.menu-item');
+                let processTabEl = null;
+                menuItems.forEach(item => {
+                    if (item.textContent.includes('Process Mapping')) processTabEl = item;
+                });
+                
+                if (processTabEl) {
+                    iframeWindow.switchMainTab('process', processTabEl);
+                    
+                    setTimeout(() => {
+                        // Change mapping select dropdown to p2p to verify swimlane mappings
+                        iframeDoc.getElementById('processMapSelect').value = 'p2p';
+                        iframeWindow.renderProcessMap('p2p');
+                        
+                        // Click simulated live agent trigger
+                        iframeWindow.triggerProcessAnimation();
+                        
+                        setTimeout(() => {
+                            // Verify active node highlighted active
+                            const activeNode = iframeDoc.querySelector('.process-node.active');
+                            if (activeNode) {
+                                logTest(`Assertion Success: Six Sigma Swimlane simulator active node highlighted: [${activeNode.id}]`, 'success');
+                                markCase(index, 'passed');
+                                executeStep6();
+                            } else {
+                                throw new Error('Simulator failed to highlight active process states.');
+                            }
+                        }, 3000);
+                    }, 1000);
+                } else {
+                    throw new Error('Process Mapping tab not visible.');
+                }
+            } catch (e) {
+                logTest(`Assertion Failure in Case 6: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep6();
+            }
+        }
+
+        // 7. HITL Workflow Pause
+        function executeStep6() {
+            const index = 6;
+            markCase(index, 'running');
+            logTest('Executing Case 7: Testing automated safety pause at Human-in-the-Loop checkpoint...', 'info');
+            
+            // Wait for simulator to hit node 4 (HITL node)
+            setTimeout(() => {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const hitlNode = iframeDoc.querySelector('.process-node.hitl.active');
+                    
+                    if (hitlNode) {
+                        logTest('Assertion Success: Automation pipeline successfully halts execution on reaching Human-in-the-Loop approval node.', 'success');
+                        markCase(index, 'passed');
+                        executeStep7();
+                    } else {
+                        throw new Error('Simulation failed to pause on HITL checkpoint.');
+                    }
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 7: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    executeStep7();
+                }
+            }, 9000); // Node 4 takes ~10s to hit (each interval 2.5s)
+        }
+
+        // 8. HITL Approve & Sync
+        function executeStep7() {
+            const index = 7;
+            markCase(index, 'running');
+            logTest('Executing Case 8: Confirming task approval, completed counts increment, and resume simulation...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Switch back to dashboard to locate oversight queue table
+                const menuItems = iframeDoc.querySelectorAll('.menu-item');
+                let dashTabEl = null;
+                menuItems.forEach(item => {
+                    if (item.textContent.includes('Operations Panel')) dashTabEl = item;
+                });
+                
+                if (dashTabEl) {
+                    iframeWindow.switchMainTab('dashboard', dashTabEl);
+                    
+                    setTimeout(() => {
+                        // Assert table has tasks
+                        const tableBody = iframeDoc.getElementById('hitlTableBody');
+                        const rowCountBefore = tableBody.querySelectorAll('.task-queue-row').length;
+                        const initialCompleted = parseInt(iframeDoc.getElementById('completedTasksCounter').textContent);
+                        const initialPendingText = iframeDoc.getElementById('pendingCountText').textContent;
+                        
+                        logTest(`Pending tasks in queue before approval: ${rowCountBefore}`, 'info');
+                        
+                        // Approve task T-1002 (Sarah Davis reschedule call)
+                        iframeWindow.approveTask('T-1002');
+                        
+                        setTimeout(() => {
+                            const rowCountAfter = tableBody.querySelectorAll('.task-queue-row').length;
+                            const finalCompleted = parseInt(iframeDoc.getElementById('completedTasksCounter').textContent);
+                            const finalPendingText = iframeDoc.getElementById('pendingCountText').textContent;
+                            
+                            // Check that counters and tables updated
+                            const queueDecremented = rowCountAfter === rowCountBefore - 1;
+                            const counterIncremented = finalCompleted === initialCompleted + 1;
+                            const badgeSynced = finalPendingText !== initialPendingText && finalPendingText.includes(rowCountAfter);
+                            
+                            assert(queueDecremented, 'HITL queue rows decremented correctly.');
+                            assert(counterIncremented, 'Completed tasks counter incremented.');
+                            assert(badgeSynced, `Header card badge synchronized correctly: ${finalPendingText}`);
+                            
+                            // Verify pipeline successfully resumed past the HITL node to completion
+                            iframeWindow.switchMainTab('process', iframeDoc.querySelector('.menu-item.active'));
+                            
+                            setTimeout(() => {
+                                // Node 5 or 6 should be active now
+                                const finishedNode = iframeDoc.getElementById('node-5') || iframeDoc.getElementById('node-6');
+                                if (finishedNode && (finishedNode.classList.contains('active') || finishedNode.classList.contains('completed'))) {
+                                    logTest('Assertion Success: Pipeline successfully resumed past the approved HITL checkpoint and completed!', 'success');
+                                    markCase(index, 'passed');
+                                    executeStep8();
+                                } else {
+                                    throw new Error('Simulation failed to resume beyond approved HITL node.');
+                                }
+                            }, 5000);
+                            
+                        }, 1000);
+                    }, 1000);
+                } else {
+                    throw new Error('Dashboard panel not accessible.');
+                }
+            } catch (e) {
+                logTest(`Assertion Failure in Case 8: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep8();
+            }
+            
+            function assert(cond, msg) {
+                if (!cond) throw new Error(msg);
+                logTest(`Sub-Assertion Check: ${msg}`, 'info');
+            }
+        }
+
+        // 9. HITL Revision Triage
+        function executeStep8() {
+            const index = 8;
+            markCase(index, 'running');
+            logTest('Executing Case 9: Confirming revision flags and duplicate guard protection checks...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Return to dashboard
+                const menuItems = iframeDoc.querySelectorAll('.menu-item');
+                let dashTabEl = null;
+                menuItems.forEach(item => {
+                    if (item.textContent.includes('Operations Panel')) dashTabEl = item;
+                });
+                
+                if (dashTabEl) {
+                    iframeWindow.switchMainTab('dashboard', dashTabEl);
+                    
+                    setTimeout(() => {
+                        // Click revise on task T-1003
+                        iframeWindow.rejectTask('T-1003');
+                        
+                        setTimeout(() => {
+                            const taskRow = iframeDoc.getElementById('task-row-T-1003');
+                            const details = taskRow.textContent;
+                            
+                            const markedRevision = details.includes('[REVISION REQUESTED]');
+                            
+                            // Hit reject again to check the duplicate guard is active
+                            iframeWindow.rejectTask('T-1003');
+                            
+                            setTimeout(() => {
+                                const detailsTwice = iframeDoc.getElementById('task-row-T-1003').textContent;
+                                const occurrenceCount = (detailsTwice.match(/\[REVISION REQUESTED\]/g) || []).length;
+                                
+                                if (markedRevision && occurrenceCount === 1) {
+                                    logTest('Assertion Success: Task successfully flagged for revision and duplicate label prepends were blocked!', 'success');
+                                    markCase(index, 'passed');
+                                    executeStep9();
+                                } else {
+                                    throw new Error(`Revision flags failed. Prepends count: ${occurrenceCount}`);
+                                }
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                } else {
+                    throw new Error('Dashboard panel not accessible.');
+                }
+            } catch (e) {
+                logTest(`Assertion Failure in Case 9: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep9();
+            }
+        }
+
+        // 10. White-label Persistence
+        function executeStep9() {
+            const index = 9;
+            markCase(index, 'running');
+            logTest('Executing Case 10: Validating white-label rebranding dynamic style persistence across reloads...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Open white-label panel
+                const menuItems = iframeDoc.querySelectorAll('.menu-item');
+                let whitelabelTabEl = null;
+                menuItems.forEach(item => {
+                    if (item.textContent.includes('Rebranding Panel')) whitelabelTabEl = item;
+                });
+                
+                if (whitelabelTabEl) {
+                    iframeWindow.switchMainTab('whitelabel', whitelabelTabEl);
+                    
+                    setTimeout(() => {
+                        // Override values
+                        iframeDoc.getElementById('rebrandCompany').value = "Reseller Healthcare Systems";
+                        iframeDoc.getElementById('rebrandLogo').value = "RHS";
+                        iframeDoc.getElementById('rebrandColor1').value = "#8b5cf6"; // Purple primary accent
+                        iframeDoc.getElementById('rebrandColor2').value = "#ec4899"; // Pink highlight accent
+                        
+                        // Mock window alert to prevent blocking the test automation loop
+                        iframeWindow.alert = function() {
+                            logTest('Iframe custom alert hijacked to prevent blocking automation thread.', 'info');
+                        };
+                        
+                        // Save changes
+                        const saveBtn = iframeDoc.querySelector('.btn-accent');
+                        saveBtn.click();
+                        
+                        setTimeout(() => {
+                            // Verify colors applied locally
+                            const brandNameText = iframeDoc.querySelector('.brand-name').textContent;
+                            
+                            // Reload page to verify persistence
+                            logTest('Rebranding saved in localStorage. Reloading sandbox iframe to verify style persistence...', 'info');
+                            iframe.src = 'index.html';
+                            
+                            setTimeout(() => {
+                                const iframeDocAfter = iframe.contentDocument || iframe.contentWindow.document;
+                                const brandNameAfter = iframeDocAfter.querySelector('.brand-name').textContent;
+                                
+                                // Fetch properties from documentElement style properties
+                                const primaryHex = iframeDocAfter.documentElement.style.getPropertyValue('--primary-color');
+                                
+                                if (brandNameAfter === "Reseller Healthcare Systems" && primaryHex === "#8b5cf6") {
+                                    logTest('Assertion Success: Dynamic custom whitelabel branding successfully verified as persistent across reloads!', 'success');
+                                    markCase(index, 'passed');
+                                    executeStep10();
+                                } else {
+                                    throw new Error(`Persistence validation failed. Brand Name: ${brandNameAfter}, Primary Color: ${primaryHex}`);
+                                }
+                            }, 2500);
+                        }, 1000);
+                    }, 1000);
+                } else {
+                    throw new Error('Rebranding panel not visible.');
+                }
+            } catch (e) {
+                logTest(`Assertion Failure in Case 10: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep10();
+            }
+        }
+
+        // 11. Social Campaigns Sync
+        function executeStep10() {
+            const index = 10;
+            markCase(index, 'running');
+            logTest('Executing Case 11: Validating Social Campaigns tab syncing and queueing...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Open Campaigns panel
+                const menuItems = iframeDoc.querySelectorAll('.menu-item');
+                let campaignsTabEl = null;
+                menuItems.forEach(item => {
+                    if (item.textContent.includes('Social Campaigns')) campaignsTabEl = item;
+                });
+                
+                if (campaignsTabEl) {
+                    iframeWindow.switchMainTab('campaigns', campaignsTabEl);
+                    
+                    setTimeout(() => {
+                        // Assert feed URL preloaded
+                        const feedUrlInput = iframeDoc.getElementById('campaignRssInput');
+                        if (feedUrlInput && feedUrlInput.value.includes('supabase.co')) {
+                            logTest(`Sub-Assertion Check: Preloaded Feed URL verified: ${feedUrlInput.value}`, 'info');
+                        } else {
+                            throw new Error('RSS input missing default URL.');
+                        }
+                        
+                        // Hijack iframe window alert to prevent blocking E2E runner thread
+                        iframeWindow.alert = function() {
+                            logTest('Iframe alert hijacked to clear modal dialog.', 'info');
+                        };
+                        
+                        // Simulate Sync
+                        iframeWindow.syncBlogFeed();
+                        
+                        setTimeout(() => {
+                            // Check that articles synced
+                            const container = iframeDoc.getElementById('syncedArticlesContainer');
+                            const articleCount = container.children.length;
+                            
+                            if (articleCount === 2) {
+                                logTest(`Sub-Assertion Check: RSS sync populated ${articleCount} article cards perfectly.`, 'info');
+                            } else {
+                                throw new Error(`Feed sync failed to render cards. Found: ${articleCount}`);
+                            }
+                            
+                            // Generate Campaigns
+                            iframeWindow.generateCampaignPosts();
+                            
+                            setTimeout(() => {
+                                // Navigate back to Dashboard to inspect new queued tasks
+                                let dashTabEl = null;
+                                iframeDoc.querySelectorAll('.menu-item').forEach(item => {
+                                    if (item.textContent.includes('Operations Panel')) dashTabEl = item;
+                                });
+                                
+                                iframeWindow.switchMainTab('dashboard', dashTabEl);
+                                
+                                setTimeout(() => {
+                                    const tableBody = iframeDoc.getElementById('hitlTableBody');
+                                    const queuedRows = tableBody.querySelectorAll('.task-queue-row');
+                                    
+                                    // Check that new CP- tasks exist in the queue
+                                    let foundCampaignPost = false;
+                                    queuedRows.forEach(row => {
+                                        if (row.textContent.includes('CP-') || row.textContent.includes('Social Campaign')) {
+                                            foundCampaignPost = true;
+                                        }
+                                    });
+                                    
+                                    if (foundCampaignPost) {
+                                        logTest('Assertion Success: Campaigns successfully parsed, mapped, and queued starting June 1, 2026!', 'success');
+                                        markCase(index, 'passed');
+                                        executeStep11();
+                                    } else {
+                                        throw new Error('Campaign posts failed to populate dashboard queue.');
+                                    }
+                                }, 1500);
+                            }, 1500);
+                        }, 2500);
+                    }, 1500);
+                } else {
+                    throw new Error('Social Campaigns tab item not found in sidebar.');
+                }
+            } catch (e) {
+                logTest(`Assertion Failure in Case 11: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep11();
+            }
+        }
+
+        // 12. Analytics Verification
+        function executeStep11() {
+            const index = 11;
+            markCase(index, 'running');
+            logTest('Executing Case 12: Verifying Performance Telemetry & Analytics Dashboard rendering...', 'info');
+            
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                iframeWindow.switchMainTab('analytics');
+                
+                setTimeout(() => {
+                    const panel = iframeDoc.getElementById('analyticsDashboardPanel');
+                    if (panel && panel.textContent.includes('Autonomous Resolution Rate')) {
+                        logTest('Assertion Success: Real-time Analytics Dashboard renders high-fidelity custom CSS widgets.', 'success');
+                        markCase(index, 'passed');
+                        executeStep12();
+                    } else {
+                        throw new Error('Analytics Dashboard failed to render KPI cards.');
+                    }
+                }, 1500);
+            } catch (e) {
+                logTest(`Assertion Failure in Case 12: ${e.message}`, 'error');
+                markCase(index, 'failed');
+                executeStep12();
+            }
+        }
+
+        // 13. SOP Search Indexing & Autocomplete
+        function executeStep12() {
+            const index = 12;
+            markCase(index, 'running');
+            logTest('Executing Case 13: Loading Training Portal and performing SOP search index lookup...', 'info');
+            
+            iframe.src = 'training_hub.html';
+            document.getElementById('currentLoadedPage').textContent = 'training_hub.html';
+            
+            setTimeout(() => {
+                try {
+                    const iframeWindow = iframe.contentWindow;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    const searchInput = iframeDoc.getElementById('sopSearchInput');
+                    if (!searchInput) throw new Error('SOP Search Input box not found on page.');
+                    
+                    searchInput.value = 'HIPAA';
+                    const event = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(event);
+                    
+                    setTimeout(() => {
+                        const resultsList = iframeDoc.getElementById('sopSearchResultsList');
+                        const resultsPanel = iframeDoc.getElementById('sopSearchResults');
+                        
+                        if (resultsPanel && resultsPanel.style.display !== 'none' && resultsList && resultsList.textContent.includes('clinical')) {
+                            logTest('Assertion Success: Full-text search successfully retrieves medical SOPs with highlighted keywords.', 'success');
+                            markCase(index, 'passed');
+                            finalizeTestSuite();
+                        } else {
+                            throw new Error('SOP Search failed to retrieve relevant results.');
+                        }
+                    }, 1500);
+                } catch (e) {
+                    logTest(`Assertion Failure in Case 13: ${e.message}`, 'error');
+                    markCase(index, 'failed');
+                    finalizeTestSuite();
+                }
+            }, 2000);
+        }
+
+        // Finalize Execution Report
+        function finalizeTestSuite() {
+            testingActive = false;
+            
+            const indicator = document.getElementById('testingIndicator');
+            indicator.style.backgroundColor = 'var(--status-success)';
+            indicator.style.boxShadow = '0 0 10px var(--status-success)';
+            document.getElementById('testingStatusText').textContent = 'Status: Complete';
+            
+            logTest('====================================================', 'info');
+            logTest('  VISUAL E2E AUTOMATED TESTING CYCLE COMPLETE       ', 'success');
+            logTest(`  Asserted Modules: ${totalCases} | Passed: ${testPassed} | Failed: ${testFailed}`, 'success');
+            logTest('====================================================', 'info');
+            
+            if (testFailed === 0) {
+                logTest('✓ ALL E2E & INTEGRATION TEST SCENARIOS PASSED SECURELY!', 'success');
+            } else {
+                logTest('⚠ SOME E2E ASSERTIONS ENCOUNTERED ISSUES. CHECK DETAILS ABOVE.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

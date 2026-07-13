@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERGENCE-Ai™ Cloud-Native AI Automations Hub Consultant Training Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background-image: radial-gradient(at 0% 0%, rgba(0, 198, 255, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 132, 255, 0.15) 0px, transparent 50%);">
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-section" style="flex-direction: column; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; gap: 8px;">
+                <div class="brand-logo" style="width: 100%; display: flex; justify-content: center;">
+                    <img src="convergence-ai_logo_light.png" alt="CONVERGENCE-Ai" style="height: 44px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                </div>
+                <div style="font-size: 0.65rem; color: var(--secondary-color); font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;">Academy Portal</div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" onclick="switchTrainingTab('manual', this)">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Training Manual</span>
+                </li>
+                <li class="menu-item" onclick="switchTrainingTab('generator', this)">
+                    <i class="fa-solid fa-laptop-code"></i>
+                    <span>Config Generator</span>
+                </li>
+                <li class="menu-item" onclick="switchTrainingTab('quiz', this)">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Certification Quiz</span>
+                </li>
+                <li class="menu-item" onclick="window.open('deployment_hub.html', '_blank')">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Launch Deployer</span>
+                </li>
+                <li class="menu-item" onclick="window.open('index.html', '_blank')">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Operations Hub</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="client-tag">
+                    <div class="client-status-indicator" style="background-color: var(--secondary-color); box-shadow: 0 0 8px var(--secondary-color);"></div>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Academy: Deployed</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <header class="header">
+                <div class="header-title-area">
+                    <h2 style="font-family: var(--font-heading); color: var(--text-primary);;">Consultant Training & Operations Hub</h2>
+                </div>
+                <div class="header-actions">
+                    <span class="vertical-badge" style="background: rgba(0, 198, 255, 0.1); border-color: rgba(0, 198, 255, 0.4); color: var(--secondary-color);">CONSULTANT GUIDE</span>
+                </div>
+            </header>
+
+            <main class="content-body">
+                
+                <!-- TAB 1: TRAINING MANUAL -->
+                <section id="train-tab-manual" class="train-tab-content">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">CONVERGENCE-Ai Consultant Onboarding</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Master the process mapping, security activation, and custom deployment steps needed to stand up the CONVERGENCE-Ai™ Cloud-Native AI Automations Hub for SMB clients.</p>
+                    </div>
+
+                    <!-- SOP Search Bar with Autocomplete -->
+                    <div class="card search-card" style="margin-bottom: 2rem; border: 1px solid var(--border-color); background: rgba(10, 15, 30, 0.4); position: relative; padding: 0.75rem 1rem;">
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <i class="fa-solid fa-magnifying-glass" style="color: var(--secondary-color); font-size: 1.1rem;"></i>
+                            <input type="text" id="sopSearchInput" placeholder="Search SOPs, manuals, help articles, and verticals..." 
+                                   style="width: 100%; border: none; background: transparent; color: var(--text-primary);; outline: none; font-size: 0.95rem;">
+                        </div>
+                        <div id="sopSearchAutocomplete" class="search-autocomplete-dropdown" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- Search Results Panel -->
+                    <div id="sopSearchResults" class="card" style="display: none; margin-bottom: 2rem; border-color: var(--secondary-color); padding: 1.5rem;">
+                        <div class="card-title" style="justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                            <span><i class="fa-solid fa-square-poll-horizontal" style="color:var(--secondary-color); margin-right:8px;"></i> SOP & Help Search Results</span>
+                            <button class="btn btn-secondary btn-small" id="clearSearchBtn">Clear Results</button>
+                        </div>
+                        <div id="sopSearchResultsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Module 1: Pre-conditions -->
+                        <div class="card" style="grid-column: span 6;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-circle-check" style="color:var(--primary-color); margin-right:8px;"></i> Module 1: Client Pre-Conditions Check</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">Before deploying the container system, walk the client's IT administrator through this technical prerequisite list:</p>
+                            <ul style="list-style: none; font-size: 0.8rem; color: var(--text-muted); display:flex; flex-direction:column; gap:8px;">
+                                <li><i class="fa-regular fa-square" style="color:var(--secondary-color); margin-right:6px;"></i> Dedicated Virtual Machine or Docker environment (2 vCPU, 4GB RAM minimum).</li>
+                                <li><i class="fa-regular fa-square" style="color:var(--secondary-color); margin-right:6px;"></i> Active SSL termination mapping to a domain (e.g. <code>assistant.client.com</code>).</li>
+                                <li><i class="fa-regular fa-square" style="color:var(--secondary-color); margin-right:6px;"></i> Direct developer API keys for OpenAI/Claude, QuickBooks, and Twilio.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Module 2: Deploying & Token Generation -->
+                        <div class="card" style="grid-column: span 6;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-key" style="color:var(--secondary-color); margin-right:8px;"></i> Module 2: The Licensing Activation Key</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">To enforce strict single-vertical licensing boundaries for each tenant, configure the credentials on your central Deployment Hub:</p>
+                            <ol style="font-size: 0.8rem; color: var(--text-muted); padding-left: 1rem; line-height: 1.6;">
+                                <li>Select the client's <strong>single authorized industry vertical</strong> from the menu.</li>
+                                <li>Define custom branding colors (primary and secondary accents matching their business logo).</li>
+                                <li>Generate the <strong>Base64 Activation Token</strong> and provide it to the client administrator.</li>
+                            </ol>
+                        </div>
+
+                        <!-- Module 3: Client Hub Unlock -->
+                        <div class="card" style="grid-column: span 6;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-unlock-keyhole" style="color:#10b981; margin-right:8px;"></i> Module 3: Client Workspace Activation</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">Explain how the client accesses their new secure control room:</p>
+                            <ul style="list-style: none; font-size: 0.8rem; color: var(--text-muted); display:flex; flex-direction:column; gap:8px;">
+                                <li><i class="fa-solid fa-chevron-right" style="color:#10b981; margin-right:6px;"></i> Open their index entrypoint page, which initially displays the <strong>Vault Lock Modal</strong>.</li>
+                                <li><i class="fa-solid fa-chevron-right" style="color:#10b981; margin-right:6px;"></i> Paste the Activation Token to authorize container services and dynamically lock the vertical.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Module 4: Six Sigma Auditing -->
+                        <div class="card" style="grid-column: span 6;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-diagram-project" style="color:var(--primary-color); margin-right:8px;"></i> Module 4: Interactive Process Mapping Audit</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">Leverage the Process Mapping canvas during consultant audit sessions:</p>
+                            <ul style="list-style: none; font-size: 0.8rem; color: var(--text-muted); display:flex; flex-direction:column; gap:8px;">
+                                <li><i class="fa-solid fa-circle" style="font-size:0.5rem; color:var(--primary-color); margin-right:6px;"></i> Map manual steps into a <strong>SIPOC</strong> or <strong>Swimlane cross-functional</strong> diagram.</li>
+                                <li><i class="fa-solid fa-circle" style="font-size:0.5rem; color:var(--primary-color); margin-right:6px;"></i> Emphasize how the agent intercepts risk at the Human-in-the-Loop check point.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Module 5: Cloud Architecture & Deployment -->
+                        <div class="card" style="grid-column: span 12;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-server" style="color:var(--secondary-color); margin-right:8px;"></i> Module 5: Scalable Cloud Architecture & Dual-Deployment Models</span>
+                                <span class="vertical-badge" style="font-size:0.7rem; border-color: rgba(0,198,255,0.3); color:var(--secondary-color);">DEPLOYMENT GUIDE</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--secondary-color);">Managed SaaS Model (No Client IT Staff)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">For standard SMB clients with zero technical departments, run their container VM securely inside **your own Google Cloud Platform (GCP)** account:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-circle-play" style="color:var(--primary-color); margin-right:6px;"></i> Bind a dedicated subdomain (e.g. <code>clientname.convergence-ai-agents.com</code>).</li>
+                                        <li><i class="fa-solid fa-circle-play" style="color:var(--primary-color); margin-right:6px;"></i> Deliver the login URL and their encrypted KMS activation token.</li>
+                                        <li><i class="fa-solid fa-circle-play" style="color:var(--primary-color); margin-right:6px;"></i> Collect high-margin subscription fees covering VM resources and API tokens.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--status-success);">Client-Owned Cloud Model (With Client IT Staff)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">For larger clients requiring strict corporate security or HIPAA data compliance on their own clouds (AWS, GCP, Azure, or private server):</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-circle-check" style="color:var(--status-success); margin-right:6px;"></i> Provide their IT team with pre-packaged Docker compose manifests.</li>
+                                        <li><i class="fa-solid fa-circle-check" style="color:var(--status-success); margin-right:6px;"></i> Client manages and pays for their own cloud virtual machine resources.</li>
+                                        <li><i class="fa-solid fa-circle-check" style="color:var(--status-success); margin-right:6px;"></i> Generate the KMS Activation Token to authorize their self-hosted license.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module 6: Agent Knowledge & Systems Integration -->
+                        <div class="card glowing-primary" style="grid-column: span 12; margin-top: 1rem;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-brain" style="color:var(--primary-color); margin-right:8px;"></i> Module 6: How the AI Agent Learns & Connects (Dify.ai & n8n.io)</span>
+                                <span class="vertical-badge" style="font-size:0.7rem; border-color: rgba(0,198,255,0.3); color:var(--primary-color);">RAG & INTEGRATIONS</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--primary-color);">Dify.ai RAG (Retrieval-Augmented Generation)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">The agent adapts to client operations using a self-hosted **Dify.ai** engine:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-graduation-cap" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Dynamic Ingestion:</strong> Upload client manuals and FAQ databases into vector storage.</li>
+                                        <li><i class="fa-solid fa-magnifying-glass-nodes" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Context prompting:</strong> Queries Dify vector indices during execution for personalization.</li>
+                                        <li><i class="fa-solid fa-database" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Hybrid Search:</strong> Combines keyword matching and embeddings for precision.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--secondary-color);">n8n.io API Workflow Runner</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">The agent interacts with tools using a self-hosted **n8n.io** API runner:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-link" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>System Connectors:</strong> Connects QuickBooks (invoicing), Twilio (SMS/calls), and Google Calendar.</li>
+                                        <li><i class="fa-solid fa-shield-halved" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>Secure Vault Storage:</strong> All API secrets and keys are stored in a Secure KMS Vault.</li>
+                                        <li><i class="fa-solid fa-arrows-spin" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>Webhook Triggers:</strong> Instantly notifies n8n on event triggers (e.g. RSS updates) to trigger workflow execution.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:#10b981;">Live LLM & AI Compose Gateway</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">The agent handles reasoning and draft generation via direct model integrations:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-bolt" style="color:#10b981; margin-right:6px;"></i> <strong>Multi-Provider Routing:</strong> Configure Gemini, OpenAI, Claude, or local Ollama engines dynamically.</li>
+                                        <li><i class="fa-solid fa-dollar-sign" style="color:#10b981; margin-right:6px;"></i> <strong>Pass-Through Billing:</strong> Track token consumption and apply reseller markup % for automated client invoicing.</li>
+                                        <li><i class="fa-solid fa-brain" style="color:#10b981; margin-right:6px;"></i> <strong>AI Compose Modal:</strong> Review AI-drafted payloads and estimated costs directly inside the HITL oversight queue.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module 7: Social Campaigns & QA Engine -->
+                        <div class="card" style="grid-column: span 6; margin-top: 1rem;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-share-nodes" style="color:var(--secondary-color); margin-right:8px;"></i> Module 7: Social Campaigns & Quality Assurance</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">The social media campaign publisher is integrated natively in all licensing tiers (Solopreneur to Enterprise). Keep these execution guidelines in mind:</p>
+                            <ul style="list-style: none; font-size: 0.8rem; color: var(--text-muted); display:flex; flex-direction:column; gap:8px;">
+                                <li><i class="fa-solid fa-circle-notch" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>Zero Standalone Pricing:</strong> Reassure clients that social media syndication is a standard, built-in back-office utility.</li>
+                                <li><i class="fa-solid fa-circle-notch" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>Automated QA Gate:</strong> The agent audits posts for platform character limits, image size ratios, and target SEO keyword density before prompting HITL approval.</li>
+                                <li><i class="fa-solid fa-circle-notch" style="color:var(--secondary-color); margin-right:6px;"></i> <strong>Headless Session Bypass:</strong> If developer portal approvals are delayed, deploy the fallback Puppeteer browser session module using encrypted chrome session cookies.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Module 8: Security & Cryptographic Cabinet -->
+                        <div class="card" style="grid-column: span 6; margin-top: 1rem;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-shield-halved" style="color:#10b981; margin-right:8px;"></i> Module 8: Vault-Grade Credential Cabinet</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">To protect clients from credential harvesting and data breaches, implement the Secure KMS-Protected Encryption Vault cabinet:</p>
+                            <ul style="list-style: none; font-size: 0.8rem; color: var(--text-muted); display:flex; flex-direction:column; gap:8px;">
+                                <li><i class="fa-solid fa-key" style="color:#10b981; margin-right:6px;"></i> <strong>Local In-Memory Decryption:</strong> API tokens for OpenAI, QuickBooks, Twilio, and social networks are decrypted only in short-lived memory partitions.</li>
+                                <li><i class="fa-solid fa-key" style="color:#10b981; margin-right:6px;"></i> <strong>Zero Cloud Transits:</strong> Ensure the client knows that keys never leave their self-hosted environment or your secure GCP container instance.</li>
+                                <li><i class="fa-solid fa-key" style="color:#10b981; margin-right:6px;"></i> <strong>No Rebranded "Zero-Trust" Terms:</strong> Always refer to the premium security system using the terms <em>"Vault-Grade Cryptographic Shield"</em> or <em>"Secure KMS-Protected Encryption Vault"</em>.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Module 9: Google Cloud Platform (GCP) Services Mastery -->
+                        <div class="card glowing-primary" style="grid-column: span 12; margin-top: 1rem;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-cloud" style="color:var(--secondary-color); margin-right:8px;"></i> Module 9: Google Cloud (GCP) Services & Architecture Provisioning</span>
+                                <span class="vertical-badge" style="font-size:0.7rem; border-color: rgba(0,198,255,0.3); color:var(--secondary-color);">GCP MASTER CLASS</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--secondary-color);">Core Host Setup (Compute & Database)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">Configure the high-availability infrastructure required to power your client's administrative agent:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-server" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Compute Engine (VMs):</strong> Provision standard <code>e2-medium</code> or <code>e2-standard-2</code> Debian virtual machine instances running Docker. Pre-configure auto-restarts for container resilience.</li>
+                                        <li><i class="fa-solid fa-database" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Cloud SQL (PostgreSQL):</strong> Deploy fully managed Cloud SQL instances running PostgreSQL 15+ with the <code>pgvector</code> extension enabled. This isolates and secures client vector storage.</li>
+                                        <li><i class="fa-solid fa-globe" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Cloud DNS & Static IPs:</strong> Bind standard static external IP addresses and map clean client subdomains (e.g. <code>assistant.clientdomain.com</code>) via Cloud DNS zones.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--status-success);">Security, KMS Vault & Networking</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">Implement our mandated <strong>Vault-Grade Cryptographic Shield</strong> guidelines to ensure enterprise-grade security:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-key" style="color:#10b981; margin-right:6px;"></i> <strong>Cloud KMS Encryption Keys:</strong> Create highly secure, symmetric customer-managed encryption keys (CMEK) via Cloud KMS to automatically handle secret decryption inside short-lived container environments.</li>
+                                        <li><i class="fa-solid fa-shield-halved" style="color:#10b981; margin-right:6px;"></i> <strong>VPC Firewall Hardening:</strong> Configure isolated VPC subnets. Create firewall rules restricting SSH access strictly via Identity-Aware Proxy (IAP) tunnels, keeping external ports 22/3389 completely blocked.</li>
+                                        <li><i class="fa-solid fa-box-archive" style="color:#10b981; margin-right:6px;"></i> <strong>Cloud Storage (GCS) Backups:</strong> Create private GCS buckets with custom object retention policies to house database dumps, document archives, and RAG ingestion files securely.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module 10: Bookkeeping & Email Client Connectors -->
+                        <div class="card glowing-primary" style="grid-column: span 12; margin-top: 1rem;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-link" style="color:var(--secondary-color); margin-right:8px;"></i> Module 10: Multi-System Connectors (Bookkeeping & Email Integrations)</span>
+                                <span class="vertical-badge" style="font-size:0.7rem; border-color: rgba(0,198,255,0.3); color:var(--secondary-color);">INTEGRATIONS MASTER CLASS</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--secondary-color);">Flexible Bookkeeping Integration (n8n Nodes)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">To connect alternative bookkeeping platforms, utilize self-hosted n8n's modular routing:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-solid fa-file-invoice-dollar" style="color:var(--primary-color); margin-right:6px;"></i> <strong>QuickBooks Online vs. Xero/FreshBooks:</strong> The frontend maps to n8n via a standard JSON webhook payload. To swap from QuickBooks to Xero, FreshBooks, or Zoho Books, simply swap the integration node inside n8n's visual workspace.</li>
+                                        <li><i class="fa-solid fa-table" style="color:var(--primary-color); margin-right:6px;"></i> <strong>Lightweight Ledgers (Google Sheets/Excel):</strong> For solo operators or micro-SMBs, you can configure n8n's native <em>Google Sheets Node</em> to log and parse transactions directly into a dedicated spreadsheet ledger, completely bypassing accounting software seat licensing fees.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color:var(--status-success);">Email Client Protocols (Gmail, Outlook & Custom)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem;">Calibrate your client's email intake and dispatch configurations based on their provider:</p>
+                                    <ul style="list-style: none; font-size: 0.75rem; color: var(--text-dim); display:flex; flex-direction:column; gap:6px;">
+                                        <li><i class="fa-brands fa-google" style="color:#10b981; margin-right:6px;"></i> <strong>Gmail (Personal @gmail.com):</strong> Connect via Google's secure OAuth 2.0 gateway or establish an encrypted SMTP/IMAP protocol connection using a standard 16-character <strong>Google App Password</strong> (with 2-Step Verification enabled). Daily sending cap is 500 emails.</li>
+                                        <li><i class="fa-solid fa-briefcase" style="color:#10b981; margin-right:6px;"></i> <strong>Google Workspace:</strong> Authenticate directly through OAuth 2.0. Highly recommended for high-volume enterprises due to standard 2,000 daily sending caps and higher API quotas.</li>
+                                        <li><i class="fa-brands fa-microsoft" style="color:#10b981; margin-right:6px;"></i> <strong>Microsoft Outlook / Office 365:</strong> Connect natively via MS Graph API OAuth credentials inside n8n or set up encrypted IMAP/SMTP nodes using a secure Outlook App Password.</li>
+                                        <li><i class="fa-solid fa-envelope" style="color:#10b981; margin-right:6px;"></i> <strong>Custom IMAP/SMTP Servers:</strong> The agent supports connection to arbitrary self-hosted email servers by inputting secure TLS hostnames, ports, and login keys in n8n's email triggers.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: CONFIG GENERATOR -->
+                <section id="train-tab-generator" class="train-tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">Docker Deployment Config Generator</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Quickly compile standard Docker Compose configuration templates for consultant use in client cloud setups.</p>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Generator Form -->
+                        <div class="card" style="grid-column: span 5;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-sliders" style="margin-right:8px;"></i> Parameters</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Client Name Identifier</label>
+                                <input type="text" id="genClient" class="form-input" value="apexmed" oninput="compileDockerCompose()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Docker Internal Exposed Port</label>
+                                <input type="number" id="genPort" class="form-input" value="8080" oninput="compileDockerCompose()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Active API LLM Framework</label>
+                                <select id="genModel" class="form-select" onchange="compileDockerCompose()">
+                                    <option value="gpt-4o-mini">OpenAI GPT-4o-Mini (Cached)</option>
+                                    <option value="claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Generator Code Display -->
+                        <div class="card glowing-primary" style="grid-column: span 7;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-code" style="color:var(--secondary-color); margin-right:8px;"></i> Generated yaml manifest</span>
+                                <button class="btn btn-secondary btn-small" onclick="copyDockerYaml()">Copy Config</button>
+                            </div>
+                            <textarea id="dockerYamlOutput" class="form-textarea" readonly style="font-family:'Courier New', monospace; font-size:0.75rem; min-height:220px; background:#02040a; color:#38bdf8; border-color:var(--border-color);"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="grid-container" style="margin-top: 1.5rem;">
+                        <!-- Downstream TCO Calculator -->
+                        <div class="card glowing-primary" style="grid-column: span 12;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-calculator" style="color: var(--secondary-color); margin-right: 8px;"></i> Client Total Cost of Ownership (TCO) & Downstream Projection</span>
+                                <span class="vertical-badge" style="font-size:0.7rem; border-color: rgba(16,185,129,0.3); color:var(--status-success);">LEGAL COMPLIANCE</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <div class="form-group">
+                                        <label class="form-label">Client Software License Tier</label>
+                                        <select id="tcoLicenseSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="99">Solopreneur Transition License — $99/mo</option>
+                                            <option value="199" selected>Professional Multi-Tenant — $199/mo</option>
+                                            <option value="499">Enterprise White-Label — $499/mo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Projected Monthly Agent Tasks</label>
+                                        <select id="tcoTasksSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="500">500 Administrative Tasks/mo</option>
+                                            <option value="2000" selected>2,000 Administrative Tasks/mo</option>
+                                            <option value="10000">10,000 Administrative Tasks/mo</option>
+                                            <option value="50000">50,000 Administrative Tasks/mo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">API LLM Model Usage Profile</label>
+                                        <select id="tcoApiSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="0.01">GPT-4o-Mini (Cached / Efficient) — $0.01 avg/task</option>
+                                            <option value="0.03" selected>Claude 3.5 Sonnet (Balanced) — $0.03 avg/task</option>
+                                            <option value="0.08">GPT-4o / Full Sonnet (Premium Heavy) — $0.08 avg/task</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Self-Hosted VM Cloud Infrastructure</label>
+                                        <select id="tcoHostingSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="10">Basic VPS (DigitalOcean / Linode) — $10/mo</option>
+                                            <option value="40" selected>Standard AWS EC2 / GCP instance — $40/mo</option>
+                                            <option value="79">Managed GCP (Resold by CONVERGENCE-Ai™) — $79/mo</option>
+                                            <option value="120">High-Availability Scaled AWS Cluster — $120/mo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; justify-content:space-between;">
+                                    <div style="padding: 1.25rem; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; gap:10px; font-size:0.8rem;">
+                                        <div style="display:flex; justify-content:space-between;">
+                                            <span style="color:var(--text-muted);">CONVERGENCE-Ai Software License:</span>
+                                            <span id="tcoLicOutput" style="font-weight:700; color: var(--text-primary);;">$199.00/mo</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between;">
+                                            <span style="color:var(--text-muted);">Projected LLM Token Costs:</span>
+                                            <span id="tcoTokensOutput" style="font-weight:700; color: var(--text-primary);;">$60.00/mo</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between;">
+                                            <span style="color:var(--text-muted);">Cloud Infrastructure Fee:</span>
+                                            <span id="tcoHostingOutput" style="font-weight:700; color: var(--text-primary);;">$40.00/mo</span>
+                                        </div>
+                                        <hr style="border-color:var(--border-color);">
+                                        <div style="display:flex; justify-content:space-between; font-size:1rem; font-weight:700; margin-top:5px;">
+                                            <span style="color:var(--secondary-color);">Projected Total TCO:</span>
+                                            <span id="tcoTotalOutput" style="color:var(--secondary-color);">$299.00/mo</span>
+                                        </div>
+                                    </div>
+                                    <div style="padding:1rem; border-radius:8px; border:1px solid rgba(244,63,94,0.3); background:rgba(244,63,94,0.05); font-size:0.7rem; line-height:1.5; color:var(--text-muted); margin-top:1rem;">
+                                        <strong style="color:var(--status-error); display:block; margin-bottom:4px;"><i class="fa-solid fa-triangle-exclamation"></i> Mandatory Operational Boundary Warning:</strong>
+                                        Downstream operational charges (OpenAI/Claude API tokens, Twilio minutes, AWS hosting bills, QuickBooks integration seat pricing) are billed directly to the customer by their respective third-party providers. CONVERGENCE-Ai™ licenses only the core agentic back-office framework and is not liable for client-side API overages, hosting bills, or usage spikes.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: CERTIFICATION QUIZ -->
+                <section id="train-tab-quiz" class="train-tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">Consultant Certification Challenge</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Test your deployment compliance and validation skills before heading to a client engagement.</p>
+                    </div>
+
+                    <div class="card glowing-primary">
+                        <div id="quizContainer">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { search, getAutocompleteSuggestions, highlightKeywords, SOP_CORPUS } from './js/search.js';
+
+        // Switch between tabs
+        function switchTrainingTab(tabId, el) {
+            document.querySelectorAll('.train-tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const target = document.getElementById(`train-tab-${tabId}`);
+            if (target) target.style.display = 'block';
+            
+            // Highlight sidebar item safely
+            if (el) {
+                el.classList.add('active');
+            } else if (window.event && window.event.currentTarget) {
+                window.event.currentTarget.classList.add('active');
+            } else if (window.event && window.event.srcElement) {
+                const src = window.event.srcElement;
+                const item = src.closest('.menu-item') || src;
+                item.classList.add('active');
+            }
+            
+            if (tabId === 'generator') {
+                compileDockerCompose();
+                calculateTco();
+            } else if (tabId === 'quiz') {
+                loadQuizQuestion();
+            }
+        }
+
+        // TCO Downstream Cost Projection Calculator
+        function calculateTco() {
+            const licVal = parseFloat(document.getElementById('tcoLicenseSelect').value || 199);
+            const tasksVal = parseInt(document.getElementById('tcoTasksSelect').value || 2000);
+            const apiVal = parseFloat(document.getElementById('tcoApiSelect').value || 0.03);
+            const hostingVal = parseFloat(document.getElementById('tcoHostingSelect').value || 40);
+            
+            const tokenCost = tasksVal * apiVal;
+            const total = licVal + tokenCost + hostingVal;
+            
+            document.getElementById('tcoLicOutput').textContent = `$${licVal.toFixed(2)}/mo`;
+            document.getElementById('tcoTokensOutput').textContent = `$${tokenCost.toFixed(2)}/mo`;
+            document.getElementById('tcoHostingOutput').textContent = `$${hostingVal.toFixed(2)}/mo`;
+            document.getElementById('tcoTotalOutput').textContent = `$${total.toFixed(2)}/mo`;
+        }
+
+        // Config compiler
+        function compileDockerCompose() {
+            const client = document.getElementById('genClient').value.trim().toLowerCase() || "client";
+            const port = document.getElementById('genPort').value || "8080";
+            const model = document.getElementById('genModel').value;
+            
+            const yaml = `version: '3.8'
+
+services:
+  aiwx-agent-${client}:
+    image: convergence-ai/aiwx-operations-administrator:latest
+    container_name: aiwx-agent-${client}
+    restart: always
+    environment:
+      - PORT=${port}
+      - TARGET_API_MODEL=${model}
+      - SECURE_KMS_VAULT_KEY=KMS-Vault-${client.toUpperCase()}-Key-2026
+      - ROW_LEVEL_SECURITY_LOCK=ENABLED
+      - TENANT_ID=${client}-tenant-hash-993
+    ports:
+      - "${port}:${port}"
+    volumes:
+      - ./config:/app/secure_credentials:ro
+      - ./logs:/app/terminal_logs:rw`;
+      
+            document.getElementById('dockerYamlOutput').value = yaml;
+        }
+
+        function copyDockerYaml() {
+            const textarea = document.getElementById('dockerYamlOutput');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Docker YAML configuration successfully copied to clipboard!');
+        }
+
+        //Certification Quiz Database
+        const QUIZ = [
+            {
+                q: "1. Under what context is a client's Operations Hub locked down, preventing access to the other 11 verticals?",
+                options: [
+                    "Only after generating a standard client token on the Deployment Hub and validating it.",
+                    "It is determined solely by their network IP address.",
+                    "It relies on third-party security audits."
+                ],
+                correct: 0,
+                ex: "When the Super Admin generates an activation token, it cryptographically locks the container instance to that single vertical, hiding the other 11 verticals completely for multi-tenant licensing."
+            },
+            {
+                q: "2. How should an CONVERGENCE-Ai consultant activate full Super Admin testing bypass in a client's environment?",
+                options: [
+                    "By entering a license bypass key containing 'BYPASS-SUPER'.",
+                    "By using an administrator email matching @convergence-ai.com or convergence-ai@gmail.com during activation.",
+                    "By modifying the system environment files manually."
+                ],
+                correct: 1,
+                ex: "Any login email matching the verified @convergence-ai.com domain or the gmail address grants immediate access to the Super Admin Vertical Switcher dropdown."
+            },
+            {
+                q: "3. What is the fundamental mandate of the Human-in-the-Loop (HITL) Queue in client operations?",
+                options: [
+                    "It allows consultants to schedule system updates.",
+                    "It serves as a temporary RAG storage partition.",
+                    "It ensures high-risk agent operations (e.g. invoices, bookings, travel releases) require manual administrator verification."
+                ],
+                correct: 2,
+                ex: "High-risk administrative outputs are routed to the HITL queue first, ensuring the client's human admin maintains control before anything is deployed or released."
+            },
+            {
+                q: "4. How should you deploy the CONVERGENCE-Ai assistant for a client with zero internal IT staff?",
+                options: [
+                    "Request that the client hires an external IT systems consultant to build a server.",
+                    "Provision a container instance on your own Google Cloud Platform (GCP) account and deliver a custom login URL + Activation Token.",
+                    "The client must run the system locally on their office desktop at all times."
+                ],
+                correct: 1,
+                ex: "For clients with no technical department, run the container in your agency's GCP environment (Managed SaaS). Simply hand them their unique subdomain link and KMS activation token for an effortless onboarding experience!"
+            },
+            {
+                q: "5. What underlying infrastructure does the CONVERGENCE-Ai agent use to learn client needs and integrate with third-party software?",
+                options: [
+                    "A centralized server hosted by open-source database providers with standard API tokens.",
+                    "A self-hosted Docker Compose stack running Dify.ai (RAG brain for learning client needs) and n8n.io (API workflow runner for integrations).",
+                    "Manual email alerts and script execution via scheduled background cron jobs."
+                ],
+                correct: 1,
+                ex: "The CONVERGENCE-Ai agent relies on a self-hosted Docker Compose stack featuring Dify.ai for structured Retrieval-Augmented Generation (RAG) learning, and n8n.io to orchestrate complex third-party API workflows dynamically."
+            },
+            {
+                q: "6. How is the social media campaign scheduler licensed and what happens if client OAuth token reviews are delayed?",
+                options: [
+                    "It requires a separate $49/mo license tier and cannot be bypassed.",
+                    "It is a built-in back-office utility in all tiers, and can bypass developer reviews using a Puppeteer browser session script with secure local cookies.",
+                    "It is hosted externally by Blotato SaaS, which charges based on total posts synced."
+                ],
+                correct: 1,
+                ex: "Social scheduling is fully built-in at no extra charge. If official Developer OAuth reviews are delayed, you can execute direct posting using local Puppeteer headless browser workers executing via secure chrome session cookies."
+            },
+            {
+                q: "7. Under what premium terminological guidelines must the consultant present the system's security architecture to clients?",
+                options: [
+                    "Refer to it strictly as 'Zero-Trust security', which represents the standard naming convention.",
+                    "Avoid discussing security altogether to prevent client anxiety.",
+                    "Use premium, trust-inspiring terms like 'Vault-Grade Cryptographic Shield' and 'Secure KMS-Protected Encryption Vault', and never mention the term 'Zero-Trust'."
+                ],
+                correct: 2,
+                ex: "To maximize client confidence and eliminate friction, avoid the negative associations of 'Zero-Trust'. Always describe the security layer using positive, premium terms like 'Vault-Grade Cryptographic Shield' or 'Secure KMS-Protected Encryption Vault'."
+            },
+            {
+                q: "8. When configuring Google Cloud Platform (GCP) for a client deployment, which service holds the cryptographic keys for the 'Vault-Grade Cryptographic Shield' and how should network access be restricted?",
+                options: [
+                    "Cloud DNS manages keys, and ports 22 and 3389 should be opened to the public web for remote editing.",
+                    "Cloud KMS (Key Management Service) holds the encryption keys, and VPC firewalls should restrict SSH access strictly via Identity-Aware Proxy (IAP) tunnels while exposing only ports 80/443 securely.",
+                    "Artifact Registry holds the keys, and the database should be placed on a public-access subnet for easier scaling."
+                ],
+                correct: 1,
+                ex: "To ensure enterprise-grade security, Cloud KMS manages the encryption keys, and network access must be locked down using VPC firewalls to restrict remote entry (SSH) strictly via Google's Identity-Aware Proxy (IAP) tunnels."
+            },
+            {
+                q: "9. When connecting a client's email inbox or bookkeeping ledgers to their private CONVERGENCE-Ai container, which configurations represent correct integration best practices?",
+                options: [
+                    "Alternative ledgers (like Xero or Google Sheets) are hard-coded into the frontend, and personal Gmail accounts must purchase Google Workspace to function.",
+                    "Swapping to alternative ledgers is done by updating nodes visually inside self-hosted n8n, and personal @gmail.com accounts can authenticate securely using Google App Passwords or standard OAuth testing profiles.",
+                    "Outlook requires manual IMAP protocol scripts to run in background cron jobs, and QuickBooks is the only ledger supported by the back-office framework."
+                ],
+                correct: 1,
+                ex: "For maximum operational flexibility, alternative ledgers (Xero, FreshBooks, Sheets) are easily hot-swappable inside the container's visual n8n workflow engine. Personal @gmail.com or Outlook accounts can connect securely using standard Google/Microsoft App Passwords or OAuth testing configurations."
+            }
+        ];
+
+        let activeQuizIndex = 0;
+
+        function loadQuizQuestion() {
+            const container = document.getElementById('quizContainer');
+            if (!container) return;
+            
+            if (activeQuizIndex >= QUIZ.length) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 3.5rem; color:#10b981; margin-bottom:1.5rem;"></i>
+                        <h2 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.5rem; margin-bottom:0.5rem;">Congratulations, Consultant!</h2>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">You have successfully completed the CONVERGENCE-Ai™ Cloud-Native AI Automations Hub Certification Challenge.</p>
+                        <button class="btn btn-accent" onclick="resetQuiz()">Restart Training Quiz</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const qObj = QUIZ[activeQuizIndex];
+            
+            let optionsHTML = '';
+            qObj.options.forEach((opt, idx) => {
+                optionsHTML += `
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <button class="btn btn-secondary" style="width: 100%; text-align: left; justify-content: flex-start; text-transform: none; padding:1rem;" onclick="checkAnswer(${idx})">
+                            <i class="fa-regular fa-circle" id="quiz-opt-icon-${idx}" style="margin-right:10px; color:var(--primary-color);"></i> ${opt}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = `
+                <div style="font-size:0.8rem; color:var(--secondary-color); font-weight:700; margin-bottom:5px; text-transform:uppercase;">Certification Quiz</div>
+                <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.15rem; margin-bottom:1.5rem;">${qObj.q}</h3>
+                <div id="quizOptions">${optionsHTML}</div>
+                <div id="quizFeedback" style="display:none; margin-top:1.5rem; padding:1rem; border-radius:8px; border:1px solid var(--border-color); font-size:0.8rem;">
+                    <div id="quizFeedbackTitle" style="font-weight:700; margin-bottom:5px;"></div>
+                    <div id="quizFeedbackText" style="color:var(--text-muted); line-height:1.5;"></div>
+                    <button class="btn btn-primary btn-small" style="margin-top:10px;" onclick="nextQuestion()">Next Certification Question</button>
+                </div>
+            `;
+        }
+
+        function checkAnswer(selectedIdx) {
+            const qObj = QUIZ[activeQuizIndex];
+            const feedback = document.getElementById('quizFeedback');
+            const feedbackTitle = document.getElementById('quizFeedbackTitle');
+            const feedbackText = document.getElementById('quizFeedbackText');
+            
+            // Disable all option buttons
+            const buttons = document.getElementById('quizOptions').querySelectorAll('button');
+            buttons.forEach(btn => btn.setAttribute('disabled', 'true'));
+            
+            if (selectedIdx === qObj.correct) {
+                feedbackTitle.textContent = "CORRECT ANSWER!";
+                feedbackTitle.style.color = "#10b981";
+                feedback.style.borderColor = "#10b981";
+                feedback.style.background = "rgba(16,185,129,0.05)";
+                document.getElementById(`quiz-opt-icon-${selectedIdx}`).className = "fa-solid fa-circle-check";
+                document.getElementById(`quiz-opt-icon-${selectedIdx}`).style.color = "#10b981";
+            } else {
+                feedbackTitle.textContent = "INCORRECT ANSWER";
+                feedbackTitle.style.color = "#f43f5e";
+                feedback.style.borderColor = "#f43f5e";
+                feedback.style.background = "rgba(244,63,94,0.05)";
+                document.getElementById(`quiz-opt-icon-${selectedIdx}`).className = "fa-solid fa-circle-xmark";
+                document.getElementById(`quiz-opt-icon-${selectedIdx}`).style.color = "#f43f5e";
+                document.getElementById(`quiz-opt-icon-${qObj.correct}`).className = "fa-solid fa-circle-check";
+                document.getElementById(`quiz-opt-icon-${qObj.correct}`).style.color = "#10b981";
+            }
+            
+            feedbackText.textContent = qObj.ex;
+            feedback.style.display = 'block';
+        }
+
+        function nextQuestion() {
+            activeQuizIndex++;
+            loadQuizQuestion();
+        }
+
+        function resetQuiz() {
+            activeQuizIndex = 0;
+            loadQuizQuestion();
+        }
+
+        // Bind standard actions to window for ES compatibility
+        window.switchTrainingTab = switchTrainingTab;
+        window.compileDockerCompose = compileDockerCompose;
+        window.copyDockerYaml = copyDockerYaml;
+        window.calculateTco = calculateTco;
+        window.resetQuiz = resetQuiz;
+        window.checkAnswer = checkAnswer;
+        window.nextQuestion = nextQuestion;
+
+        // Search Input listeners
+        const input = document.getElementById('sopSearchInput');
+        if (input) {
+            input.addEventListener('input', (e) => handleSopSearch(e.target.value));
+        }
+
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (input) input.value = '';
+                document.getElementById('sopSearchResults').style.display = 'none';
+                document.getElementById('sopSearchAutocomplete').style.display = 'none';
+            });
+        }
+
+        function handleSopSearch(val) {
+            const autocomplete = document.getElementById('sopSearchAutocomplete');
+            const resultsPanel = document.getElementById('sopSearchResults');
+            const list = document.getElementById('sopSearchResultsList');
+            
+            if (!val || val.trim().length < 2) {
+                if (autocomplete) autocomplete.style.display = 'none';
+                if (resultsPanel) resultsPanel.style.display = 'none';
+                return;
+            }
+            
+            // Get suggestions
+            const suggestions = getAutocompleteSuggestions(val);
+            if (suggestions.length > 0 && autocomplete) {
+                autocomplete.innerHTML = suggestions.map(s => `
+                    <div class="autocomplete-item" style="padding:8px 12px; cursor:pointer;" onclick="selectAutocomplete('${s}')">${s}</div>
+                `).join('');
+                autocomplete.style.display = 'block';
+            } else {
+                if (autocomplete) autocomplete.style.display = 'none';
+            }
+            
+            // Perform search
+            const results = search(val);
+            if (results.length > 0 && list && resultsPanel) {
+                list.innerHTML = results.map(r => `
+                    <div class="search-result-card" style="padding:1rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <span style="font-weight:600; color: var(--text-primary);; font-size:0.9rem;">${r.title}</span>
+                            <span class="vertical-badge" style="font-size:0.65rem; background:rgba(0,198,255,0.1); color:var(--secondary-color); border-color:rgba(0,198,255,0.3);">${r.category}</span>
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.5; margin:0;">${highlightKeywords(r.content, val)}</p>
+                    </div>
+                `).join('');
+                resultsPanel.style.display = 'block';
+            } else if (list && resultsPanel) {
+                list.innerHTML = `<div style="text-align:center; color:var(--text-dim); font-size:0.8rem; padding:1rem;">No matching documents found.</div>`;
+                resultsPanel.style.display = 'block';
+            }
+        }
+        window.handleSopSearch = handleSopSearch;
+
+        function selectAutocomplete(term) {
+            const searchInput = document.getElementById('sopSearchInput');
+            if (searchInput) {
+                searchInput.value = term;
+                document.getElementById('sopSearchAutocomplete').style.display = 'none';
+                handleSopSearch(term);
+            }
+        }
+        window.selectAutocomplete = selectAutocomplete;
+    </script>
+</body>
+</html>

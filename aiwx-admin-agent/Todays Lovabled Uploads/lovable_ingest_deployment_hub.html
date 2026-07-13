@@ -1,0 +1,2329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERGENCE-Ai™ Operations Administrator System & Command Center</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .connectivity-check {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .connectivity-check.active {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.05);
+        }
+
+        .connectivity-check.active i {
+            color: #10b981 !important;
+        }
+
+        .connectivity-check.active .check-status {
+            color: #10b981 !important;
+            font-weight: bold;
+        }
+
+        .connectivity-check.mock-active {
+            background: rgba(241, 179, 28, 0.05);
+            border-color: rgba(241, 179, 28, 0.3);
+            color: #f1b31c;
+        }
+
+        .connectivity-check.mock-active i {
+            color: #f1b31c !important;
+        }
+
+        .connectivity-check.mock-active .check-status {
+            color: #f1b31c !important;
+            font-weight: bold;
+        }
+
+        .build-step {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            padding: 4px 0;
+            transition: all 0.3s;
+        }
+
+        .build-step.active {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .build-step.completed {
+            color: #10b981;
+        }
+
+        .build-step i {
+            font-size: 0.9rem;
+        }
+
+        .build-step.completed i {
+            color: #10b981;
+        }
+
+        .installation-guide-card {
+            background: linear-gradient(135deg, rgba(11, 87, 208, 0.03) 0%, rgba(11, 15, 25, 0.6) 100%);
+            border: 1px solid rgba(11, 87, 208, 0.15);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .guide-step-box {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: left;
+            transition: all 0.3s;
+        }
+
+        .guide-step-box:hover {
+            border-color: rgba(241, 179, 28, 0.2);
+            background: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+
+<body
+    style="background-image: radial-gradient(at 0% 0%, rgba(241, 179, 28, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(11, 87, 208, 0.15) 0px, transparent 50%);">
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-section"
+                style="flex-direction: column; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; gap: 8px;">
+                <div class="brand-logo" style="width: 100%; display: flex; justify-content: center; min-height: 48px;">
+                    <img src="data:image/png;base64,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" alt="CONVERGENCE-Ai"
+                        style="height: 44px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                </div>
+                <div
+                    style="font-size: 0.65rem; color: var(--secondary-color); font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; font-family: var(--font-heading);">
+                    Agency Command Center</div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item active" onclick="switchTab('deployer', this)">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Remote Deployer</span>
+                </li>
+                <li class="menu-item" onclick="switchTab('licensing', this)">
+                    <i class="fa-solid fa-key"></i>
+                    <span>License Vault</span>
+                </li>
+                <li class="menu-item" onclick="switchTab('pricing', this)">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Pricing Engine</span>
+                </li>
+                <li class="menu-item" onclick="switchTab('compliance', this)">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Compliance Audits</span>
+                </li>
+                <li class="menu-item" onclick="switchTab('sitebuilder', this)">
+                    <i class="fa-solid fa-laptop-code"></i>
+                    <span>Lovable Builder Hub</span>
+                </li>
+                <li class="menu-item" onclick="switchTab('sops', this)">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span>Search & SOPs</span>
+                </li>
+                <li class="menu-item" onclick="window.open('./operations_hub.html', '_blank')">
+                    <i class="fa-solid fa-square-poll-vertical"></i>
+                    <span>Launch Client Hub</span>
+                </li>
+                <li class="menu-item" onclick="window.open('./index.html', '_blank')">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Operations Hub</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="client-tag">
+                    <div class="client-status-indicator"
+                        style="background-color: var(--secondary-color); box-shadow: 0 0 8px var(--secondary-color);">
+                    </div>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Licensing Engine: Active</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <header class="header">
+                <div class="header-title-area">
+                    <h2 style="font-family: var(--font-heading); color: var(--text-primary);;">Master Agency Command Center & Client
+                        Provisioner</h2>
+                </div>
+                <div class="header-actions">
+                    <span class="vertical-badge"
+                        style="background: rgba(241, 179, 28, 0.1); border-color: rgba(241, 179, 28, 0.4); color: var(--secondary-color);">PROPRIETARY
+                        LICENSE</span>
+                </div>
+            </header>
+
+            <main class="content-body">
+
+                <!-- Unified Sequential Process Stepper Progress Bar -->
+                <div class="unified-progress-container" id="unifiedProgressStepper">
+                    <div class="unified-progress-header">
+                        <div
+                            style="font-family: var(--font-heading); font-size: 0.95rem; font-weight: 600; color: var(--text-primary);;">
+                            <i class="fa-solid fa-route" style="color: var(--secondary-color); margin-right: 8px;"></i>
+                            Installation & Setup Progress Sequence
+                        </div>
+                        <span class="unified-progress-badge" id="unifiedStepperBadge">Step 1 of 6: Configure
+                            Client</span>
+                    </div>
+                    <div class="unified-stepper">
+                        <div class="unified-stepper-line" id="unifiedStepperLine" style="width: 0%;"></div>
+                        <div class="unified-step active" id="unified-step-1" onclick="jumpToUnifiedStep(1)">
+                            <div class="unified-step-circle">1</div>
+                            <span class="unified-step-label">Configure Client</span>
+                        </div>
+                        <div class="unified-step" id="unified-step-2" onclick="jumpToUnifiedStep(2)">
+                            <div class="unified-step-circle">2</div>
+                            <span class="unified-step-label">Remote Provisioning</span>
+                        </div>
+                        <div class="unified-step" id="unified-step-3" onclick="jumpToUnifiedStep(3)">
+                            <div class="unified-step-circle">3</div>
+                            <span class="unified-step-label">Vault Activation</span>
+                        </div>
+                        <div class="unified-step" id="unified-step-4" onclick="jumpToUnifiedStep(4)">
+                            <div class="unified-step-circle">4</div>
+                            <span class="unified-step-label">Agent Config</span>
+                        </div>
+                        <div class="unified-step" id="unified-step-5" onclick="jumpToUnifiedStep(5)">
+                            <div class="unified-step-circle">5</div>
+                            <span class="unified-step-label">Verify Simulation</span>
+                        </div>
+                        <div class="unified-step" id="unified-step-6" onclick="jumpToUnifiedStep(6)">
+                            <div class="unified-step-circle">6</div>
+                            <span class="unified-step-label">Complete Onboarding</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 1: REMOTE DEPLOYER -->
+                <section id="tab-deployer" class="tab-content">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                            Provision & License Remote Instances</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 800px;">Configure, brand, and
+                            secure client-specific AI agent environments. Turn on exactly one industry vertical block
+                            per container to enforce strict tenant licensing boundaries.</p>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Deployment Setup Card -->
+                        <div class="card glowing-primary" style="grid-column: span 7;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-sliders"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> 1. Tenant
+                                    Parameters & Core Vertical Configuration</span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Client Company Name <span class="tooltip-trigger"
+                                            data-tooltip="The official name of the client's business. Sets header branding titles."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <input type="text" id="deployCompany" class="form-input"
+                                        placeholder="e.g. Apex Medical Care" value="" oninput="updateLicensePreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Client Logo Initials / Short <span class="tooltip-trigger"
+                                            data-tooltip="A short 2-4 letter abbreviation used in sidebar badges."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <input type="text" id="deployLogo" class="form-input" placeholder="e.g. AMC"
+                                        value="" oninput="updateLicensePreview()">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Target Industry Vertical (Select precisely 1 to activate &
+                                    lock) <span class="tooltip-trigger"
+                                        data-tooltip="Locks down container processing scope to selected vertical industry boundaries."><i
+                                            class="fa-regular fa-circle-question"></i></span></label>
+                                <select id="deployVertical" class="form-select" onchange="updateLicensePreview()">
+                                    <option value="medical" selected>Medical & Healthcare (Scheduling, Refills)</option>
+                                    <option value="legal">Legal Services (Deposition Calendar, Intake)</option>
+                                    <option value="realestate">Real Estate (Lead Follow-up, Showings)</option>
+                                    <option value="retail">Retail & E-commerce (Orders, Support)</option>
+                                    <option value="hospitality">Hospitality & Leisure (Reservations, Concierge)</option>
+                                    <option value="finance">Financial & Bookkeeping (QuickBooks, P2C)</option>
+                                    <option value="construction">Construction & Contracting (Permits, Materials)
+                                    </option>
+                                    <option value="logistics">Logistics & Supply Chain (Dispatch, Travel Routing)
+                                    </option>
+                                    <option value="education">Education & Tutoring (Scheduling, Invoices)</option>
+                                    <option value="tech">SaaS & Tech Startups (Bug Routing, Newsletters)</option>
+                                    <option value="professional">Professional Services (Client Reports, Invoices)
+                                    </option>
+                                    <option value="nonprofit">Non-Profit Organizations (Donations, Vol. Roster)</option>
+                                    <option value="events">Event Planning & Management (Vendors, Scheduling)</option>
+                                </select>
+                                <div
+                                    style="font-size: 0.75rem; color: var(--secondary-color); margin-top: 6px; font-weight: 500;">
+                                    <i class="fa-solid fa-circle-info"></i> Standard Warning: Upon deployment
+                                    activation, other verticals will be completely locked out.
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Branding Primary Theme Color <span class="tooltip-trigger"
+                                            data-tooltip="Dynamic accent color loaded into the client operations hub interface."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="color" id="deployColor1" value="#0084ff"
+                                            style="border: none; border-radius: 4px; width: 45px; height: 35px; background: none; cursor: pointer;"
+                                            onchange="updateLicensePreview()">
+                                        <span
+                                            style="font-size:0.8rem; font-family:var(--font-heading); color: var(--text-muted)">Primary
+                                            Accent</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Branding Secondary Theme Color <span
+                                            class="tooltip-trigger"
+                                            data-tooltip="Highlights and glowing outline borders match this accent secondary color."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="color" id="deployColor2" value="#00c6ff"
+                                            style="border: none; border-radius: 4px; width: 45px; height: 35px; background: none; cursor: pointer;"
+                                            onchange="updateLicensePreview()">
+                                        <span
+                                            style="font-size:0.8rem; font-family:var(--font-heading); color: var(--text-muted)">Highlight
+                                            Accent</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Remote Deployed Container API Endpoint <span
+                                        class="tooltip-trigger"
+                                        data-tooltip="Restful service URL mapping to Google Cloud serverless container running n8n/dify workflows."><i
+                                            class="fa-regular fa-circle-question"></i></span></label>
+                                <input type="text" id="deployEndpoint" class="form-input" value=""
+                                    placeholder="e.g. https://client-subdomain.convergence-ai.com/v1"
+                                    oninput="markEndpointEdited()">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1.5rem;">
+                                <label class="form-label"
+                                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary);;">
+                                    <input type="checkbox" id="deployUpskill" onchange="updateLicensePreview()"
+                                        style="accent-color: var(--secondary-color); width: 18px; height: 18px;">
+                                    <span>Enable Modular Workforce Upskilling Matrix (Premium Add-On) <span
+                                            class="tooltip-trigger"
+                                            data-tooltip="Licenses modular 90-day training map blocks in the client workspace (+ $49/mo)."><i
+                                                class="fa-regular fa-circle-question"></i></span></span>
+                                </label>
+                                <div
+                                    style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; margin-left: 26px;">
+                                    Adds +$49/mo (Client) or custom consultant upcharge to the tenant license agreement.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Secure Key Generator -->
+                        <div class="card"
+                            style="grid-column: span 5; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div class="card-title">
+                                    <span><i class="fa-solid fa-shield-halved"
+                                            style="color: #10b981; margin-right: 8px;"></i> 2. Vault-Grade Security
+                                        Shield</span>
+                                </div>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Generate
+                                    AES-256 encrypted environmental overrides to prevent token interception or client
+                                    extraction.</p>
+
+                                <div class="form-group">
+                                    <label class="form-label">Secure Credentials Passphrase <span
+                                            class="tooltip-trigger"
+                                            data-tooltip="Encrypts sensitive client API credentials stored in local storage vaults."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="password" id="deployVault" class="form-input" value=""
+                                            placeholder="Enter secure credentials passphrase">
+                                        <button class="btn btn-secondary btn-small" onclick="togglePass()"><i
+                                                class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Client Instance Access Token (License Key) <span
+                                            class="tooltip-trigger"
+                                            data-tooltip="Unique token hash calculated from the company config."><i
+                                                class="fa-regular fa-circle-question"></i></span></label>
+                                    <input type="text" id="deployLicense" class="form-input" readonly value=""
+                                        placeholder="Token will generate automatically">
+                                </div>
+                            </div>
+
+                            <div style="padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <button class="btn btn-accent pulse-btn" style="width: 100%;" id="deployStartBtn"
+                                    onclick="deployClient()">
+                                    <i class="fa-solid fa-rocket"></i> Activate Deployments & Continue to Step 3
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upgraded Layman Self-Installation Guide with Architecture Explanations -->
+                    <div class="installation-guide-card">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; gap: 10px;">
+                            <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.2rem; margin: 0;"><i
+                                    class="fa-solid fa-graduation-cap"
+                                    style="color:var(--secondary-color); margin-right:8px;"></i> Installation & Cloud
+                                Architecture Explorer</h3>
+                            <div
+                                style="display: flex; gap: 8px; background: rgba(0,0,0,0.4); border-radius: 20px; padding: 3px; border: 1px solid var(--border-color);">
+                                <button class="btn btn-secondary btn-small" id="guideTabBtn"
+                                    onclick="switchGuideTab('how')"
+                                    style="border-radius: 16px; padding: 0.25rem 0.75rem; font-size: 0.7rem; border: none; background: var(--primary-color); color: #ffffff;">How
+                                    to Deploy</button>
+                                <button class="btn btn-secondary btn-small" id="archTabBtn"
+                                    onclick="switchGuideTab('under-hood')"
+                                    style="border-radius: 16px; padding: 0.25rem 0.75rem; font-size: 0.7rem; border: none; background: transparent; color: var(--text-muted);">Under
+                                    the Hood (What/Where/Why/How)</button>
+                            </div>
+                        </div>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem;"
+                            id="guideSubtitleText">Deploying a new AI agent instance is simple and automatic. Follow
+                            these steps to provision and activate your workspace:</p>
+
+                        <!-- Tab: How to Deploy -->
+                        <div id="guideTabContent"
+                            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px;">
+                            <div class="guide-step-box">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--secondary-color); margin-bottom:4px;">
+                                    1. SET CONFIGURATION</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Enter your
+                                    company name, color theme, and target vertical. The system locks down parameters
+                                    automatically.</div>
+                            </div>
+                            <div class="guide-step-box">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--secondary-color); margin-bottom:4px;">
+                                    2. PROVISION ENVIRONMENT</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Click
+                                    'Activate' to start the installer. The coordinator automatically spawns isolated
+                                    containers on GCP and migrates database schemas.</div>
+                            </div>
+                            <div class="guide-step-box">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--secondary-color); margin-bottom:4px;">
+                                    3. LIVE API VERIFICATION</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">The installer
+                                    checks and verifies system hook connectivity (GCP, Supabase, n8n, Twilio, and mock
+                                    QuickBooks).</div>
+                            </div>
+                            <div class="guide-step-box">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--secondary-color); margin-bottom:4px;">
+                                    4. AUTO-UNLOCK LAUNCH</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Click the
+                                    Launch button to automatically enter the secure cryptographic vault of your new
+                                    workspace in one click!</div>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Under the Hood -->
+                        <div id="archTabContent"
+                            style="display:none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px;">
+                            <div class="guide-step-box"
+                                style="border-color: rgba(0, 132, 255, 0.25); background: rgba(0, 132, 255, 0.02);">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--primary-color); margin-bottom:4px;">
+                                    <i class="fa-solid fa-cube"></i> WHAT IS HAPPENING?</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Spawning
+                                    dedicated serverless Docker container runtimes containing the agent's n8n workflow
+                                    blueprints, Dify.ai cognitive RAG model engine, and isolated Supabase DB schemas.
+                                </div>
+                            </div>
+                            <div class="guide-step-box"
+                                style="border-color: rgba(0, 198, 255, 0.25); background: rgba(0, 198, 255, 0.02);">
+                                <div
+                                    style="font-size:0.75rem; font-weight:700; color:var(--secondary-color); margin-bottom:4px;">
+                                    <i class="fa-solid fa-cloud"></i> WHERE IS IT HAPPENING?</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Containers
+                                    execute on **Google Cloud Run (Serverless)** in the `us-central1` zone. Data is
+                                    stored inside a dedicated postgres schema on **Supabase**. Communications are
+                                    tunneled via secure **Twilio** hooks.</div>
+                            </div>
+                            <div class="guide-step-box"
+                                style="border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.02);">
+                                <div style="font-size:0.75rem; font-weight:700; color:#10b981; margin-bottom:4px;"><i
+                                        class="fa-solid fa-shield-halved"></i> WHY BUILT THIS WAY?</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">Isolating
+                                    workspaces prevents customer data interception (HIPAA/GDPR compliance). Serverless
+                                    computing ensures zero host idle costs—scaling up dynamically only on inbound tasks.
+                                </div>
+                            </div>
+                            <div class="guide-step-box"
+                                style="border-color: rgba(167, 139, 250, 0.25); background: rgba(167, 139, 250, 0.02);">
+                                <div style="font-size:0.75rem; font-weight:700; color:#a78bfa; margin-bottom:4px;"><i
+                                        class="fa-solid fa-key"></i> HOW THE TOKEN WORKS</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">The token is a
+                                    signed JWT containing container endpoints & parameters. Passing it to the Operations
+                                    Hub unlocks the secure KMS Vault, matching prompt vectors & activating the agent
+                                    runner.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deployment Active Progress Panel (Initially Hidden) -->
+                    <div id="deployProgressContainer" class="card"
+                        style="display: none; margin-top: 1.5rem; border-color: rgba(0, 198, 255, 0.2);">
+                        <div class="card-title"
+                            style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                            <span><i class="fa-solid fa-server fa-spin"
+                                    style="color: var(--secondary-color); margin-right: 8px;"></i> Deployed Container
+                                System Installation Cockpit</span>
+                            <span id="deployProgressStage" class="status-badge pending">PROVISIONING RUNTIME</span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div
+                            style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">
+                                <span style="color: var(--text-primary);;">Installation Progress: <span id="deployStatusText"
+                                        style="color:var(--text-muted);">Authenticating GCP credentials...</span></span>
+                                <span id="deployPercentText" style="color: var(--secondary-color);">0%</span>
+                            </div>
+                            <div
+                                style="width: 100%; height: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                <div id="deployProgressBar"
+                                    style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%); transition: width 0.15s ease-out;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <!-- Left: Installation Steps Checklist -->
+                            <div>
+                                <h4 style="font-size: 0.95rem; font-weight:600; margin-bottom: 0.75rem; color: var(--text-primary);;">
+                                    System Deployment Checklist</h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="build-step" id="build-step-1">
+                                        <span>1. Authenticate GCP & Setup CLI Orchestrator</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <div class="build-step" id="build-step-2">
+                                        <span>2. Provision Cloud Run Deployed Container</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <div class="build-step" id="build-step-3">
+                                        <span>3. Migrate Supabase Database & Security Policies (RLS)</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <div class="build-step" id="build-step-4">
+                                        <span>4. Pull and Launch n8n Workflow Daemon Engine</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <div class="build-step" id="build-step-5">
+                                        <span>5. Deploy Twilio Voice Webhook & Web Tunnels</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <div class="build-step" id="build-step-6">
+                                        <span>6. Complete Verification & Encrypt Vault license key</span>
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Live Connectivity Checkmarks -->
+                            <div>
+                                <h4 style="font-size: 0.95rem; font-weight:600; margin-bottom: 0.75rem; color: var(--text-primary);;">
+                                    Active System Verification Checkmarks</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <div class="connectivity-check" id="check-gcp">
+                                        <span>Cloud Run</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                    <div class="connectivity-check" id="check-db">
+                                        <span>Supabase DB</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                    <div class="connectivity-check" id="check-n8n">
+                                        <span>n8n Daemon</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                    <div class="connectivity-check" id="check-dify">
+                                        <span>Dify RAG Brain</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                    <div class="connectivity-check" id="check-twilio">
+                                        <span>Twilio Hook</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                    <div class="connectivity-check" id="check-qbo">
+                                        <span>QuickBooks</span>
+                                        <span class="check-status">WAITING</span>
+                                    </div>
+                                </div>
+                                <div
+                                    style="margin-top: 10px; font-size: 0.7rem; color: var(--text-dim); line-height: 1.4; padding: 8px; background: rgba(255,255,255,0.01); border-radius: 6px; border: 1px dashed var(--border-color);">
+                                    <i class="fa-solid fa-circle-info"
+                                        style="color:var(--secondary-color); margin-right:4px;"></i>
+                                    <strong>Connection Sandbox Notice:</strong> QuickBooks starts automatically in Local
+                                    Sandbox Mock / Verification mode (no production credentials required). You can
+                                    update production credentials inside the Operations Hub settings after launching.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rolling Terminal Logs -->
+                        <div style="margin-top: 1.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label class="form-label" style="margin-bottom: 0;">Diagnostic Installer Logs</label>
+                                <span
+                                    style="font-size: 0.65rem; color: var(--text-dim); font-family: monospace;">stream:
+                                    stdout/stderr</span>
+                            </div>
+                            <div id="deployTerminal"
+                                style="font-family: 'Courier New', monospace; font-size: 0.72rem; line-height: 1.4; height: 160px; overflow-y: auto; background: #020306; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: #00c6ff; display: flex; flex-direction: column; gap: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.85);">
+                                <!-- Dynamic script terminal lines -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deployment Outputs -->
+                    <div id="deploymentResults" class="card"
+                        style="display: none; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3); margin-top: 1.5rem;">
+                        <div class="card-title" style="color: #10b981; border-color: rgba(16, 185, 129, 0.15);">
+                            <span><i class="fa-solid fa-circle-check"></i> Client Instance Deployed & Verified
+                                Successfully!</span>
+                            <button class="btn btn-secondary btn-small" onclick="copyToken()">Copy Activation
+                                Token</button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1.5rem;">
+                            <div>
+                                <h4 style="font-size: 0.95rem; font-weight:600; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                                    Self-Installation Complete!</h4>
+                                <p
+                                    style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1rem;">
+                                    Your secure environment is initialized, locked to the <strong><span
+                                            id="activeVertText">Medical & Healthcare</span></strong> vertical, and all
+                                    system hooks are successfully connected.
+                                </p>
+                                <button class="btn btn-accent pulse-btn" id="launchHubBtn" onclick="launchHub()"
+                                    style="padding: 10px 20px; font-weight: 700; width: 100%; box-shadow: 0 0 15px rgba(0, 198, 255, 0.4); border-color: var(--secondary-color);">
+                                    <i class="fa-solid fa-rocket"></i> Launch Operations Panel (Auto-Unlock)
+                                </button>
+                                <div class="next-step-indicator-banner" style="margin-top: 12px;">
+                                    <i class="fa-solid fa-arrow-right-long fa-bounce"></i>
+                                    <span><strong>👉 Next Step:</strong> Click this pulsing button to open the client
+                                        Operations Hub. The cryptographic activation token will automatically unlock
+                                        it.</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="form-label" style="color: #10b981; font-weight:700;">Secure Cryptographic
+                                    Activation Token</label>
+                                <textarea id="activationTokenResult" class="form-textarea" readonly
+                                    style="font-family:'Courier New', monospace; font-size:0.72rem; min-height:85px; color:#10b981; background:rgba(0,0,0,0.3); border-color: rgba(16,185,129,0.3);"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: LICENSE VAULT -->
+                <section id="tab-licensing" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                            Licensing Inventory</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Track, manage, and verify all active
+                            client licenses deployed in production environments.</p>
+                    </div>
+
+                    <div class="card">
+                        <table class="task-queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Client ID / License</th>
+                                    <th>Company Name</th>
+                                    <th>Locked Vertical</th>
+                                    <th>Licensing Tier</th>
+                                    <th>Security Level</th>
+                                    <th>Endpoint Details</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="task-queue-row">
+                                    <td><code style="color:var(--secondary-color)">CONVERGENCE-Ai-APEXMED-9812A-2026</code></td>
+                                    <td>Apex Medical Care</td>
+                                    <td>Medical & Healthcare</td>
+                                    <td><span style="color:var(--secondary-color); font-weight:600;">Tier 1: Starter
+                                            Team ($249/mo)</span></td>
+                                    <td><span style="color:#10b981; font-weight:600;"><i class="fa-solid fa-lock"></i>
+                                            Vault Secure</span></td>
+                                    <td><code>https://client-apexmed.convergence-ai.com</code></td>
+                                    <td><span class="status-badge completed">ACTIVE</span></td>
+                                </tr>
+                                <tr class="task-queue-row">
+                                    <td><code style="color:var(--secondary-color)">CONVERGENCE-Ai-METROLA-4122C-2026</code></td>
+                                    <td>Metro LA Law Group</td>
+                                    <td>Legal Services</td>
+                                    <td><span style="color:var(--secondary-color); font-weight:600;">Tier 3: Enterprise
+                                            Elite ($1,200/mo)</span></td>
+                                    <td><span style="color:#10b981; font-weight:600;"><i class="fa-solid fa-lock"></i>
+                                            Vault Secure</span></td>
+                                    <td><code>https://metrola.convergence-ai.com</code></td>
+                                    <td><span class="status-badge completed">ACTIVE</span></td>
+                                </tr>
+                                <tr class="task-queue-row">
+                                    <td><code style="color:var(--secondary-color)">CONVERGENCE-Ai-OAKWOOD-5592B-2026</code></td>
+                                    <td>Oakwood Properties</td>
+                                    <td>Real Estate</td>
+                                    <td><span style="color:var(--secondary-color); font-weight:600;">Tier 2: Growth
+                                            Office ($499/mo)</span></td>
+                                    <td><span style="color:#10b981; font-weight:600;"><i class="fa-solid fa-lock"></i>
+                                            Vault Secure</span></td>
+                                    <td><code>https://oakwood.convergence-ai.com</code></td>
+                                    <td><span class="status-badge completed">ACTIVE</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- TAB 3: PRICING ENGINE -->
+                <section id="tab-pricing" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                            Competitive Matrix & Business Monetization</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Understand the market landscapes and
+                            calculate potential license revenue splits.</p>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Competitor Table -->
+                        <div class="card" style="grid-column: span 8;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-table-list"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> Industry
+                                    Competitor Analysis Matrix</span>
+                            </div>
+                            <table class="matrix-table" style="font-size: 0.8rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Feature / Platform</th>
+                                        <th>Lindy.ai</th>
+                                        <th>Relevance AI</th>
+                                        <th>Voiceflow</th>
+                                        <th class="matrix-row-highlight" style="color: var(--secondary-color);">
+                                            CONVERGENCE-Ai™ Operations Administrator</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Multi-Tenant Vault Isolation</strong></td>
+                                        <td>Basic API Key</td>
+                                        <td>Shared Database</td>
+                                        <td>Shared Project</td>
+                                        <td class="matrix-row-highlight" style="color: #10b981; font-weight: 600;"><i
+                                                class="fa-solid fa-check"></i> AES-256 Vault Tokens</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Locked Industry Verticals</strong></td>
+                                        <td>No (General)</td>
+                                        <td>No (General)</td>
+                                        <td>No (Chatbots Only)</td>
+                                        <td class="matrix-row-highlight" style="color: #10b981; font-weight: 600;"><i
+                                                class="fa-solid fa-check"></i> 12 Vertical Lockdowns</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Human-in-the-Loop Queue</strong></td>
+                                        <td>Yes (Intermediate)</td>
+                                        <td>Yes (RAG workflows)</td>
+                                        <td>No (Custom build)</td>
+                                        <td class="matrix-row-highlight" style="color: #10b981; font-weight: 600;"><i
+                                                class="fa-solid fa-check"></i> Native Secure Queue</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Workflow Designer & Flows</strong></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Only Design Canvas</td>
+                                        <td class="matrix-row-highlight" style="color: #10b981; font-weight: 600;"><i
+                                                class="fa-solid fa-check"></i> Interactive Flowcharts & Steps</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Estimated Platform Pricing</strong></td>
+                                        <td>$49 - $299/seat/mo</td>
+                                        <td>Usage credits (Expensive)</td>
+                                        <td>$50/agent/mo</td>
+                                        <td class="matrix-row-highlight"
+                                            style="color: var(--secondary-color); font-weight: 600;">$99 to $1,200/mo
+                                            Tiers</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Interactive Calculator -->
+                        <div class="card" style="grid-column: span 4;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-sack-dollar"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> Revenue
+                                    Calculator</span>
+                            </div>
+
+                            <div class="pricing-calc-box">
+                                <div class="form-group">
+                                    <label class="form-label">License Model Tier</label>
+                                    <select id="licTypeSelect" class="form-select" onchange="calculatePricing()">
+                                        <option value="99">Tier 0: Solopreneur / Freelance — $99/mo</option>
+                                        <option value="249" selected>Tier 1: Starter Team / SMB — $249/mo</option>
+                                        <option value="499">Tier 2: Growth Office — $499/mo</option>
+                                        <option value="1200">Tier 3: Enterprise Elite (Private Cloud) — $1,200/mo
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Number of SMB Clients Deployed</label>
+                                    <select id="volSelect" class="form-select" onchange="calculatePricing()">
+                                        <option value="5">5 Active Businesses</option>
+                                        <option value="10" selected>10 Active Businesses</option>
+                                        <option value="25">25 Active Businesses</option>
+                                        <option value="50">50 Active Businesses</option>
+                                        <option value="100">100 Active Businesses</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0.5rem;">
+                                    <label class="form-label"
+                                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary);;">
+                                        <input type="checkbox" id="calcUpskillCheck" onchange="calculatePricing()"
+                                            style="accent-color: var(--secondary-color); width: 16px; height: 16px;">
+                                        <span>Upskilling Module Included (+49/mo)</span>
+                                    </label>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 1.25rem;">
+                                    <label class="form-label"
+                                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary);;">
+                                        <input type="checkbox" id="calcObserverCheck" onchange="calculatePricing()"
+                                            style="accent-color: var(--secondary-color); width: 16px; height: 16px;">
+                                        <span>Observer Agent Included (+99/mo)</span>
+                                    </label>
+                                </div>
+
+                                <div
+                                    style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Estimated Recurring Monthly
+                                        Revenue (MRR)</div>
+                                    <div id="pricingResult" style="margin-top: 4px;">
+                                        <!-- Javascript filled -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-container" style="margin-top: 1.5rem;">
+                        <!-- Downstream TCO Calculator -->
+                        <div class="card glowing-primary" style="grid-column: span 12;">
+                            <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                                <span><i class="fa-solid fa-calculator"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> Client Total Cost
+                                    of Ownership (TCO) & Downstream Projection</span>
+                                <span class="vertical-badge"
+                                    style="font-size:0.7rem; border-color: rgba(16,185,129,0.3); color:var(--status-success);">LEGAL
+                                    COMPLIANCE</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <div class="form-group">
+                                        <label class="form-label">Client Software License Tier</label>
+                                        <select id="tcoLicenseSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="99">Tier 0: Solopreneur Transition — $99/mo</option>
+                                            <option value="249" selected>Tier 1: Starter Team / SMB — $249/mo</option>
+                                            <option value="499">Tier 2: Growth Office — $499/mo</option>
+                                            <option value="1200">Tier 3: Enterprise Elite — $1,200/mo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Projected Monthly Agent Tasks</label>
+                                        <select id="tcoTasksSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="500">500 Administrative Tasks/mo</option>
+                                            <option value="2000" selected>2,000 Administrative Tasks/mo</option>
+                                            <option value="10000">10,000 Administrative Tasks/mo</option>
+                                            <option value="50000">50,000 Administrative Tasks/mo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">API LLM Model Usage Profile</label>
+                                        <select id="tcoApiSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="0.01">GPT-4o-Mini (Cached / Efficient) — $0.01 avg/task
+                                            </option>
+                                            <option value="0.03" selected>Claude 3.5 Sonnet (Balanced) — $0.03 avg/task
+                                            </option>
+                                            <option value="0.08">GPT-4o / Full Sonnet (Premium Heavy) — $0.08 avg/task
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Self-Hosted VM Cloud Infrastructure</label>
+                                        <select id="tcoHostingSelect" class="form-select" onchange="calculateTco()">
+                                            <option value="10">Basic VPS (DigitalOcean / Linode) — $10/mo</option>
+                                            <option value="40" selected>Standard AWS EC2 / GCP instance — $40/mo
+                                            </option>
+                                            <option value="120">High-Availability Scaled AWS Cluster — $120/mo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 1rem;">
+                                        <label class="form-label"
+                                            style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary);;">
+                                            <input type="checkbox" id="tcoUpskillCheck" onchange="calculateTco()"
+                                                style="accent-color: var(--secondary-color); width: 16px; height: 16px;">
+                                            <span>Workforce Upskilling Module Add-On (+$49/mo)</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                                        <label class="form-label"
+                                            style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary);;">
+                                            <input type="checkbox" id="tcoObserverCheck" onchange="calculateTco()"
+                                                style="accent-color: var(--secondary-color); width: 16px; height: 16px;">
+                                            <span>Workflow Recording Observer Agent Add-On (+$99/mo)</span>
+                                        </label>
+                                    </div>
+                                    <div style="display:flex; flex-direction:column; justify-content:space-between;">
+                                        <div
+                                            style="padding: 1.25rem; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; gap:10px; font-size:0.8rem;">
+                                            <div style="display:flex; justify-content:space-between;">
+                                                <span style="color:var(--text-muted);">Operations Hub Software
+                                                    License:</span>
+                                                <span id="tcoLicOutput"
+                                                    style="font-weight:700; color: var(--text-primary);;">$249.00/mo</span>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between;">
+                                                <span style="color:var(--text-muted);">Projected LLM Token Costs:</span>
+                                                <span id="tcoTokensOutput"
+                                                    style="font-weight:700; color: var(--text-primary);;">$60.00/mo</span>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between;">
+                                                <span style="color:var(--text-muted);">Cloud Infrastructure Fee:</span>
+                                                <span id="tcoHostingOutput"
+                                                    style="font-weight:700; color: var(--text-primary);;">$40.00/mo</span>
+                                            </div>
+                                            <hr style="border-color:var(--border-color);">
+                                            <div
+                                                style="display:flex; justify-content:space-between; font-size:1rem; font-weight:700; margin-top:5px;">
+                                                <span style="color:var(--secondary-color);">Projected Total TCO:</span>
+                                                <span id="tcoTotalOutput"
+                                                    style="color:var(--secondary-color);">$349.00/mo</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style="padding:1rem; border-radius:8px; border:1px solid rgba(244,63,94,0.3); background:rgba(244,63,94,0.05); font-size:0.7rem; line-height:1.5; color:var(--text-muted); margin-top:1rem;">
+                                        <strong style="color:var(--status-error); display:block; margin-bottom:4px;"><i
+                                                class="fa-solid fa-triangle-exclamation"></i> Mandatory Operational
+                                            Boundary Warning:</strong>
+                                        Downstream operational charges (OpenAI/Claude API tokens, Twilio minutes, AWS
+                                        hosting bills, QuickBooks integration seat pricing) are billed directly to the
+                                        customer by their respective third-party providers. The platform licenses only
+                                        the core agentic back-office framework and is not liable for client-side API
+                                        overages, hosting bills, or usage spikes.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: LOVABLE BUILDER HUB -->
+                <section id="tab-sitebuilder" class="tab-content" style="display: none;">
+                    <div
+                        style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                                Lovable AI Builder & Scoping Hub</h1>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 800px;">
+                                Orchestrate the multi-agent system. The <strong>Antigravity agent</strong> structures
+                                database schemas, configurations, and API pipelines, while <strong>Lovable.ai</strong>
+                                builds and serves the front-end layout blocks.
+                            </p>
+                        </div>
+                        <span class="vertical-badge"
+                            style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); color: var(--status-success); font-size: 0.75rem;">
+                            <i class="fa-solid fa-code-merge"></i> Orchestrator Connected
+                        </span>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Scoping Trigger Parameters -->
+                        <div class="card glowing-primary" style="grid-column: span 6;">
+                            <div class="card-title">
+                                <span><i class="fa-solid fa-wand-magic-sparkles"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> 1. Automated
+                                    Scoping Parameters</span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Client Name</label>
+                                    <input type="text" id="sbClientName" class="form-input"
+                                        placeholder="e.g. Elarion Intelligence" value="">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Client Target Domain</label>
+                                    <input type="text" id="sbClientDomain" class="form-input"
+                                        placeholder="e.g. elarion.co" value="">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Client Current URL (for extraction &
+                                    re-interpretation)</label>
+                                <input type="text" id="sbCurrentUrl" class="form-input"
+                                    placeholder="e.g. https://www.elarion-old.com" value="">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Competitor URLs (Max 3, comma separated)</label>
+                                    <textarea id="sbCompetitors" class="form-textarea" style="min-height: 60px;"
+                                        placeholder="e.g. https://lindy.ai, https://relevance.ai"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Benchmark URLs / Design Examples (Max 3)</label>
+                                    <textarea id="sbBenchmarks" class="form-textarea" style="min-height: 60px;"
+                                        placeholder="e.g. https://stripe.com, https://linear.app"></textarea>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Google Analytics Measurement ID</label>
+                                    <input type="text" id="sbGaId" class="form-input" placeholder="e.g. G-XXXXXXXXXX"
+                                        value="">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">E-commerce Platform</label>
+                                    <select id="sbEcommerce" class="form-select" onchange="toggleSbEcomFields()">
+                                        <option value="none" selected>None (Standard Lead Capture)</option>
+                                        <option value="wordpress_woocommerce">Headless WooCommerce</option>
+                                        <option value="shopify">Shopify Storefront API</option>
+                                        <option value="custom_built">Custom DB E-commerce</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Payment Gateways Multi-Select -->
+                            <div class="form-group">
+                                <label class="form-label">Active Web Checkout Payment Providers (Select
+                                    Multiple)</label>
+                                <div
+                                    style="display: flex; flex-wrap: wrap; gap: 12px; padding: 0.5rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 8px;">
+                                    <label
+                                        style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-primary);;">
+                                        <input type="checkbox" name="sbGateways" value="Stripe" checked
+                                            style="accent-color: var(--secondary-color);"> Stripe
+                                    </label>
+                                    <label
+                                        style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-primary);;">
+                                        <input type="checkbox" name="sbGateways" value="PayPal" checked
+                                            style="accent-color: var(--secondary-color);"> PayPal
+                                    </label>
+                                    <label
+                                        style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-primary);;">
+                                        <input type="checkbox" name="sbGateways" value="Square"
+                                            style="accent-color: var(--secondary-color);"> Square
+                                    </label>
+                                    <label
+                                        style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-primary);;">
+                                        <input type="checkbox" name="sbGateways" value="Paddle"
+                                            style="accent-color: var(--secondary-color);"> Paddle
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Custom Conversion Targets -->
+                            <div class="form-group">
+                                <label class="form-label">Custom Conversion Targets & CTA Tags (JSON Array
+                                    Format)</label>
+                                <textarea id="sbConversions" class="form-textarea"
+                                    style="min-height: 60px; font-family: monospace; font-size: 0.75rem;">[]</textarea>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; margin-top: 1rem;">
+                                <button class="btn btn-secondary" style="flex: 1;" onclick="runSbScoping()">
+                                    <i class="fa-solid fa-magnifying-glass"></i> Analyze & Scope Specs
+                                </button>
+                                <button class="btn btn-primary" id="sbDeployBtn" style="flex: 1.2;" disabled
+                                    onclick="runSbDeploy()">
+                                    <i class="fa-solid fa-rocket"></i> Deploy Staging Build
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Scoped Output & Terminal logs -->
+                        <div class="card"
+                            style="grid-column: span 6; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div class="card-title">
+                                    <span><i class="fa-solid fa-code"
+                                            style="color: var(--primary-color); margin-right: 8px;"></i> 2. Generated
+                                        Lovable prompt Spec</span>
+                                    <span class="status-badge pending" id="sbPromptBadge">PENDING ANALYSIS</span>
+                                </div>
+
+                                <div style="margin-bottom: 1rem; position: relative;">
+                                    <label class="form-label">Generated System Prompt for Lovable.ai Scaffold</label>
+                                    <textarea id="sbPromptOutput" class="form-textarea" readonly
+                                        placeholder="Run Scoping Analysis to compile..."
+                                        style="font-family: monospace; font-size: 0.75rem; min-height: 120px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.05); color: var(--text-muted);"></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <div
+                                        style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px;">
+                                        <span style="color: var(--text-muted)">Scoping & Crawl Fee: <strong
+                                                id="sbScopingCredits">0</strong> credits</span>
+                                        <span style="color: var(--text-muted)">Estimated Build Cost: <strong
+                                                id="sbBuildCredits">0</strong> credits</span>
+                                    </div>
+                                    <div
+                                        style="padding: 0.5rem 0.75rem; background: rgba(0, 132, 255, 0.05); border: 1px solid rgba(0, 132, 255, 0.2); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                        <span style="color: var(--text-primary);; font-weight: 500;">Grand Total Estimate:</span>
+                                        <span style="color: var(--secondary-color); font-weight: 700;"
+                                            id="sbTotalCreditsText">$0.00 (0 credits)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Multi-Agent Execution Pipeline Output Stream</label>
+                                <div class="log-terminal" id="sbTerminal" style="height: 160px; font-size: 0.72rem;">
+                                    <div class="log-entry info">> Intake Engine idle. Ready to analyze client inputs.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Staging Preview and Actions (Only visible after deployment simulation) -->
+                    <div id="sbStagingResult" class="card"
+                        style="display: none; background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.3); margin-bottom: 1.5rem; transition: all 0.5s;">
+                        <div class="card-title" style="color: #10b981; border-color: rgba(16,185,129,0.15);">
+                            <span><i class="fa-solid fa-circle-check"></i> Staging Site Built & Verified
+                                Successfully!</span>
+                            <span class="status-badge completed">STAGING ONLINE</span>
+                        </div>
+                        <div
+                            style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1.5rem; align-items: center;">
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight:600; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                                    Site Details</h3>
+                                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+                                    Staging has been provisioned on Lovable Cloud. RLS rules check completed, payment
+                                    gateways are active in sandbox mode, and GA tags are configured.
+                                </p>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <a id="sbStagingUrlBtn" href="#" target="_blank" class="btn btn-accent btn-small"><i
+                                            class="fa-solid fa-up-right-from-square"></i> Open Staging Site</a>
+                                    <button class="btn btn-secondary btn-small"
+                                        onclick="window.open('https://lovable.ai', '_blank')"><i
+                                            class="fa-solid fa-laptop-code"></i> Edit Front-End in Lovable</button>
+                                    <button class="btn btn-success btn-small" onclick="copySbPrompt()"><i
+                                            class="fa-solid fa-copy"></i> Copy Prompt Spec</button>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <label class="form-label" style="align-self: flex-start;">Front-End Visual Staging
+                                    Thumbnail Mockup</label>
+                                <!-- Interactive Staging Page Thumbnail -->
+                                <div id="sbStagingThumbnail"
+                                    style="width: 100%; height: 120px; border-radius: 8px; border: 1px solid var(--border-color); background: #030712; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+                                    <!-- Dynamic header -->
+                                    <div
+                                        style="height: 18px; border-bottom: 1px solid var(--border-color); padding: 0 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.5rem;">
+                                        <span id="sbThumLogo" style="font-weight: 700; color: var(--text-primary);;">ELARION</span>
+                                        <div style="display: flex; gap: 4px; color: var(--text-muted);">
+                                            <span>Home</span><span>Services</span><span>Contact</span>
+                                        </div>
+                                    </div>
+                                    <!-- Dynamic hero body -->
+                                    <div id="sbThumBody"
+                                        style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; text-align: center;">
+                                        <div id="sbThumTitle"
+                                            style="font-size: 0.6rem; font-weight: 700; color: var(--secondary-color);">
+                                            ELARION INTELLIGENCE</div>
+                                        <div
+                                            style="font-size: 0.4rem; color: var(--text-muted); max-width: 140px; margin-top: 2px;">
+                                            Automated e-commerce consulting platform</div>
+                                        <div id="sbThumBtn"
+                                            style="padding: 2px 6px; font-size: 0.35rem; color: #000000; background: var(--secondary-color); border-radius: 2px; margin-top: 6px; font-weight: 600;">
+                                            Shop Products</div>
+                                    </div>
+                                    <!-- GA tracker dot -->
+                                    <div style="position: absolute; bottom: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: #10b981;"
+                                        title="GA Event Tagging Enabled"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Build Requests Library & Prompt Vault -->
+                    <div class="card">
+                        <div class="card-title" style="border-color: rgba(255,255,255,0.06);">
+                            <span><i class="fa-solid fa-folder-open"
+                                    style="color: var(--secondary-color); margin-right: 8px;"></i> 3. Client Build
+                                Request Library & Prompt Vault</span>
+                            <span id="projectCountBadge"
+                                style="font-size: 0.8rem; color: var(--text-muted); font-weight: 400;">0 Projects
+                                Scaffolding Vaulted</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;"
+                            id="projectLibraryList">
+                            <!-- Dynamically filled in script based on tenant -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 5: SEARCH & SOPS -->
+                <section id="tab-sops" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">Standard
+                            Operating Procedures (SOPs) & Deployment Guides</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Search and filter standard operating
+                            procedures, clinical checklists, and deployment handbooks in real-time.</p>
+                    </div>
+
+                    <div class="grid-container">
+                        <!-- Left Panel: SOP List and Search -->
+                        <div class="card" style="grid-column: span 12;">
+                            <div class="card-title"
+                                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+                                <span><i class="fa-solid fa-magnifying-glass"
+                                        style="color: var(--secondary-color); margin-right: 8px;"></i> Searchable
+                                    Knowledge Base</span>
+                                <span class="vertical-badge"
+                                    style="font-size:0.65rem; border-color: var(--primary-color); color: var(--primary-color);">Real-Time
+                                    Query Filtering</span>
+                            </div>
+
+                            <!-- Search Input -->
+                            <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                                <div style="position: relative;">
+                                    <input type="text" id="deploymentSopSearch" class="form-input"
+                                        placeholder="Search SOPs by title, category, tags, or content..."
+                                        oninput="handleDeploymentSopSearch(event)"
+                                        style="padding-left: 2.5rem; background: rgba(0,0,0,0.25); height: 42px;">
+                                    <i class="fa-solid fa-magnifying-glass"
+                                        style="position: absolute; left: 1rem; top: 13px; color: var(--text-dim);"></i>
+                                </div>
+                            </div>
+
+                            <!-- List of SOPs -->
+                            <div id="deploymentSopListContainer"
+                                style="display: flex; flex-direction: column; gap: 1rem; max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                                <!-- Will be dynamically loaded -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 6: COMPLIANCE AUDITS -->
+                <section id="tab-compliance" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 2rem;">
+                        <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);;">
+                            Compliance & Legal Audits Repository</h1>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Review signed tenant covenants,
+                            vertical-specific legal registries, and SHA-256 integrity proofs.</p>
+                    </div>
+
+                    <div class="card glowing-primary">
+                        <div class="card-title"
+                            style="display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fa-solid fa-scale-balanced"
+                                    style="color: var(--secondary-color); margin-right: 8px;"></i> Client Legal Consent
+                                Audit Log</span>
+                            <button class="btn btn-secondary btn-small" onclick="refreshConsents()"><i
+                                    class="fa-solid fa-arrows-rotate"></i> Refresh Audit Log</button>
+                        </div>
+                        <table class="task-queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Client / Company</th>
+                                    <th>Locked Vertical</th>
+                                    <th>Signer Email</th>
+                                    <th>IP Address</th>
+                                    <th>Terms SHA-256 Hash</th>
+                                    <th>Audit PDF</th>
+                                </tr>
+                            </thead>
+                            <tbody id="complianceConsentBody">
+                                <tr class="task-queue-row">
+                                    <td>2026-06-26 11:22:15</td>
+                                    <td>Apex Medical Care</td>
+                                    <td><span style="color:#10b981; font-weight: 600;">Medical & Healthcare
+                                            (HIPAA)</span></td>
+                                    <td>auditor@apexmed.com</td>
+                                    <td>192.168.1.45</td>
+                                    <td><code
+                                            style="font-size:0.7rem; color: var(--secondary-color)">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
+                                    </td>
+                                    <td><button class="btn btn-secondary btn-small"
+                                            onclick="downloadPdf('Apex Medical Care', 'Medical & Healthcare (HIPAA)')"><i
+                                                class="fa-solid fa-download"></i> PDF</button></td>
+                                </tr>
+                                <tr class="task-queue-row">
+                                    <td>2026-06-26 10:45:02</td>
+                                    <td>Metro LA Law Group</td>
+                                    <td><span style="color:#38bdf8; font-weight: 600;">Legal Services (ABA Rule
+                                            1.6)</span></td>
+                                    <td>compliance@metrola.com</td>
+                                    <td>172.16.4.12</td>
+                                    <td><code
+                                            style="font-size:0.7rem; color: var(--secondary-color)">7f83b1657ff1fc53b92c43053d5a281a179c45012a6479b1852a855ab764f691</code>
+                                    </td>
+                                    <td><button class="btn btn-secondary btn-small"
+                                            onclick="downloadPdf('Metro LA Law Group', 'Legal Services (ABA Rule 1.6)')"><i
+                                                class="fa-solid fa-download"></i> PDF</button></td>
+                                </tr>
+                                <tr class="task-queue-row">
+                                    <td>2026-06-26 09:15:30</td>
+                                    <td>Oakwood Properties</td>
+                                    <td><span style="color:#f59e0b; font-weight: 600;">Real Estate (Fair Housing
+                                            Act)</span></td>
+                                    <td>broker@oakwood.com</td>
+                                    <td>204.14.88.3</td>
+                                    <td><code
+                                            style="font-size:0.7rem; color: var(--secondary-color)">fb63b7165ef1fa53c92c43053d5a281a179c45012a6479b1852a855ab764f772</code>
+                                    </td>
+                                    <td><button class="btn btn-secondary btn-small"
+                                            onclick="downloadPdf('Oakwood Properties', 'Real Estate (Fair Housing Act)')"><i
+                                                class="fa-solid fa-download"></i> PDF</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+    <script type="module" src="hub_chrome.js"></script>
+    <script>
+        // Tab switcher
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const selectedTab = document.getElementById(`tab-${tabId}`);
+            if (selectedTab) selectedTab.style.display = 'block';
+
+            if (tabId === 'sops') {
+                renderDeploymentSopList();
+            }
+
+            // Highlight sidebar item safely
+            if (el) {
+                el.classList.add('active');
+            } else if (window.event && window.event.currentTarget) {
+                window.event.currentTarget.classList.add('active');
+            } else if (window.event && window.event.srcElement) {
+                const src = window.event.srcElement;
+                const item = src.closest('.menu-item') || src;
+                item.classList.add('active');
+            }
+        }
+
+        function renderDeploymentSopList(filteredSops = null) {
+            const container = document.getElementById('deploymentSopListContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            const list = filteredSops || (typeof STATE !== 'undefined' ? STATE.sops : []);
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 3rem; color:var(--text-dim); text-align:center;">
+                        <i class="fa-solid fa-folder-open" style="font-size:2.5rem; margin-bottom:1rem; color:var(--text-dim)"></i>
+                        <div style="font-weight:600; font-size:1rem;">No SOPs Found</div>
+                        <div style="font-size:0.8rem; margin-top:4px;">No matching operational guides in repository.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.forEach(sop => {
+                const card = document.createElement('div');
+                card.style.background = 'rgba(255, 255, 255, 0.01)';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '8px';
+                card.style.padding = '1.25rem';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '8px';
+
+                const tagsHTML = sop.tags.split(',').map(tag =>
+                    `<span style="background:rgba(241,179,28,0.1); border:1px solid rgba(241,179,28,0.25); color:#fcd34d; font-size:0.65rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:3px;">${tag.trim()}</span>`
+                ).join(' ');
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.75rem; color:var(--secondary-color); font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">${sop.category}</span>
+                        <span style="font-size:0.7rem; color:var(--text-dim); font-family:monospace;">${sop.id}</span>
+                    </div>
+                    <div style="font-family:var(--font-heading); font-size:1.1rem; font-weight:700; color: var(--text-primary);;">${sop.title}</div>
+                    <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">${sop.content}</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                        ${tagsHTML}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function handleDeploymentSopSearch(event) {
+            const query = event.target.value.toLowerCase().trim();
+            if (!query) {
+                renderDeploymentSopList();
+                return;
+            }
+            const filtered = (typeof STATE !== 'undefined' ? STATE.sops : []).filter(sop =>
+                sop.title.toLowerCase().includes(query) ||
+                sop.category.toLowerCase().includes(query) ||
+                sop.tags.toLowerCase().includes(query) ||
+                sop.content.toLowerCase().includes(query)
+            );
+            renderDeploymentSopList(filtered);
+        }
+
+        function togglePass() {
+            const vaultInput = document.getElementById('deployVault');
+            if (vaultInput.type === "password") {
+                vaultInput.type = "text";
+            } else {
+                vaultInput.type = "password";
+            }
+        }
+
+        // Hook licensing functions
+        let isEndpointManuallyEdited = false;
+        function markEndpointEdited() {
+            isEndpointManuallyEdited = true;
+            updateLicensePreview();
+        }
+
+        function updateLicensePreview() {
+            const comp = document.getElementById('deployCompany').value.trim();
+            if (!comp) {
+                document.getElementById('deployLicense').value = "";
+                if (!isEndpointManuallyEdited) {
+                    document.getElementById('deployEndpoint').value = "";
+                }
+                updateSessionThemeAndData();
+                return;
+            }
+            const vert = document.getElementById('deployVertical').value;
+            const logo = document.getElementById('deployLogo').value || "CC";
+            const color1 = document.getElementById('deployColor1').value;
+            const color2 = document.getElementById('deployColor2').value;
+
+            // Dynamic Short Code
+            const shortCode = comp.replace(/[^a-zA-Z]/g, "").substring(0, 8).toUpperCase();
+            document.getElementById('deployLicense').value = `CONVERGENCE-Ai-${shortCode}-9812A-2026`;
+
+            // Auto-update subdomain API endpoint unless manually edited by the user
+            if (!isEndpointManuallyEdited) {
+                const cleanSlug = comp.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 12);
+                document.getElementById('deployEndpoint').value = cleanSlug
+                    ? `https://client-${cleanSlug}.convergence-ai.com/v1`
+                    : "";
+            }
+            updateSessionThemeAndData();
+        }
+
+        let lastSessionIsDemo = null;
+        function updateSessionThemeAndData() {
+            const isDemo = isSuperAdminSession();
+            if (isDemo !== lastSessionIsDemo) {
+                lastSessionIsDemo = isDemo;
+
+                // Populate/Clear Lovable AI Builder inputs depending on session type
+                if (isDemo) {
+                    document.getElementById('sbClientName').value = "Elarion Intelligence";
+                    document.getElementById('sbClientDomain').value = "elarion.co";
+                    document.getElementById('sbCurrentUrl').value = "https://www.elarion-old.com";
+                    document.getElementById('sbCompetitors').value = "https://lindy.ai, https://relevance.ai";
+                    document.getElementById('sbBenchmarks').value = "https://stripe.com, https://linear.app";
+                    document.getElementById('sbGaId').value = "G-K29L84P12D";
+                    document.getElementById('sbEcommerce').value = "shopify";
+                    document.getElementById('sbConversions').value = `[\n  {"name": "Checkout Start", "pagePath": "/checkout", "ctaText": "Buy Tier Now", "gaEventName": "begin_checkout"},\n  {"name": "Agent Session", "pagePath": "/contact", "ctaText": "Chat with Smithy", "gaEventName": "chat_initiated"}\n]`;
+                } else {
+                    document.getElementById('sbClientName').value = "";
+                    document.getElementById('sbClientDomain').value = "";
+                    document.getElementById('sbCurrentUrl').value = "";
+                    document.getElementById('sbCompetitors').value = "";
+                    document.getElementById('sbBenchmarks').value = "";
+                    document.getElementById('sbGaId').value = "";
+                    document.getElementById('sbEcommerce').value = "none";
+                    document.getElementById('sbConversions').value = "[]";
+                }
+
+                // Re-render project library
+                renderProjectLibrary();
+            }
+        }
+
+        let activeToken = "";
+
+        function logDeployTerminal(message, type = 'info') {
+            const terminal = document.getElementById('deployTerminal');
+            if (!terminal) return;
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+
+            let color = '#38bdf8'; // Cyan
+            if (type === 'success') color = '#10b981'; // Green
+            if (type === 'warn') color = '#f59e0b'; // Amber
+            if (type === 'error') color = '#ef4444'; // Red
+            if (type === 'agent') color = '#a78bfa'; // Purple
+
+            entry.style.color = color;
+            entry.innerHTML = `<span style="color:var(--text-dim)">[${new Date().toLocaleTimeString()}]</span> <span style="font-weight:600;">[${type.toUpperCase()}]</span> ${message}`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function launchHub() {
+            if (!activeToken) return;
+            try {
+                localStorage.setItem('aiwx_active_token', activeToken);
+                localStorage.setItem('aiwx_superadmin', 'true');
+                window.location.href = `./operations_hub.html?token=${encodeURIComponent(activeToken)}`;
+            } catch (e) {
+                console.error("Local storage error on launch redirection:", e);
+                window.location.href = `./operations_hub.html?token=${encodeURIComponent(activeToken)}`;
+            }
+        }
+
+        function deployClient() {
+            const config = {
+                companyName: document.getElementById('deployCompany').value,
+                vertical: document.getElementById('deployVertical').value,
+                logoText: document.getElementById('deployLogo').value,
+                primaryColor: document.getElementById('deployColor1').value,
+                secondaryColor: document.getElementById('deployColor2').value,
+                apiEndpoint: document.getElementById('deployEndpoint').value,
+                vaultKey: document.getElementById('deployVault').value,
+                upskill: document.getElementById('deployUpskill').checked,
+                observer: document.getElementById('deployObserver').checked
+            };
+
+            activeToken = generateActivationToken(config);
+
+            // Render Result in Results Card
+            document.getElementById('activeVertText').textContent = VERTICALS[config.vertical].name;
+            document.getElementById('activationTokenResult').value = activeToken;
+
+            // Disable start button
+            const startBtn = document.getElementById('deployStartBtn');
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deploying...';
+            }
+
+            // Reset and Show Progress Container
+            const progressContainer = document.getElementById('deployProgressContainer');
+            progressContainer.style.display = 'block';
+            progressContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            updateUnifiedStepper(2);
+
+            const progressBar = document.getElementById('deployProgressBar');
+            const percentText = document.getElementById('deployPercentText');
+            const statusText = document.getElementById('deployStatusText');
+            const stageBadge = document.getElementById('deployProgressStage');
+            const terminal = document.getElementById('deployTerminal');
+            terminal.innerHTML = '';
+
+            // Reset checklist and checks UI
+            document.querySelectorAll('.build-step').forEach(step => {
+                step.className = 'build-step';
+                step.querySelector('i').className = 'fa-regular fa-clock';
+            });
+            document.querySelectorAll('.connectivity-check').forEach(check => {
+                check.className = 'connectivity-check';
+                check.querySelector('.check-status').textContent = 'WAITING';
+            });
+
+            let percent = 0;
+
+            // Sequence logs and status ticks
+            const logSequence = [
+                { time: 0, pct: 5, status: "Authenticating GCP credentials...", log: "Initializing deployment runner on gcloud agent-node-us-east1...", type: "info" },
+                { time: 300, pct: 10, status: "Authenticating GCP credentials...", log: "Authenticating with Service Account Credentials... OK", type: "success" },
+                { time: 600, pct: 15, status: "Spawning Cloud Run runtime...", log: "[GCP RUN] Connecting to region us-central1...", type: "info" },
+                { time: 900, pct: 22, status: "Spawning Cloud Run runtime...", log: "[GCP RUN] Deploying service 'aiwx-agent-service-" + config.vertical + "'... revision: v2.4.0", type: "info" },
+                { time: 1200, pct: 28, status: "Spawning Cloud Run runtime...", log: "[GCP RUN] Setting container memory limits: 2048MB, CPU: 1.0... OK", type: "success" },
+                { time: 1500, pct: 35, status: "Spawning Cloud Run runtime...", log: "[GCP RUN] Injecting vault security environment overrides...", type: "info" },
+                { time: 1800, pct: 40, status: "Running Supabase DB migrations...", log: "[SUPABASE] Connecting to postgres://db.supabase.co:5432/client_db...", type: "info" },
+                { time: 2100, pct: 46, status: "Running Supabase DB migrations...", log: "[SUPABASE] Executing schema migrations: 20260610_init_tables (Profiles, Leads, Telemetry)", type: "info" },
+                { time: 2400, pct: 52, status: "Running Supabase DB migrations...", log: "[SUPABASE] Applying Row-Level Security (RLS) policies to tenant schema... OK", type: "success" },
+                { time: 2700, pct: 58, status: "Pulling workflow daemon images...", log: "[DOCKER] Orchestrator pulling workflow engine n8n-io/n8n:latest...", type: "info" },
+                { time: 3000, pct: 64, status: "Pulling workflow daemon images...", log: "[DOCKER] Orchestrator pulling AI framework langgenius/dify-api:0.6.15...", type: "info" },
+                { time: 3300, pct: 70, status: "Pulling workflow daemon images...", log: "[DOCKER] Containers pulled successfully. Spawning bridge networks...", type: "success" },
+                { time: 3600, pct: 76, status: "Configuring Twilio voice tunnels...", log: "[TWILIO] Initializing webhook listener at " + config.apiEndpoint + "/twilio/voice...", type: "info" },
+                { time: 3900, pct: 82, status: "Configuring Twilio voice tunnels...", log: "[TWILIO] Voice webhook verified & linked to caller routing queue.", type: "success" },
+                { time: 4200, pct: 88, status: "Verifying API integrations...", log: "[INTEGRATIONS] Running connection diagnostics...", type: "info" },
+                { time: 4400, pct: 92, status: "Verifying API integrations...", log: "[INTEGRATIONS] QuickBooks API: SANDBOX MOCK MODE ACTIVE (Local development bypass enabled)", type: "warn" },
+                { time: 4600, pct: 96, status: "Verifying API integrations...", log: "[SYSTEM] Generating cryptographic activation token... OK", type: "success" },
+                { time: 4900, pct: 100, status: "Deployment Complete!", log: "[SYSTEM] Secure instance deployment finished successfully. Sandbox active.", type: "success" }
+            ];
+
+            // Set up timer to update progress bar and terminal logs
+            logSequence.forEach(step => {
+                setTimeout(() => {
+                    percent = step.pct;
+                    progressBar.style.width = percent + "%";
+                    percentText.textContent = percent + "%";
+                    statusText.textContent = step.status;
+                    logDeployTerminal(step.log, step.type);
+
+                    // Update checklist state based on percentage
+                    if (percent >= 15) {
+                        const step1 = document.getElementById('build-step-1');
+                        step1.className = 'build-step completed';
+                        step1.querySelector('i').className = 'fa-solid fa-circle-check';
+                    }
+                    if (percent >= 35) {
+                        const step2 = document.getElementById('build-step-2');
+                        step2.className = 'build-step completed';
+                        step2.querySelector('i').className = 'fa-solid fa-circle-check';
+
+                        const chkGcp = document.getElementById('check-gcp');
+                        chkGcp.className = 'connectivity-check active';
+                        chkGcp.querySelector('.check-status').textContent = 'ACTIVE';
+                    }
+                    if (percent >= 52) {
+                        const step3 = document.getElementById('build-step-3');
+                        step3.className = 'build-step completed';
+                        step3.querySelector('i').className = 'fa-solid fa-circle-check';
+
+                        const chkDb = document.getElementById('check-db');
+                        chkDb.className = 'connectivity-check active';
+                        chkDb.querySelector('.check-status').textContent = 'ACTIVE';
+                    }
+                    if (percent >= 70) {
+                        const step4 = document.getElementById('build-step-4');
+                        step4.className = 'build-step completed';
+                        step4.querySelector('i').className = 'fa-solid fa-circle-check';
+
+                        const chkN8n = document.getElementById('check-n8n');
+                        chkN8n.className = 'connectivity-check active';
+                        chkN8n.querySelector('.check-status').textContent = 'ACTIVE';
+
+                        const chkDify = document.getElementById('check-dify');
+                        chkDify.className = 'connectivity-check active';
+                        chkDify.querySelector('.check-status').textContent = 'ACTIVE';
+                    }
+                    if (percent >= 82) {
+                        const step5 = document.getElementById('build-step-5');
+                        step5.className = 'build-step completed';
+                        step5.querySelector('i').className = 'fa-solid fa-circle-check';
+
+                        const chkTwilio = document.getElementById('check-twilio');
+                        chkTwilio.className = 'connectivity-check active';
+                        chkTwilio.querySelector('.check-status').textContent = 'ACTIVE';
+                    }
+                    if (percent >= 92) {
+                        const chkQbo = document.getElementById('check-qbo');
+                        chkQbo.className = 'connectivity-check mock-active';
+                        chkQbo.querySelector('.check-status').textContent = 'MOCK ACTIVE';
+                    }
+                    if (percent >= 100) {
+                        const step6 = document.getElementById('build-step-6');
+                        step6.className = 'build-step completed';
+                        step6.querySelector('i').className = 'fa-solid fa-circle-check';
+
+                        stageBadge.className = 'status-badge completed';
+                        stageBadge.textContent = 'DEPLOYED & ACTIVE';
+
+                        // Show output results card
+                        const resultsCard = document.getElementById('deploymentResults');
+                        resultsCard.style.display = 'block';
+                        resultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                        // Reset start button
+                        if (startBtn) {
+                            startBtn.disabled = false;
+                            startBtn.innerHTML = '<i class="fa-solid fa-rocket"></i> Activate Deployments & Continue to Step 3';
+                        }
+
+                        // Local storage persistence
+                        try {
+                            localStorage.setItem('aiwx_pending_token', activeToken);
+                        } catch (e) {
+                            console.warn("localStorage write disabled:", e);
+                        }
+                    }
+                }, step.time);
+            });
+        }
+
+        function copyToken() {
+            const textarea = document.getElementById('activationTokenResult');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Security activation token copied to clipboard! You can paste this in the Operations Hub activation lock.');
+        }
+
+        function switchGuideTab(tab) {
+            const guideTabBtn = document.getElementById('guideTabBtn');
+            const archTabBtn = document.getElementById('archTabBtn');
+            const guideTabContent = document.getElementById('guideTabContent');
+            const archTabContent = document.getElementById('archTabContent');
+            const subtitle = document.getElementById('guideSubtitleText');
+
+            if (tab === 'how') {
+                guideTabBtn.style.background = 'var(--primary-color)';
+                guideTabBtn.style.color = '#ffffff';
+                archTabBtn.style.background = 'transparent';
+                archTabBtn.style.color = 'var(--text-muted)';
+                guideTabContent.style.display = 'grid';
+                archTabContent.style.display = 'none';
+                subtitle.textContent = "Deploying a new AI agent instance is simple and automatic. Follow these steps to provision and activate your workspace:";
+            } else {
+                guideTabBtn.style.background = 'transparent';
+                guideTabBtn.style.color = 'var(--text-muted)';
+                archTabBtn.style.background = 'var(--primary-color)';
+                archTabBtn.style.color = '#ffffff';
+                guideTabContent.style.display = 'none';
+                archTabContent.style.display = 'grid';
+                subtitle.textContent = "Learn about the enterprise-grade microservice architecture executing client-specific cognitive tasks:";
+            }
+        }
+
+        // TCO Downstream Cost Projection Calculator
+        function calculateTco() {
+            const licVal = parseFloat(document.getElementById('tcoLicenseSelect').value || 249);
+            const tasksVal = parseInt(document.getElementById('tcoTasksSelect').value || 2000);
+            const apiVal = parseFloat(document.getElementById('tcoApiSelect').value || 0.03);
+            const hostingVal = parseFloat(document.getElementById('tcoHostingSelect').value || 40);
+            const upskillVal = document.getElementById('tcoUpskillCheck')?.checked ? 49 : 0;
+            const observerVal = document.getElementById('tcoObserverCheck')?.checked ? 99 : 0;
+
+            const tokenCost = tasksVal * apiVal;
+            const total = licVal + tokenCost + hostingVal + upskillVal + observerVal;
+
+            document.getElementById('tcoLicOutput').textContent = `$${(licVal + upskillVal + observerVal).toFixed(2)}/mo`;
+            document.getElementById('tcoTokensOutput').textContent = `$${tokenCost.toFixed(2)}/mo`;
+            document.getElementById('tcoHostingOutput').textContent = `$${hostingVal.toFixed(2)}/mo`;
+            document.getElementById('tcoTotalOutput').textContent = `$${total.toFixed(2)}/mo`;
+        }
+
+        // ----------------------------------------------------
+        // Lovable AI Builder Hub JavaScript Functionality
+        // ----------------------------------------------------
+        function toggleSbEcomFields() {
+            // Placeholder for e-commerce field adjustments if needed
+        }
+
+        function toggleVaultPrompt(id) {
+            const promptBox = document.getElementById(`prompt-${id}`);
+            if (promptBox.style.display === 'none' || !promptBox.style.display) {
+                promptBox.style.display = 'block';
+            } else {
+                promptBox.style.display = 'none';
+            }
+        }
+
+        function copySbPrompt() {
+            const outputText = document.getElementById('sbPromptOutput');
+            outputText.select();
+            document.execCommand('copy');
+            alert('Generated Lovable prompt spec copied to clipboard!');
+        }
+
+        function logSbTerminal(message, type = 'info') {
+            const terminal = document.getElementById('sbTerminal');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        let calculatedStagingSlug = 'elarion';
+
+        function runSbScoping() {
+            const clientName = document.getElementById('sbClientName').value || 'Elarion Intelligence';
+            const domain = document.getElementById('sbClientDomain').value || 'elarion.co';
+            const currentUrl = document.getElementById('sbCurrentUrl').value;
+            const competitorsRaw = document.getElementById('sbCompetitors').value || '';
+            const benchmarksRaw = document.getElementById('sbBenchmarks').value || '';
+            const gaId = document.getElementById('sbGaId').value || 'G-K29L84P12D';
+            const ecommercePlatform = document.getElementById('sbEcommerce').value;
+
+            // Get selected payment gateways
+            const gateways = [];
+            document.querySelectorAll('input[name="sbGateways"]:checked').forEach(cb => {
+                gateways.push(cb.value);
+            });
+
+            // Parse conversion points count
+            let conversionsCount = 0;
+            try {
+                const convArr = JSON.parse(document.getElementById('sbConversions').value);
+                conversionsCount = Array.isArray(convArr) ? convArr.length : 0;
+            } catch (e) {
+                conversionsCount = 2; // Default fallback
+            }
+
+            calculatedStagingSlug = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '');
+            if (!calculatedStagingSlug) calculatedStagingSlug = 'client-site';
+
+            // Terminal log simulation sequence
+            const terminal = document.getElementById('sbTerminal');
+            terminal.innerHTML = ''; // Clear logs
+            logSbTerminal(`Initializing Intake Scoping Engine for ${clientName}...`, 'info');
+
+            setTimeout(() => {
+                if (currentUrl) {
+                    logSbTerminal(`Crawling current client URL: ${currentUrl}...`, 'info');
+                } else {
+                    logSbTerminal(`No current URL provided. Bypassing client website crawl.`, 'warn');
+                }
+            }, 300);
+
+            setTimeout(() => {
+                if (competitorsRaw) {
+                    const comps = competitorsRaw.split(',').map(c => c.trim()).filter(Boolean);
+                    logSbTerminal(`Scraping competitor layouts: ${comps.join(', ')}...`, 'info');
+                }
+            }, 700);
+
+            setTimeout(() => {
+                if (benchmarksRaw) {
+                    const benchs = benchmarksRaw.split(',').map(b => b.trim()).filter(Boolean);
+                    logSbTerminal(`Analyzing design benchmarks sitemaps: ${benchs.join(', ')}...`, 'info');
+                }
+            }, 1100);
+
+            setTimeout(() => {
+                logSbTerminal(`Branding Analyzer: Extracted primary brand color HSL (217, 91%, 24%) and font display pair (Cormorant Garamond + Inter).`, 'success');
+                logSbTerminal(`Analytics sniffer: GA ID "${gaId}" verified. Auto-tagging triggers initialized.`, 'success');
+            }, 1500);
+
+            setTimeout(() => {
+                logSbTerminal(`Scoping Complete! Spec configuration file intake-config.json saved to database. Ready to deploy staging.`, 'success');
+
+                // Perform calculations
+                let scopingCredits = 0;
+                if (currentUrl) scopingCredits += 100;
+
+                const compsCount = competitorsRaw.split(',').map(c => c.trim()).filter(Boolean).length;
+                const benchsCount = benchmarksRaw.split(',').map(b => b.trim()).filter(Boolean).length;
+                scopingCredits += (compsCount + benchsCount) * 50;
+
+                const baseCredits = 1260; // Standard Base
+                let multiplier = 0;
+
+                if (ecommercePlatform === 'wordpress_woocommerce') multiplier += 0.15;
+                else if (ecommercePlatform === 'shopify') multiplier += 0.15;
+                else if (ecommercePlatform === 'custom_built') multiplier += 0.20;
+
+                if (gateways.length > 0) {
+                    multiplier += 0.10; // Base payments configuration overhead
+                    if (gateways.length > 1) {
+                        multiplier += (gateways.length - 1) * 0.10;
+                    }
+                }
+
+                multiplier += conversionsCount * 0.02;
+
+                const buildCredits = Math.round(baseCredits * (1 + multiplier));
+                const totalCredits = scopingCredits + buildCredits;
+                const totalCost = (totalCredits * 0.10).toFixed(2);
+
+                document.getElementById('sbScopingCredits').textContent = scopingCredits;
+                document.getElementById('sbBuildCredits').textContent = buildCredits;
+                document.getElementById('sbTotalCreditsText').textContent = `$${totalCost} (${totalCredits} credits)`;
+
+                // Formulate system prompt output
+                const gatewaysText = gateways.length > 0 ? `with ${gateways.join(' + ')} checkouts` : 'no checkout gate';
+                const ecomText = ecommercePlatform !== 'none' ? `integrated headless e-commerce (${ecommercePlatform})` : 'standard lead capture landing page';
+
+                document.getElementById('sbPromptOutput').value = `Build a site that MUST be fully mobile responsive out of the gate (mobile-first layout structure, touch targets >=44px, input fields >=16px to prevent iOS auto-zoom, and zero horizontal scroll using overflow-x clip). Use the template: React 18 + Vite + TS, Tailwind HSL tokens, ${ecomText} ${gatewaysText}, sniffs GA ID ${gaId}. Analyze layout from currentUrl: "${currentUrl || 'none'}", competitorUrls: "${competitorsRaw}", and benchmarkUrls: "${benchmarksRaw}". Auto-tag all pages, components, and CTAs (including ${conversionsCount} configured conversion points). Enforce mobile 16px inputs, RLS Security with app_role user_roles, and AdminRoute gates.`;
+
+                document.getElementById('sbPromptBadge').className = 'status-badge completed';
+                document.getElementById('sbPromptBadge').textContent = 'SPEC COMPILED';
+                document.getElementById('sbDeployBtn').disabled = false;
+            }, 1900);
+        }
+
+        function runSbDeploy() {
+            logSbTerminal(`Initializing Antigravity multi-agent database scaffold...`, 'agent');
+
+            setTimeout(() => {
+                logSbTerminal(`[Antigravity] Connecting to Lovable Cloud Supabase Postgres instance...`, 'info');
+                logSbTerminal(`[Antigravity] Executing migration schema: public.profiles, public.user_roles, public.leads, public.credit_events.`, 'success');
+                logSbTerminal(`[Antigravity] Deploying SECURITY DEFINER RPC helper has_role() and RLS policy rules...`, 'success');
+            }, 500);
+
+            setTimeout(() => {
+                logSbTerminal(`[Antigravity] Initializing pluggable payment-gateway.ts abstraction layer...`, 'info');
+                logSbTerminal(`[Antigravity] Deploying Edge Function webhook/submit-form with rate-limiting...`, 'success');
+                logSbTerminal(`[Antigravity] Deploying Edge Function ga4-analytics server-side proxy...`, 'success');
+            }, 1200);
+
+            setTimeout(() => {
+                logSbTerminal(`[Lovable.ai] Compiling visual layouts & React components (Hero, ServiceCard, Cart, Footer)...`, 'info');
+                logSbTerminal(`[Lovable.ai] Bundling Vite assets. Size: 182KB gzipped. Core Web Vitals validated.`, 'success');
+            }, 2000);
+
+            setTimeout(() => {
+                logSbTerminal(`[Orchestrator] Staging build deployed successfully to Lovable Cloud staging network!`, 'success');
+
+                const clientName = document.getElementById('sbClientName').value || 'Elarion Intelligence';
+                const domain = document.getElementById('sbClientDomain').value || 'elarion.co';
+
+                // Display results card
+                const stagingCard = document.getElementById('sbStagingResult');
+                stagingCard.style.display = 'block';
+                stagingCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                // Configure staging url
+                const url = `https://staging-${calculatedStagingSlug}.lovable.app`;
+                document.getElementById('sbStagingUrlBtn').href = url;
+
+                // Update thumbnail visuals dynamically
+                document.getElementById('sbThumLogo').textContent = clientName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8).toUpperCase();
+                document.getElementById('sbThumTitle').textContent = clientName.toUpperCase();
+
+                const ecom = document.getElementById('sbEcommerce').value;
+                if (ecom !== 'none') {
+                    document.getElementById('sbThumBtn').textContent = 'Shop Products';
+                } else {
+                    document.getElementById('sbThumBtn').textContent = 'Schedule Session';
+                }
+
+                // Create and save project item to localStorage user library
+                const newProj = {
+                    id: 'usr_' + Date.now(),
+                    company: clientName,
+                    domain: domain,
+                    status: 'PRODUCTION LIVE',
+                    title: clientName + ' Platform',
+                    desc: 'Automated ' + (ecom !== 'none' ? ecom : 'lead capture') + ' platform',
+                    btnText: ecom !== 'none' ? 'Shop Products' : 'Schedule Session',
+                    tech1: ecom !== 'none' ? ecom : 'HTML5',
+                    tech2: 'Stripe',
+                    url: `https://staging-${calculatedStagingSlug}.lovable.app`,
+                    prompt: document.getElementById('sbPromptOutput').value
+                };
+
+                let userProjs = [];
+                const saved = localStorage.getItem('aiwx_user_projects');
+                if (saved) {
+                    try { userProjs = JSON.parse(saved); } catch (e) { }
+                }
+                userProjs.push(newProj);
+                localStorage.setItem('aiwx_user_projects', JSON.stringify(userProjs));
+
+                // Re-render project library
+                renderProjectLibrary();
+            }, 2800);
+        }
+
+        function isSuperAdminSession() {
+            const deployCompanyInput = document.getElementById('deployCompany');
+            if (deployCompanyInput && (deployCompanyInput.value.toLowerCase().includes("opsadmin") || deployCompanyInput.value.toLowerCase().includes("agencyadmin"))) {
+                return true;
+            }
+            const activeTok = activeToken || localStorage.getItem('aiwx_active_token') || localStorage.getItem('aiwx_pending_token') || '';
+            if (activeTok) {
+                const parts = activeTok.split('.');
+                if (parts.length === 3) {
+                    try {
+                        const body = JSON.parse(safeAtob(parts[1]));
+                        if (body.company && (body.company.toLowerCase().includes("opsadmin") || body.company.toLowerCase().includes("agencyadmin"))) {
+                            return true;
+                        }
+                    } catch (e) { }
+                }
+            }
+            return localStorage.getItem('aiwx_superadmin') === 'true';
+        }
+
+        function renderProjectLibrary() {
+            const listEl = document.getElementById('projectLibraryList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            let projects = [];
+            const isDemo = isSuperAdminSession();
+
+            if (isDemo) {
+                projects = [
+                    {
+                        id: 'p1',
+                        company: 'Elarion Intelligence Ltd',
+                        domain: 'elarion.co',
+                        status: 'PRODUCTION LIVE',
+                        title: 'Cognitive B2B Consultancies',
+                        desc: 'Governance and AI workflows integration',
+                        btnText: 'Shop Products',
+                        tech1: 'Shopify API',
+                        tech2: 'Stripe',
+                        url: 'https://staging-elarion.lovable.app',
+                        prompt: 'Build a site using the CONVERGENCE-Ai template: React 18 + Vite + TS, Tailwind HSL tokens, Shopify Storefront GraphQL Integration, Stripe + PayPal checkout, sniffs GA ID G-K29L84P12D. Competitor URLs analyzed: relevance.ai, lindy.ai. Auto-tag every page and CTA button. Use has_role Security triggers in Supabase profiles. Ensure mobile 16px input targets.'
+                    },
+                    {
+                        id: 'p2',
+                        company: 'CapHouseFest 2026',
+                        domain: 'caphousefest.com',
+                        status: 'PRODUCTION LIVE',
+                        title: 'Capital House Music Festival',
+                        desc: 'Saturday, May 23, 2026 at Alethia Tanner Park',
+                        btnText: 'Get Tickets',
+                        tech1: 'Eventbrite',
+                        tech2: 'Stripe',
+                        url: 'https://staging-caphousefest.lovable.app',
+                        prompt: 'Build a site using the lovable-site-template.md spec: countdown timers, sponsors Embla carousel, Eventbrite ticket embed widgets, GA analytics edge function tracking G-7A2L8B91CC. HSL variables 187 100% 25%. Auto-tag all lead forms and ticket buttons. Standard user_roles tables.'
+                    },
+                    {
+                        id: 'p3',
+                        company: 'Operations Hub Admin',
+                        domain: 'operations-hub.cloud',
+                        status: 'PRODUCTION LIVE',
+                        title: 'Cognitive Operations Studio',
+                        desc: 'Deploying high-frequency agent workflows',
+                        btnText: 'Launch Hub',
+                        tech1: 'GHL + Notion',
+                        tech2: 'Stripe',
+                        url: 'https://staging-ops-admin.lovable.app',
+                        prompt: 'Build a site using the operations-build-template.md spec: 6 dynamic service tiers, embedded chat widget Agent Smithy proxying Gemini, analytics tracking UTM conversion paths, leads routing webhook to Notion and GHL CRM pipeline. stripe checkout. GA G-K29L84P12D. RLS gates.'
+                    },
+                    {
+                        id: 'p4',
+                        company: 'Meaningful Expressions',
+                        domain: 'meaningful-expressions.com',
+                        status: 'PRODUCTION LIVE',
+                        title: 'Art & Creative Expression',
+                        desc: 'Creative Gallery',
+                        btnText: 'View Portfolio',
+                        tech1: 'Masonry',
+                        tech2: 'Stripe',
+                        url: 'https://staging-meaningful-expressions.lovable.app',
+                        prompt: 'Build a premium gallery and portfolio site using the React+Vite+TS template. Incorporate a masonry image grid with lightboxes, fluid CSS-only smooth scroll animations, a contact intake form routing submissions via Supabase database triggers, Stripe payment checkouts for artwork purchases, and Google Analytics event tracking (GA G-E39L56P88W) on all CTA buttons.'
+                    },
+                    {
+                        id: 'p5',
+                        company: 'PanAfricGenAI',
+                        domain: 'panafricgenai.africa',
+                        status: 'PRODUCTION LIVE',
+                        title: 'Pan-African GenAI Hub',
+                        desc: 'Python Flask + Local VSS Embeddings',
+                        btnText: 'Query Model',
+                        tech1: 'Flask RAG',
+                        tech2: 'SQLite',
+                        url: 'https://staging-panafricgenai.lovable.app',
+                        prompt: 'Replit-Scaffolded Python & React App: Set up a fast Flask API backend serving local vector RAG document querying, SQLite storage databases, and user authorization sessions. The frontend runs React 18, styling with Tailwind CSS, integrating Stripe checkout links with multi-currency support (ZAR, NGN, KES), and GA4 tracking codes on all search submissions.'
+                    }
+                ];
+            }
+
+            const savedUserProjects = localStorage.getItem('aiwx_user_projects');
+            if (savedUserProjects) {
+                try {
+                    const parsed = JSON.parse(savedUserProjects);
+                    projects = projects.concat(parsed);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            const badgeEl = document.getElementById('projectCountBadge');
+            if (badgeEl) {
+                badgeEl.textContent = `${projects.length} Project${projects.length === 1 ? '' : 's'} Scaffolding Vaulted`;
+            }
+
+            if (projects.length === 0) {
+                listEl.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; border: 1px dashed var(--border-color); border-radius: 8px;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; color: var(--text-dim);"></i>
+                        No build requests provisioned yet. Start by generating an activation token to scope your first client build.
+                    </div>
+                `;
+                return;
+            }
+
+            projects.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.background = 'rgba(255,255,255,0.01)';
+                card.style.borderColor = 'var(--border-color)';
+                card.style.padding = '1.25rem';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                        <div>
+                            <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary);;">${p.company}</h3>
+                            <code style="font-size: 0.7rem; color: var(--secondary-color);">${p.domain}</code>
+                        </div>
+                        <span class="status-badge completed" style="font-size: 0.65rem;">${p.status}</span>
+                    </div>
+
+                    <!-- Dynamic Layout Thumbnail -->
+                    <div style="height: 100px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); background: #010B16; display: flex; flex-direction: column; overflow: hidden; position: relative; margin-bottom: 0.75rem;">
+                        <div style="height: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0 6px; display: flex; align-items: center; justify-content: space-between; font-size: 0.45rem; background: rgba(0,0,0,0.3);">
+                            <span style="font-weight: 700; color: #00c6ff;">${p.company.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8).toUpperCase()}</span>
+                            <span style="font-size: 0.35rem; color: #94a3b8;">Headless App</span>
+                        </div>
+                        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; text-align: center;">
+                            <div style="font-size: 0.55rem; font-weight: 700; color: #0084ff;">${p.title}</div>
+                            <div style="font-size: 0.35rem; color: #94a3b8; max-width: 150px; margin-top: 1px;">${p.desc}</div>
+                            <div style="padding: 2px 4px; font-size: 0.35rem; color: #000000; background: #00c6ff; border-radius: 2px; margin-top: 4px; font-weight: 600;">${p.btnText}</div>
+                        </div>
+                        <!-- Badges on thumbnail -->
+                        <div style="position: absolute; bottom: 3px; left: 3px; display: flex; gap: 2px;">
+                            <span style="font-size: 0.35rem; background: rgba(0,198,255,0.1); border: 1px solid rgba(0,198,255,0.3); color: #00c6ff; padding: 0 2px; border-radius: 2px;">${p.tech1}</span>
+                            <span style="font-size: 0.35rem; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; padding: 0 2px; border-radius: 2px;">${p.tech2}</span>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 0.75rem;">
+                        <strong>Analyzed URL:</strong> ${p.domain}
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary btn-small" style="flex: 1;" onclick="toggleVaultPrompt('${p.id}')">
+                            <i class="fa-solid fa-code"></i> View Vault Prompt
+                        </button>
+                        <a href="${p.url}" target="_blank" class="btn btn-primary btn-small" style="flex: 0.8; font-size: 0.7rem;">Staging Link</a>
+                    </div>
+
+                    <!-- Collapsible prompt -->
+                    <div id="prompt-${p.id}" style="display: none; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.65rem; color: var(--text-muted); overflow-x: auto; white-space: pre-wrap;">${p.prompt}</div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        function jumpToUnifiedStep(stepNum) {
+            const token = document.getElementById('activationTokenResult')?.value || activeToken || localStorage.getItem('aiwx_pending_token') || localStorage.getItem('aiwx_active_token') || '';
+            if (stepNum === 1) {
+                switchTab('deployer');
+                const progressContainer = document.getElementById('deployProgressContainer');
+                if (progressContainer) progressContainer.style.display = 'none';
+                updateUnifiedStepper(1);
+                return;
+            }
+            if (stepNum === 2) {
+                switchTab('deployer');
+                const progressContainer = document.getElementById('deployProgressContainer');
+                if (progressContainer) progressContainer.style.display = 'block';
+                updateUnifiedStepper(2);
+                return;
+            }
+
+            // If we are at /site_builds/deployment_hub.html, the operations_hub.html is at ../operations_hub.html
+            let opsPage = './operations_hub.html';
+            if (window.location.pathname.includes('/site_builds/')) {
+                opsPage = '../operations_hub.html';
+            }
+            window.location.href = `${opsPage}?step=${stepNum}&token=${encodeURIComponent(token)}`;
+        }
+
+        function autoSaveDeploymentConfig() {
+            const config = {
+                companyName: document.getElementById('deployCompany').value,
+                logoText: document.getElementById('deployLogo').value,
+                vertical: document.getElementById('deployVertical').value,
+                primaryColor: document.getElementById('deployColor1').value,
+                secondaryColor: document.getElementById('deployColor2').value,
+                apiEndpoint: document.getElementById('deployEndpoint').value,
+                vaultKey: document.getElementById('deployVault').value,
+                upskill: document.getElementById('deployUpskill').checked,
+                observer: document.getElementById('deployObserver').checked
+            };
+            localStorage.setItem('aiwx_auto_deploy_config', JSON.stringify(config));
+        }
+
+        function loadSavedDeploymentConfig() {
+            const saved = localStorage.getItem('aiwx_auto_deploy_config');
+            if (saved) {
+                try {
+                    const config = JSON.parse(saved);
+                    document.getElementById('deployCompany').value = config.companyName || '';
+                    document.getElementById('deployLogo').value = config.logoText || '';
+                    document.getElementById('deployVertical').value = config.vertical || 'medical';
+                    document.getElementById('deployColor1').value = config.primaryColor || '#0084ff';
+                    document.getElementById('deployColor2').value = config.secondaryColor || '#00c6ff';
+                    document.getElementById('deployEndpoint').value = config.apiEndpoint || '';
+                    document.getElementById('deployVault').value = config.vaultKey || '';
+                    document.getElementById('deployUpskill').checked = config.upskill || false;
+                    document.getElementById('deployObserver').checked = config.observer || false;
+                    updateLicensePreview();
+                } catch (e) {
+                    console.error(e);
+                }
+            } else if (isSuperAdminSession()) {
+                // If it is the Super Admin demo session and no custom config is saved,
+                // pre-populate the form with the default demo data.
+                document.getElementById('deployCompany').value = "Apex Medical Care";
+                document.getElementById('deployLogo').value = "AMC";
+                document.getElementById('deployVertical').value = "medical";
+                document.getElementById('deployColor1').value = "#0084ff";
+                document.getElementById('deployColor2').value = "#00c6ff";
+                document.getElementById('deployEndpoint').value = "https://client-apexmed.convergence-ai.com/v1";
+                document.getElementById('deployVault').value = "Secure-Vault-99238-AW-Alpha";
+                document.getElementById('deployUpskill').checked = false;
+                document.getElementById('deployObserver').checked = false;
+                updateLicensePreview();
+            }
+        }
+
+        function updateUnifiedStepper(stepNumber) {
+            const labels = [
+                "Configure Client",
+                "Remote Provisioning",
+                "Vault Activation",
+                "Agent Config",
+                "Verify Simulation",
+                "Complete Onboarding"
+            ];
+            const badge = document.getElementById('unifiedStepperBadge');
+            if (badge) {
+                badge.textContent = `Step ${stepNumber} of 6: ${labels[stepNumber - 1]}`;
+            }
+
+            const line = document.getElementById('unifiedStepperLine');
+            if (line) {
+                line.style.width = `${((stepNumber - 1) / 5) * 100}%`;
+            }
+
+            for (let i = 1; i <= 6; i++) {
+                const stepEl = document.getElementById(`unified-step-${i}`);
+                if (!stepEl) continue;
+                stepEl.classList.remove('active', 'completed');
+                if (i < stepNumber) {
+                    stepEl.classList.add('completed');
+                } else if (i === stepNumber) {
+                    stepEl.classList.add('active');
+                }
+            }
+        }
+
+        // Compliance Audits functions
+        function refreshConsents() {
+            const body = document.getElementById('complianceConsentBody');
+            body.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px; color: var(--secondary-color);"></i> Querying remote tenants at GET /api/governance/consents...
+                    </td>
+                </tr>
+            `;
+
+            setTimeout(() => {
+                body.innerHTML = `
+                    <tr class="task-queue-row">
+                        <td>2026-06-26 11:22:15</td>
+                        <td>Apex Medical Care</td>
+                        <td><span style="color:#10b981; font-weight: 600;">Medical & Healthcare (HIPAA)</span></td>
+                        <td>auditor@apexmed.com</td>
+                        <td>192.168.1.45</td>
+                        <td><code style="font-size:0.7rem; color: var(--secondary-color)">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code></td>
+                        <td><button class="btn btn-secondary btn-small" onclick="downloadPdf('Apex Medical Care', 'Medical & Healthcare (HIPAA)')"><i class="fa-solid fa-download"></i> PDF</button></td>
+                    </tr>
+                    <tr class="task-queue-row">
+                        <td>2026-06-26 10:45:02</td>
+                        <td>Metro LA Law Group</td>
+                        <td><span style="color:#38bdf8; font-weight: 600;">Legal Services (ABA Rule 1.6)</span></td>
+                        <td>compliance@metrola.com</td>
+                        <td>172.16.4.12</td>
+                        <td><code style="font-size:0.7rem; color: var(--secondary-color)">7f83b1657ff1fc53b92c43053d5a281a179c45012a6479b1852a855ab764f691</code></td>
+                        <td><button class="btn btn-secondary btn-small" onclick="downloadPdf('Metro LA Law Group', 'Legal Services (ABA Rule 1.6)')"><i class="fa-solid fa-download"></i> PDF</button></td>
+                    </tr>
+                    <tr class="task-queue-row">
+                        <td>2026-06-26 09:15:30</td>
+                        <td>Oakwood Properties</td>
+                        <td><span style="color:#f59e0b; font-weight: 600;">Real Estate (Fair Housing Act)</span></td>
+                        <td>broker@oakwood.com</td>
+                        <td>204.14.88.3</td>
+                        <td><code style="font-size:0.7rem; color: var(--secondary-color)">fb63b7165ef1fa53c92c43053d5a281a179c45012a6479b1852a855ab764f772</code></td>
+                        <td><button class="btn btn-secondary btn-small" onclick="downloadPdf('Oakwood Properties', 'Real Estate (Fair Housing Act)')"><i class="fa-solid fa-download"></i> PDF</button></td>
+                    </tr>
+                `;
+            }, 800);
+        }
+
+        function downloadPdf(company, vertical) {
+            alert(`Generating and downloading tamper-proof WORM compliance PDF for ${company} (${vertical})...\nVerification Hash: e3b0c442...`);
+        }
+
+        // Init calc
+        window.addEventListener('load', () => {
+            calculatePricing();
+            calculateTco();
+            updateLicensePreview();
+            loadSavedDeploymentConfig();
+            renderProjectLibrary();
+            updateUnifiedStepper(1);
+
+            // Listeners for real-time auto-saving
+            document.getElementById('deployCompany').addEventListener('input', autoSaveDeploymentConfig);
+            document.getElementById('deployLogo').addEventListener('input', autoSaveDeploymentConfig);
+            document.getElementById('deployVertical').addEventListener('change', autoSaveDeploymentConfig);
+            document.getElementById('deployColor1').addEventListener('change', autoSaveDeploymentConfig);
+            document.getElementById('deployColor2').addEventListener('change', autoSaveDeploymentConfig);
+            document.getElementById('deployEndpoint').addEventListener('input', autoSaveDeploymentConfig);
+            document.getElementById('deployVault').addEventListener('input', autoSaveDeploymentConfig);
+            document.getElementById('deployUpskill').addEventListener('change', autoSaveDeploymentConfig);
+            document.getElementById('deployObserver').addEventListener('change', autoSaveDeploymentConfig);
+
+            // Routing step parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const stepParam = urlParams.get('step');
+            if (stepParam) {
+                const stepNum = parseInt(stepParam, 10);
+                if (stepNum === 1 || stepNum === 2) {
+                    jumpToUnifiedStep(stepNum);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

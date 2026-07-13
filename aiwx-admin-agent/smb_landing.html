@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- SEO METADATA & DISCOVERABILITY -->
+    <title>SMB Operations Hub - How to Install | CONVERGENCE-Ai Admin Assistant™</title>
+    <meta name="description" content="Deploy the CONVERGENCE-Ai Admin Assistant inside your corporate container. Automate invoice procure-to-pay, calendar rosters, Twilio phone calls, and QuickBooks bookkeeping under private KMS vaults. Secure 7-day trial.">
+    <meta name="keywords" content="SMB operations automation, private AI agents, secure invoice processing, n8n workflow scheduler, HIPAA compliance AI, business receptionist replacement">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background-image: radial-gradient(at 0% 0%, rgba(0, 198, 255, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 132, 255, 0.15) 0px, transparent 50%); overflow-y: auto;">
+
+    <!-- Click Funnel Sticky Navigation Bar -->
+    <header class="header" style="position: sticky; top: 0; padding: 0 4rem; z-index: 1000;">
+        <div class="brand-logo" style="width: auto;">
+                    <img src="convergence-ai_logo_light.png" alt="CONVERGENCE-Ai" style="height: 44px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                </div>
+        <div class="header-actions">
+            <span class="vertical-badge" style="background: rgba(0, 198, 255, 0.1); border-color: rgba(0, 198, 255, 0.4); color: var(--secondary-color);">7-DAY RISK FREE TRIAL</span>
+            <button class="btn btn-accent btn-small" onclick="scrollToPurchase()">Secure Deployed Trial</button>
+        </div>
+    </header>
+
+    <!-- Main Funnel Canvas -->
+    <main class="content-body" style="max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem;">
+        
+        <!-- SECTION 1: HERO & CORE DISCOVERY -->
+        <section style="text-align: center; margin-bottom: 5rem; padding-top: 2rem;">
+            <span class="vertical-badge" style="margin-bottom:1rem; font-size:0.75rem;">VAULT-SECURE ENTERPRISE AUTOMATION</span>
+            <h1 style="font-size: 3.5rem; font-weight: 700; line-height: 1.15; margin-bottom: 1.5rem; color: var(--text-primary);; font-family: var(--font-heading);">
+                Empower Your Administrative Team.<br>Multiply Your Business Growth & Reach.
+            </h1>
+            <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 850px; margin: 0 auto 2.5rem auto; line-height: 1.6;">
+                Unlock the true potential of your office staff. Instead of burying your administrative professionals in routine data entry, calendar scheduling, and manual invoicing, deploy the CONVERGENCE-Ai Operations Hub to automate the busywork. Upskill your office teams to become Growth Coordinators, driving customer success, strategic outreach, and market expansion while securing data behind private vaults.
+            </p>
+            
+            <div style="display: flex; gap: 1.5rem; justify-content: center; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="scrollToPurchase()">Start 7-Day Free Trial</button>
+                <button class="btn btn-secondary" onclick="openConsultantModal()"><i class="fa-solid fa-user-tie"></i> Contact a Consultant</button>
+            </div>
+            
+            <!-- Trust Factors -->
+            <div style="display:flex; justify-content:center; gap:2.5rem; margin-top:3rem; flex-wrap:wrap; font-size:0.8rem; color:var(--text-muted);">
+                <span><i class="fa-solid fa-shield-halved" style="color:var(--primary-color); margin-right:6px;"></i> AES-256 KMS Vault Encrypted</span>
+                <span><i class="fa-solid fa-server" style="color:var(--primary-color); margin-right:6px;"></i> Private Server Container Deployment</span>
+                <span><i class="fa-solid fa-calendar-check" style="color:var(--primary-color); margin-right:6px;"></i> Cancel Within 7 Days: Zero Risk</span>
+            </div>
+        </section>
+
+        <!-- SECTION 2: CHAT WITH AGENT SMITHY (Conversational Assistant Widget) -->
+        <section class="card glowing-primary" style="margin-bottom: 5rem; padding: 2.5rem;">
+            <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin-bottom:1.5rem;">
+                <div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:1.5rem; box-shadow:0 0 15px var(--primary-glow)">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div>
+                    <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.35rem;">Consult with Agent Smithy™</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem;">Ask our specialized operations agent anything about your specific industry vertical.</p>
+                </div>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:1.5rem;">
+                <button class="btn btn-secondary btn-small" style="text-align:left; justify-content:flex-start; text-transform:none;" onclick="triggerSmithy('medical')">
+                    <i class="fa-solid fa-stethoscope" style="color:var(--secondary-color); margin-right:8px;"></i> How does Agent Smithy manage patient triage & Twilio calls?
+                </button>
+                <button class="btn btn-secondary btn-small" style="text-align:left; justify-content:flex-start; text-transform:none;" onclick="triggerSmithy('finance')">
+                    <i class="fa-solid fa-file-invoice-dollar" style="color:var(--secondary-color); margin-right:8px;"></i> Show me the Procure-to-Pay workflow posts in QuickBooks.
+                </button>
+                <button class="btn btn-secondary btn-small" style="text-align:left; justify-content:flex-start; text-transform:none;" onclick="triggerSmithy('legal')">
+                    <i class="fa-solid fa-gavel" style="color:var(--secondary-color); margin-right:8px;"></i> How are legal intake documents structured under HIPAA regulations?
+                </button>
+                <button class="btn btn-secondary btn-small" style="text-align:left; justify-content:flex-start; text-transform:none;" onclick="triggerSmithy('realestate')">
+                    <i class="fa-solid fa-house-laptop" style="color:var(--secondary-color); margin-right:8px;"></i> How are showing schedules matched with realtor availability?
+                </button>
+            </div>
+            
+            <div id="smithyOutputBox" class="log-terminal" style="display:none; height:130px; padding:1rem; border-color:var(--secondary-color);">
+                <!-- Animated response -->
+            </div>
+        </section>
+
+        <!-- SECTION 2.5: EMPOWERED GROWTH USE CASES -->
+        <section style="margin-bottom: 5rem;">
+            <h2 style="font-size: 2.2rem; text-align: center; margin-bottom: 3rem; color: var(--text-primary);; font-family:var(--font-heading)">Empowered Growth: Upskilling Your Office Team</h2>
+            <div class="grid-container">
+                <div class="card glowing-primary" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 1rem;"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <h4 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);;">1. Administrative to Growth Coordinator</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+                            <strong>The Agent's Role:</strong> Automatically parses incoming client invoices, verifies PO tolerances, and drafts QuickBooks ledger entries under your control.
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                            <strong>The Upskilled Admin's Reach:</strong> Frees up 15+ hours weekly for your administrator to focus on building VIP client relations, renegotiating major vendor contracts, and executing outbound customer retention campaigns.
+                        </p>
+                    </div>
+                </div>
+                <div class="card glowing-primary" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 1rem;"><i class="fa-solid fa-volume-high"></i></div>
+                        <h4 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);;">2. Receptionist to Marketing Orchestrator</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+                            <strong>The Agent's Role:</strong> Fields inbound FAQ inquiries via Twilio voice and synthesizes speech responses, logging customer requests securely in your private CRM.
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                            <strong>The Upskilled Admin's Reach:</strong> Enables your front-desk staff to launch local direct-outreach marketing efforts, orchestrate dynamic team events, and personally welcome walk-in VIP opportunities.
+                        </p>
+                    </div>
+                </div>
+                <div class="card glowing-primary" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 1rem;"><i class="fa-solid fa-compass"></i></div>
+                        <h4 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);;">3. Scheduling to Operational Project Manager</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+                            <strong>The Agent's Role:</strong> Manages calendar appointment holds, handles complex scheduling overlaps, and routes itineraries for company travel.
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                            <strong>The Upskilled Admin's Reach:</strong> The administrator steps into a strategic planning role, using our Six Sigma Process Mapper to optimize service delivery workflows, reduce service bottlenecks, and orchestrate project resources.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: THE TRUST & SECURITY CASE -->
+        <section style="margin-bottom: 5rem;">
+            <h2 style="font-size: 2.2rem; text-align: center; margin-bottom: 3rem; color: var(--text-primary);; font-family:var(--font-heading)">Why Global SMBs Trust the CONVERGENCE-Ai System</h2>
+            <div class="grid-container">
+                <div class="card" style="grid-column: span 4;">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-lock" style="margin-right:8px;"></i> Vault-Grade Private Cloud</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">Your operational database strings and API credentials live in an isolated private cloud container under your target DNS. Bypasses shared public server clouds to ensure absolute compliance.</p>
+                </div>
+                <div class="card" style="grid-column: span 4;">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-list-check" style="margin-right:8px;"></i> Rigid Human-in-the-Loop</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">No out-of-bounds agent behavior. All high-risk tasks (dispatching client quotes, invoice post authorization, paid travel routing) pause in the HITL queue awaiting physical admin sign-off.</p>
+                </div>
+                <div class="card" style="grid-column: span 4;">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-database" style="margin-right:8px;"></i> Zero Shared Vectors</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">Your customer data is protected. CONVERGENCE-Ai runs custom local models, ensuring proprietary business SOPs never feed external foundation datasets or train third-party LLMs.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: STEP-BY-STEP DEPLOYMENT MAP (Funnel Discovery) -->
+        <section style="margin-bottom: 5rem;">
+            <h2 style="font-size: 2.2rem; text-align: center; margin-bottom: 3rem; color: var(--text-primary);; font-family:var(--font-heading)">How to Install: Step-by-Step Outline</h2>
+            
+            <div style="display:flex; flex-direction:column; gap:1.5rem; max-width:800px; margin:0 auto;">
+                <div class="card" style="display:flex; gap:20px; align-items:flex-start;">
+                    <div style="font-size:1.5rem; font-family:var(--font-heading); color:var(--secondary-color); font-weight:700; width:40px; height:40px; border-radius:50%; border:2px solid var(--secondary-color); display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
+                    <div>
+                        <h4 style="font-size:1rem; font-weight:600; margin-bottom:5px;">Secure Your Deployed License Key</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">Scroll down to the secure purchase gateway, input your card details, and activate your 7-day risk-free trial container. Your activation license key will be generated instantly.</p>
+                    </div>
+                </div>
+                <div class="card" style="display:flex; gap:20px; align-items:flex-start;">
+                    <div style="font-size:1.5rem; font-family:var(--font-heading); color:var(--secondary-color); font-weight:700; width:40px; height:40px; border-radius:50%; border:2px solid var(--secondary-color); display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
+                    <div>
+                        <h4 style="font-size:1rem; font-weight:600; margin-bottom:5px;">Collaborate with IT Staff or an CONVERGENCE-Ai Consultant</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">To ensure a seamless server setup, your IT lead or one of our certified <strong>CONVERGENCE-Ai Consultants</strong> will run the single-container Docker setup in your company's hosting environment.</p>
+                    </div>
+                </div>
+                <div class="card" style="display:flex; gap:20px; align-items:flex-start;">
+                    <div style="font-size:1.5rem; font-family:var(--font-heading); color:var(--secondary-color); font-weight:700; width:40px; height:40px; border-radius:50%; border:2px solid var(--secondary-color); display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</div>
+                    <div>
+                        <h4 style="font-size:1rem; font-weight:600; margin-bottom:5px;">Unlock & Launch Your Dedicated Vertical</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">Open your secure domain subpage. Paste the activation code into the lock window to automatically dynamic-brand and lock your system to your authorized industry vertical.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: SECURE REGISTRATION & PURCHASE FUNNEL (7-Day Trial) -->
+        <section id="purchase-funnel" class="card glowing-primary" style="max-width: 680px; margin: 0 auto 5rem auto; padding: 3rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <i class="fa-solid fa-credit-card" style="font-size: 3rem; color:var(--secondary-color); margin-bottom:1rem;"></i>
+                <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.6rem; margin-bottom:0.5rem;">Secure Trial Registration Portal</h3>
+                <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.5;">Start your 7-day risk-free trial. Card details are required to configure and download your dedicated license key. <strong>No charges are processed during the trial</strong>. If you cancel within 7 days, your activation code is deactivated with zero charges.</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Authorized Business Representative Email</label>
+                <input type="email" id="purchaseEmail" class="form-input" placeholder="e.g. administrator@apexmedical.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Industry Vertical Deployment</label>
+                <select id="purchaseVertical" class="form-select">
+                    <option value="medical">Medical & Healthcare Vertical</option>
+                    <option value="legal">Legal Services Vertical</option>
+                    <option value="realestate">Real Estate & Agency Vertical</option>
+                    <option value="finance">Financial & Bookkeeping Vertical</option>
+                </select>
+            </div>
+
+            <!-- Simulated Credit Card Input Group -->
+            <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: rgba(255,255,255,0.01); margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Secure Card Payment Details</span>
+                    <i class="fa-solid fa-lock" style="color: var(--secondary-color);"></i>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Cardholder Name</label>
+                    <input type="text" class="form-input" id="cardName" placeholder="e.g. Sarah Jenkins">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Card Number</label>
+                    <div style="position: relative;">
+                        <input type="text" class="form-input" id="cardNumber" placeholder="4111 2222 3333 4444" style="padding-left: 2.75rem;">
+                        <i class="fa-solid fa-credit-card" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim);"></i>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">Expiration Date</label>
+                        <input type="text" class="form-input" id="cardExpiry" placeholder="MM/YY">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CVC / Security Code</label>
+                        <input type="text" class="form-input" id="cardCvc" placeholder="123">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:2rem;">
+                <div style="padding:1rem; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid var(--border-color); font-size:0.8rem; margin-bottom:1rem; color:var(--text-muted); text-align:center;">
+                    <i class="fa-solid fa-info-circle" style="color:var(--secondary-color); margin-right:6px;"></i> Cancel Policy: Canceling terminates the container license key on day 8.
+                </div>
+                <button class="btn btn-accent" style="width:100%; font-size:1rem; padding:1rem;" onclick="processCheckout()">
+                    <i class="fa-solid fa-unlock-keyhole"></i> Secure License & Download Installer ($249/mo)
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Interactive Consultant Contact Modal -->
+    <div id="consultantModal" class="activation-modal" style="display:none;">
+        <div class="activation-box" style="max-width:500px;">
+            <div class="activation-box-inner" style="text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <h3 style="font-family:var(--font-heading); color: var(--text-primary);; font-size:1.35rem;"><i class="fa-solid fa-user-tie" style="color:var(--secondary-color); margin-right:8px;"></i> Talk to a Specialist</h3>
+                    <button class="btn btn-secondary btn-small" onclick="closeConsultantModal()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem; line-height:1.5;">Schedule a dedicated alignment session with an CONVERGENCE-Ai deployment consultant to walk through your server configurations.</p>
+                <div class="form-group">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" class="form-input" placeholder="e.g. Dr. Aris Smith">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" class="form-input" placeholder="e.g. +1 (555) 902-8821">
+                </div>
+                <button class="btn btn-primary" style="width:100%; margin-top:1rem;" onclick="closeConsultantModal(); alert('Consultation request queued. An administrator will call you shortly!');">Request Consultation Callback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+    <script>
+        function triggerSmithy(verticalKey) {
+            const out = document.getElementById('smithyOutputBox');
+            out.style.display = 'block';
+            out.innerHTML = `<span style="color:#a78bfa">[Agent Smithy]</span> <span class="log-entry info">Simulating intent classification for: ${verticalKey}...</span>`;
+            
+            setTimeout(() => {
+                let response = "";
+                if (verticalKey === 'medical') {
+                    response = "Inbound call classified. Speech synthesized via Deepgram/ElevenLabs API. Medical assistant queries local patient database, matches clinic guidelines for Dr. Aris's buffer policies, and prompts the HITL queue for surgery slot approval.";
+                } else if (verticalKey === 'finance') {
+                    response = "Supplier invoice scanned via direct RAG layout analyzer. Matched against PO #8821 within 5% standard tolerances. QuickBooks Online API called, preparing journal ledger draft and staging ACH payment authorization in HITL queue.";
+                } else if (verticalKey === 'legal') {
+                    response = "Client intake PDF parsed via private OCR container. Personal HIPAA identifiers encrypted and separated. Scheduled intake deposition dates generated inside MS Exchange calendar roster, pending admin release.";
+                } else if (verticalKey === 'realestate') {
+                    response = "Warm lead registered via Typeform hook. Agent filters realtor calendar databases, routes available listing showings matching buyer constraints, and schedules email drafts in the queue.";
+                }
+                out.innerHTML = `<span style="color:#a78bfa">[Agent Smithy]</span> <span style="color: var(--text-primary);">${response}</span>`;
+            }, 1200);
+        }
+
+        function scrollToPurchase() {
+            document.getElementById('purchase-funnel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function processCheckout() {
+            const email = document.getElementById('purchaseEmail').value.trim();
+            if (!email) {
+                alert('Please input a valid email address first.');
+                return;
+            }
+
+            // Super Admin Bypass validation
+            const isSuperAdminEmail = (email.toLowerCase() === 'aiworxmiths@gmail.com' || email.toLowerCase().endsWith('@convergence-ai.com'));
+            
+            // Check card inputs unless it is Super Admin bypassing for immediate demo
+            if (!isSuperAdminEmail) {
+                const card = document.getElementById('cardNumber').value.trim();
+                const expiry = document.getElementById('cardExpiry').value.trim();
+                const cvc = document.getElementById('cardCvc').value.trim();
+                
+                if (!card || !expiry || !cvc) {
+                    alert('Please input complete Credit Card billing details to secure your trial license key.');
+                    return;
+                }
+            }
+
+            const selectedVertical = document.getElementById('purchaseVertical').value;
+            
+            // Configure deployment details
+            const clientConfig = {
+                companyName: isSuperAdminEmail ? "CONVERGENCE-Ai Cloud-Native AI Automations Hub" : "My SMB Operations Hub",
+                vertical: selectedVertical,
+                logoText: isSuperAdminEmail ? "CONVERGENCE-Ai" : "SMB",
+                primaryColor: "#0084ff",
+                secondaryColor: "#00c6ff",
+                apiEndpoint: "https://api.convergence-ai.com/v1",
+                vaultKey: "SMB-Trial-Key-2026"
+            };
+
+            // Cryptographically generate activation token
+            const token = generateActivationToken(clientConfig);
+
+            // Store in LocalStorage for index.html / operations_hub.html autoload
+            localStorage.setItem('aiwx_pending_token', token);
+            
+            if (isSuperAdminEmail) {
+                localStorage.setItem('aiwx_superadmin', 'true');
+                alert('Super Admin session authenticated! Bypassing checkout and redirecting straight to the Operations Hub Agency Sandbox.');
+            } else {
+                localStorage.removeItem('aiwx_superadmin');
+                alert('Risk-free 7-day trial activated! Your new SMB deployment license key is: ' + token.substring(token.length - 25) + '.\n\nYour card details have been securely registered to start the trial. You have 7 days to cancel before you are charged. Redirection to operations sandbox starting now.');
+            }
+            
+            window.open('index.html', '_blank');
+        }
+
+        function openConsultantModal() {
+            document.getElementById('consultantModal').style.display = 'flex';
+        }
+
+        function closeConsultantModal() {
+            document.getElementById('consultantModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
