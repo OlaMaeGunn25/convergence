@@ -7,6 +7,7 @@ const { cleanDomain, scrapeDomain, extractNamesFromText } = require('../lib/scra
 const { analyzeFootprint } = require('../lib/analyzer');
 const { analyzeWorkforce } = require('../lib/workforce');
 const { scourBusiness, isOlderThanOneYear, filterRecentMentions } = require('../lib/scourer');
+const { searchScholar, isScholarConfigured, getSimulatedResults } = require('../lib/scholar');
 
 let passedTests = 0;
 let failedTests = 0;
@@ -181,6 +182,47 @@ async function runTests() {
 
   } catch (e) {
     assert(false, `Scouring, Green Tech, WAF & Name cross-reference tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 5: Google Scholar Integration (Legal vertical) ---
+  try {
+    // Ensure the environment key is unset so the fallback path is exercised.
+    delete process.env.SERPAPI_API_KEY;
+    delete process.env.SCHOLAR_API_KEY;
+
+    // A. searchScholar retrieves and structures research results
+    const scholar = await searchScholar('lobo law appeals precedent');
+    assert(scholar.success === true, 'searchScholar returns a successful result');
+    assert(Array.isArray(scholar.results) && scholar.results.length > 0, 'searchScholar returns a non-empty results array');
+
+    const firstResult = scholar.results[0];
+    const requiredFields = ['title', 'source', 'authors', 'publicationDate', 'citationsCount', 'link'];
+    const hasAllFields = requiredFields.every(f => f in firstResult);
+    assert(hasAllFields, 'Each scholar result exposes title, source, authors, publicationDate, citationsCount, and link');
+    assert(Array.isArray(firstResult.authors), 'Scholar result authors field is an array');
+    assert(typeof firstResult.citationsCount === 'number', 'Scholar result citationsCount is numeric');
+
+    // B. Mock fallback dataset activates gracefully when the API key is missing
+    assert(isScholarConfigured() === false, 'isScholarConfigured reports false when no key is set');
+    assert(scholar.simulated === true, 'searchScholar activates the simulated fallback when no API key is configured');
+    const caseLaw = scholar.results.some(r => r.title.includes('Nevada') || r.title.includes('Lobo Law'));
+    assert(caseLaw, 'Simulated fallback includes representative case-law citations (Nevada / Lobo Law)');
+
+    // C. getSimulatedResults is deterministic and echoes the query
+    const sim = getSimulatedResults('expert witness vetting');
+    assert(sim.simulated === true && sim.query === 'expert witness vetting', 'getSimulatedResults returns a simulated dataset echoing the query');
+    assert(sim.results.some(r => r.type === 'expert_publication' || r.type === 'scientific_precedent'), 'Simulated dataset includes expert-witness / scientific-precedent publications');
+
+    // D. Empty query is rejected without hitting the network
+    const empty = await searchScholar('');
+    assert(empty.success === false, 'searchScholar rejects an empty query');
+
+    // E. /api/scholar/search response contract (endpoint returns searchScholar output verbatim)
+    const endpointSchemaKeys = ['success', 'simulated', 'query', 'engine', 'totalResults', 'results'];
+    const schemaOk = endpointSchemaKeys.every(k => k in scholar);
+    assert(schemaOk, '/api/scholar/search response matches the expected JSON schema (success, simulated, query, engine, totalResults, results)');
+  } catch (e) {
+    assert(false, `Google Scholar integration tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

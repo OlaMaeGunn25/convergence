@@ -231,6 +231,7 @@
             <button class="tab-btn" data-consultant-tab="security" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Tech & Compliance</button>
             <button class="tab-btn" data-consultant-tab="workforce" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Workforce Blueprint</button>
             <button class="tab-btn" data-consultant-tab="sales" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Sales Proposals</button>
+            <button class="tab-btn" data-consultant-tab="scholar" id="tab-btn-scholar" style="display: none; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">⚖️ Case Precedents & Vetting</button>
           </div>
 
           <!-- TAB PANE: DOSSIER OVERVIEW -->
@@ -409,6 +410,37 @@
               <div id="sales-pitch-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <!-- JS populates copy-paste pitch cards -->
               </div>
+            </div>
+          </div>
+
+          <!-- TAB PANE: GOOGLE SCHOLAR CASE PRECEDENTS & VETTING (Legal vertical) -->
+          <div id="pane-consultant-scholar" class="consultant-tab-pane" style="display: none;">
+            <div class="dashboard-card" style="border: 1px solid var(--accent-indigo); background: linear-gradient(180deg, rgba(99, 102, 241, 0.03), transparent);">
+              <h3 style="font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-indigo);">
+                ⚖️ Google Scholar Case Precedents &amp; Vetting
+              </h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Automated case-law search, expert-witness publication vetting, and scientific-precedent checks cross-referenced against legal personnel found on the firm's site.</p>
+              <div id="scholar-summary" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                <!-- JS populates summary chips -->
+              </div>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                  <thead>
+                    <tr style="text-align: left; border-bottom: 1px solid var(--card-border); color: var(--text-secondary);">
+                      <th style="padding: 0.5rem;">Title</th>
+                      <th style="padding: 0.5rem;">Source / Court</th>
+                      <th style="padding: 0.5rem;">Authors</th>
+                      <th style="padding: 0.5rem;">Published</th>
+                      <th style="padding: 0.5rem;">Citations</th>
+                      <th style="padding: 0.5rem;">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scholar-results-tbody">
+                    <!-- JS populates Google Scholar rows -->
+                  </tbody>
+                </table>
+              </div>
+              <p id="scholar-fallback-note" style="display: none; font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.85rem; font-style: italic;"></p>
             </div>
           </div>
 
@@ -814,11 +846,93 @@ function initializeAdminConsole() {
   /**
    * Render admin dashboard metrics and components
    */
+  // Render the Google Scholar Case Precedents & Vetting tab (Legal vertical only).
+  // Uses textContent throughout to prevent stored XSS from scholar result fields.
+  function renderScholarTab(scholarData) {
+    const tabBtn = document.getElementById('tab-btn-scholar');
+    const tbody = document.getElementById('scholar-results-tbody');
+    const summary = document.getElementById('scholar-summary');
+    const note = document.getElementById('scholar-fallback-note');
+    if (!tbody || !summary) return;
+
+    tbody.innerHTML = '';
+    summary.innerHTML = '';
+    if (note) { note.style.display = 'none'; note.textContent = ''; }
+
+    // No scholar data => non-legal audit; hide the tab entirely.
+    if (!scholarData || !Array.isArray(scholarData.results)) {
+      if (tabBtn) tabBtn.style.display = 'none';
+      return;
+    }
+    if (tabBtn) tabBtn.style.display = '';
+
+    // Summary chips: verified case citations + expert publications
+    const chip = (label, value) => {
+      const box = document.createElement('div');
+      box.style.cssText = 'flex:1; min-width:150px; padding:0.85rem 1rem; border:1px solid var(--card-border); border-radius:10px;';
+      const v = document.createElement('div');
+      v.style.cssText = 'font-family: var(--font-display); font-weight:700; font-size:1.6rem; color: var(--accent-indigo);';
+      v.textContent = String(value);
+      const l = document.createElement('div');
+      l.style.cssText = 'font-size:0.72rem; color: var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;';
+      l.textContent = label;
+      box.appendChild(v); box.appendChild(l);
+      return box;
+    };
+    summary.appendChild(chip('Verified Case Citations', scholarData.verifiedCaseCitations != null ? scholarData.verifiedCaseCitations : scholarData.results.filter(r => r.type === 'case_law').length));
+    summary.appendChild(chip('Expert / Precedent Papers', scholarData.expertPublicationCount != null ? scholarData.expertPublicationCount : 0));
+    summary.appendChild(chip('Total Results', scholarData.totalResults != null ? scholarData.totalResults : scholarData.results.length));
+
+    // Result rows
+    scholarData.results.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--card-border)';
+      const cell = (text) => {
+        const td = document.createElement('td');
+        td.style.padding = '0.55rem 0.5rem';
+        td.style.verticalAlign = 'top';
+        td.textContent = text != null ? String(text) : '';
+        return td;
+      };
+      tr.appendChild(cell(r.title));
+      tr.appendChild(cell(r.source));
+      tr.appendChild(cell(Array.isArray(r.authors) ? r.authors.join(', ') : (r.authors || '')));
+      tr.appendChild(cell(r.publicationDate));
+      tr.appendChild(cell(r.citationsCount));
+      const linkTd = document.createElement('td');
+      linkTd.style.padding = '0.55rem 0.5rem';
+      if (r.link) {
+        const a = document.createElement('a');
+        a.href = r.link;                 // href assignment; text is set via textContent
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.color = 'var(--accent-indigo)';
+        a.textContent = 'View ↗';
+        linkTd.appendChild(a);
+      } else {
+        linkTd.textContent = '—';
+      }
+      tr.appendChild(linkTd);
+      tbody.appendChild(tr);
+    });
+
+    // Simulated / degraded provenance note
+    if (note && (scholarData.simulated || scholarData.degraded)) {
+      note.style.display = 'block';
+      note.textContent = scholarData.degraded
+        ? 'Note: live SerpApi request failed; showing simulated fallback citations for demonstration.'
+        : 'Note: SerpApi key not configured — showing simulated fallback citations for demonstration.';
+    }
+  }
+
   function renderAdminDashboard(data) {
     // Banner info
     document.getElementById('adm-business-name').textContent = data.businessName;
     document.getElementById('adm-domain-name').textContent = data.domain;
     document.getElementById('adm-vertical-name').textContent = data.vertical;
+
+    // Legal vertical: render the Google Scholar Case Precedents & Vetting tab
+    renderScholarTab(data.scholarData);
 
     const badgeSim = document.getElementById('adm-simulated-badge');
     if (data.isSimulated) {

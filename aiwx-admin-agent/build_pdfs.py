@@ -452,7 +452,116 @@ def generate_verticals_use_cases():
     print(f"Generated {pdf_filename} successfully.")
 
 
+def build_scholar_section(story, scholar_data):
+    """Append the Google Scholar Case Precedents & Vetting section to an audit
+    report story. `scholar_data` is the `scholarData` block from an audit package
+    (Legal Services vertical). Includes verified case citations, expert
+    publication counts, and a per-result table."""
+    styles = getSampleStyleSheet()
+    h1_style = ParagraphStyle('AuditH1', fontName='Helvetica-Bold', fontSize=16, leading=20, textColor=PRIMARY_COLOR, keepWithNext=True)
+    body_style = ParagraphStyle('AuditBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9, leading=12, textColor=TEXT_COLOR)
+    cell_style = ParagraphStyle('AuditCell', fontName='Helvetica', fontSize=8, leading=10, textColor=TEXT_COLOR)
+    head_style = ParagraphStyle('AuditHead', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white)
+
+    results = (scholar_data or {}).get('results', []) or []
+    verified = scholar_data.get('verifiedCaseCitations')
+    if verified is None:
+        verified = len([r for r in results if r.get('type') == 'case_law'])
+    experts = scholar_data.get('expertPublicationCount')
+    if experts is None:
+        experts = len([r for r in results if r.get('type') in ('expert_publication', 'scientific_precedent')])
+
+    story.append(Paragraph("Google Scholar Case Precedents &amp; Vetting", h1_style))
+    story.append(Spacer(1, 8))
+    summary_line = (
+        f"<b>Verified Case Citations:</b> {verified} &nbsp;&nbsp; "
+        f"<b>Expert / Precedent Publications:</b> {experts} &nbsp;&nbsp; "
+        f"<b>Total Results:</b> {scholar_data.get('totalResults', len(results))}"
+    )
+    if scholar_data.get('simulated') or scholar_data.get('degraded'):
+        summary_line += " &nbsp; <i>(simulated fallback dataset)</i>"
+    story.append(Paragraph(summary_line, body_style))
+    story.append(Spacer(1, 12))
+
+    # Results table
+    table_data = [[
+        Paragraph("Title", head_style),
+        Paragraph("Source / Court", head_style),
+        Paragraph("Authors", head_style),
+        Paragraph("Published", head_style),
+        Paragraph("Citations", head_style),
+    ]]
+    for r in results:
+        authors = r.get('authors', [])
+        if isinstance(authors, list):
+            authors = ", ".join(authors)
+        title = r.get('title', '')
+        link = r.get('link', '')
+        title_html = f'<a href="{link}" color="#0084ff">{title}</a>' if link else title
+        table_data.append([
+            Paragraph(title_html, cell_style),
+            Paragraph(str(r.get('source', '')), cell_style),
+            Paragraph(str(authors), cell_style),
+            Paragraph(str(r.get('publicationDate', '')), cell_style),
+            Paragraph(str(r.get('citationsCount', 0)), cell_style),
+        ])
+
+    table = Table(table_data, colWidths=[170, 120, 110, 55, 50], repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), PRIMARY_COLOR),
+        ('GRID', (0, 0), (-1, -1), 0.5, LINE_COLOR),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 16))
+
+
+def generate_audit_report(audit_data, output_filename=None):
+    """Generate an audit PDF report from an audit package (dict or path to a
+    cached audit JSON). When the package includes a Legal-vertical `scholarData`
+    block, the Google Scholar Case Precedents & Vetting section is included."""
+    import json
+    if isinstance(audit_data, str):
+        with open(audit_data, 'r', encoding='utf-8') as fh:
+            audit_data = json.load(fh)
+
+    business = audit_data.get('businessName', 'Client')
+    domain = audit_data.get('domain', '')
+    if not output_filename:
+        safe = "".join(c if c.isalnum() else "_" for c in (domain or business))
+        output_filename = f"audit_report_{safe}.pdf"
+
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(output_filename, pagesize=letter,
+                            topMargin=72, bottomMargin=54, leftMargin=54, rightMargin=54)
+    story = []
+    create_cover_page(story, f"Audit Report: {business}", domain or "External Readiness Audit")
+
+    intro_style = ParagraphStyle('AuditIntro', parent=styles['BodyText'], fontName='Helvetica', fontSize=10, leading=14, textColor=TEXT_COLOR)
+    story.append(Paragraph(f"Vertical: {audit_data.get('vertical', 'N/A')}", intro_style))
+    story.append(Spacer(1, 16))
+
+    scholar_data = audit_data.get('scholarData')
+    if scholar_data and scholar_data.get('results') is not None:
+        build_scholar_section(story, scholar_data)
+    else:
+        story.append(Paragraph("No Google Scholar case-law data attached (non-legal vertical).", intro_style))
+
+    doc.build(story, canvasmaker=NumberedCanvas)
+    print(f"Generated {output_filename} successfully.")
+    return output_filename
+
+
 if __name__ == "__main__":
-    generate_product_docs()
-    generate_sop_manual()
-    generate_verticals_use_cases()
+    import sys
+    # Optional: `python build_pdfs.py audit <audit_json_path> [output.pdf]`
+    if len(sys.argv) >= 3 and sys.argv[1] == "audit":
+        generate_audit_report(sys.argv[2], sys.argv[3] if len(sys.argv) >= 4 else None)
+    else:
+        generate_product_docs()
+        generate_sop_manual()
+        generate_verticals_use_cases()

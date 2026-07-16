@@ -18,6 +18,7 @@ const { getGA4Metrics } = require('./lib/ga');
 const { scoutLocalProspects } = require('./lib/scouting');
 const { generateAgentReply } = require('./lib/conversational_agent');
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
+const { searchScholar, isScholarConfigured } = require('./lib/scholar');
 
 // Structured application logger (JSON in production, colorized in dev)
 const logger = winston.createLogger({
@@ -35,6 +36,15 @@ if (missingEnv.length) {
   logger.error(`[BOOT] Missing required environment variables: ${missingEnv.join(', ')}`);
   logger.error('[BOOT] Server cannot start safely. Check your environment configuration.');
   process.exit(1);
+}
+
+// Optional-but-validated: Google Scholar (SerpApi) powers the Legal vertical.
+// Not required to boot — absence falls back to the simulated dataset — but we
+// surface a clear warning so operators know live case-law search is inactive.
+if (isScholarConfigured()) {
+  logger.info('[BOOT] Google Scholar (SerpApi) integration active for the Legal vertical.');
+} else {
+  logger.warn('[BOOT] SERPAPI_API_KEY / SCHOLAR_API_KEY not set — Legal-vertical Google Scholar search will use the simulated fallback dataset.');
 }
 
 // Sibling-folder path resolution — overridable so the container/cloud host can
@@ -154,9 +164,18 @@ const publishLimiter = rateLimit({
   message: { success: false, error: 'Publishing rate limit reached. Please wait before posting again.' }
 });
 
+const scholarLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_SCHOLAR_PER_MIN, 10) || 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Google Scholar search rate limit reached. Please wait.' }
+});
+
 app.use('/api/', globalApiLimiter);
 app.use('/api/audit', auditLimiter);
 app.use('/api/scout-prospects', scoutLimiter);
+app.use('/api/scholar/search', scholarLimiter);
 app.use('/api/publish-post', publishLimiter);
 app.use('/api/outreach-send', publishLimiter);
 app.use('/api/run-prospecting', publishLimiter);
@@ -283,7 +302,60 @@ app.get('/api/analytics-config', (req, res) => {
   });
 });
 
+/**
+ * Google Scholar Search Endpoint (Legal Services vertical)
+ * Powers case-law search, expert-witness publication vetting, and
+ * scientific-precedent checks. Falls back to a simulated dataset when the
+ * SerpApi key is not configured.
+ *
+ * @openapi
+ * /api/scholar/search:
+ *   get:
+ *     summary: Search Google Scholar for case law and expert publications
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: num
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: engine
+ *         schema: { type: string, enum: [google_scholar, google_scholar_author] }
+ *     responses:
+ *       200: { description: Structured scholar results }
+ */
+app.get('/api/scholar/search', async (req, res) => {
+  const q = (req.query.q || '').toString().trim();
+  const engine = req.query.engine === 'google_scholar_author' ? 'google_scholar_author' : 'google_scholar';
+
+  if (!q && engine !== 'google_scholar_author') {
+    return res.status(400).json({ success: false, error: 'Query parameter "q" is required.' });
+  }
+
+  try {
+    const data = await searchScholar(q, {
+      engine,
+      num: req.query.num,
+      authorId: req.query.author_id,
+      apiKey: req.query.apiKey
+    });
+    return res.json(data);
+  } catch (err) {
+    console.error('[Server] Scholar search failed:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Scholar search failed.' });
+  }
+});
+
 const DOMAIN_REGEX = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+
+// Determine whether an audit target belongs to the Legal Services vertical, so
+// the audit flow can attach Google Scholar case-law / expert-witness citations.
+function isLegalVertical(explicitVertical, scrapedVertical, businessName) {
+  const haystack = `${explicitVertical || ''} ${scrapedVertical || ''} ${businessName || ''}`.toLowerCase();
+  return /\b(legal|law|attorney|counsel|litigation|esq)\b/.test(haystack);
+}
 
 function withTimeout(promise, ms = 30000) {
   const timeout = new Promise((_, reject) =>
@@ -296,7 +368,7 @@ function withTimeout(promise, ms = 30000) {
  * Primary Audit Endpoint
  */
 app.post('/api/audit', async (req, res) => {
-  const { domain, apiKey } = req.body;
+  const { domain, apiKey, vertical } = req.body;
 
   if (!domain || !DOMAIN_REGEX.test(domain.trim())) {
     return res.status(400).json({
@@ -335,6 +407,30 @@ app.post('/api/audit', async (req, res) => {
     // 4. Formulate Workforce AI-HITL Upskilling blueprint
     const workforceData = analyzeWorkforce(scrapedData);
 
+    // 4b. Legal Services vertical: cross-reference personnel against Google
+    // Scholar for case-law precedents and expert-witness publication vetting.
+    let scholarData = null;
+    if (isLegalVertical(vertical, scrapedData.vertical, scrapedData.businessName)) {
+      try {
+        const primaryName = teamNames[0];
+        const scholarQuery = primaryName
+          ? `"${scrapedData.businessName}" "${primaryName}" case law precedent`
+          : `"${scrapedData.businessName}" legal precedent`;
+        console.log(`[Server] Legal vertical detected — running Google Scholar cross-reference: ${scholarQuery}`);
+        const scholarResult = await withTimeout(searchScholar(scholarQuery, { num: 8 }), 25000);
+        const expertPublications = (scholarResult.results || []).filter(r => r.type === 'expert_publication' || r.type === 'scientific_precedent').length;
+        scholarData = {
+          ...scholarResult,
+          crossReferencedNames: teamNames,
+          expertPublicationCount: expertPublications,
+          verifiedCaseCitations: (scholarResult.results || []).filter(r => r.type === 'case_law').length
+        };
+      } catch (scholarErr) {
+        console.error('[Server] Scholar cross-reference failed (non-fatal):', scholarErr.message);
+        scholarData = { success: false, error: scholarErr.message, results: [] };
+      }
+    }
+
     // 5. Synthesize unified corporate audit package
     const auditPackage = {
       success: true,
@@ -352,7 +448,9 @@ app.post('/api/audit', async (req, res) => {
       },
       scourerData,
       analyzerData,
-      workforceData
+      workforceData,
+      // Present only for Legal Services audits
+      ...(scholarData ? { scholarData } : {})
     };
 
     // Save completed audit package permanently to disk
