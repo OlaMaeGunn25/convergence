@@ -168,7 +168,13 @@ function loadGACredentials() {
 
 // Main function to fetch metrics
 async function getGA4Metrics() {
-  const propertyId = process.env.GA4_PROPERTY_ID;
+  let propertyId = process.env.GA4_PROPERTY_ID;
+  if (propertyId) {
+    if (propertyId.includes('=')) {
+      propertyId = propertyId.split('=').pop();
+    }
+    propertyId = propertyId.replace(/[^0-9]/g, '').trim();
+  }
   if (!propertyId) {
     throw new Error('GA4_PROPERTY_ID is not configured in the environment.');
   }
