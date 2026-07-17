@@ -19,6 +19,8 @@ const { scoutLocalProspects } = require('./lib/scouting');
 const { generateAgentReply } = require('./lib/conversational_agent');
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
+const { authenticate, isAuthConfigured } = require('./lib/auth');
+const { auditOnFinish } = require('./lib/audit');
 
 // Structured application logger (JSON in production, colorized in dev)
 const logger = winston.createLogger({
@@ -45,6 +47,13 @@ if (isScholarConfigured()) {
   logger.info('[BOOT] Google Scholar (SerpApi) integration active for the Legal vertical.');
 } else {
   logger.warn('[BOOT] SERPAPI_API_KEY / SCHOLAR_API_KEY not set — Legal-vertical Google Scholar search will use the simulated fallback dataset.');
+}
+
+// Governance posture: mutating endpoints are auth-gated once a key is set.
+if (isAuthConfigured()) {
+  logger.info('[BOOT] Gateway governance ACTIVE — mutating endpoints require an API key (audit trail enabled).');
+} else {
+  logger.warn('[BOOT] GATEWAY_API_KEY not set — mutating endpoints are UNAUTHENTICATED. Set it before production to enforce the governance layer.');
 }
 
 // Sibling-folder path resolution — overridable so the container/cloud host can
@@ -123,7 +132,7 @@ app.use((req, res, next) => {
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization,Accept,Origin');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization,Accept,Origin,x-api-key');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -171,6 +180,32 @@ const scholarLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Google Scholar search rate limit reached. Please wait.' }
 });
+
+// --- Governance: authentication + immutable audit trail on mutating routes ---
+// Authentication (fail-closed once a key is configured) is applied to every
+// side-effectful endpoint; high-value actions also emit an audit_log entry.
+const PROTECTED_MUTATIONS = [
+  '/api/audit',
+  '/api/publish-post',
+  '/api/outreach-send',
+  '/api/run-prospecting',
+  '/api/scout-prospects',
+  '/api/schedule-campaign',
+  '/api/toggle-scheduler',
+  '/api/update-post',
+  '/api/update-post-status',
+  '/api/post-reply',
+  '/api/generate-reply',
+  '/api/activity-alerts/resolve',
+  '/api/export-crm',
+  '/api/generate-monthly-posts'
+];
+app.use(PROTECTED_MUTATIONS, authenticate);
+app.use('/api/audit', auditOnFinish('audit.run'));
+app.use('/api/publish-post', auditOnFinish('post.publish'));
+app.use('/api/outreach-send', auditOnFinish('outreach.send'));
+app.use('/api/run-prospecting', auditOnFinish('prospecting.run'));
+app.use('/api/export-crm', auditOnFinish('crm.export'));
 
 app.use('/api/', globalApiLimiter);
 app.use('/api/audit', auditLimiter);

@@ -644,8 +644,46 @@ app.get('/api/hitl', async (req, res) => {
     }
 });
 
+// Governance: identify the caller of a HITL decision. Accepts either a verified
+// session JWT (issued by the operations hub) or an operator API key. Attaches
+// req.actor / req.tenantId; rejects unauthenticated callers so every approval is
+// attributable.
+function authenticateHitl(req, res, next) {
+    const authz = req.headers['authorization'] || '';
+    const bearer = authz.replace(/^Bearer\s+/i, '').trim();
+    const apiKey = req.headers['x-api-key'] || (bearer && !authz.includes('.') ? bearer : null);
+
+    // 1) Operator API key path (service/automation callers, incl. the MCP server)
+    if (process.env.GATEWAY_API_KEY && apiKey === process.env.GATEWAY_API_KEY) {
+        req.actor = 'api-client';
+        req.tenantId = req.body && req.body.tenantId ? req.body.tenantId : null;
+        return next();
+    }
+
+    // 2) Session JWT path
+    if (bearer && bearer.includes('.')) {
+        try {
+            const decoded = jwt.verify(bearer, JWT_SECRET);
+            req.actor = decoded.email || decoded.sub || decoded.user || 'session-user';
+            req.tenantId = decoded.tenant_id || decoded.tenantId || null;
+            return next();
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid or expired session token.' });
+        }
+    }
+
+    // Fail-closed only when a key is configured; otherwise warn and attribute to 'unauthenticated'
+    if (process.env.GATEWAY_API_KEY) {
+        return res.status(401).json({ error: 'Unauthorized. A session token or operator API key is required to action HITL tasks.' });
+    }
+    console.warn('[Governance] HITL action taken without authentication — set GATEWAY_API_KEY to enforce identity on approvals.');
+    req.actor = 'unauthenticated';
+    req.tenantId = null;
+    return next();
+}
+
 // 3. POST HITL Action (Approve / Reject Mutations in PostgreSQL)
-app.post('/api/hitl/action', rateLimit({ max: 30, windowMs: 60 * 1000 }), validate(['taskId', 'action']), async (req, res) => {
+app.post('/api/hitl/action', authenticateHitl, rateLimit({ max: 30, windowMs: 60 * 1000 }), validate(['taskId', 'action']), async (req, res) => {
     try {
         const { taskId, action } = req.body;
         const newStatus = action === 'approve' ? 'approved' : 'revised';
@@ -674,7 +712,22 @@ app.post('/api/hitl/action', rateLimit({ max: 30, windowMs: 60 * 1000 }), valida
 
         if (updateError) throw updateError;
 
-        console.log(`[DATABASE SYNC] Task [${taskId}] updated to: ${newStatus}`);
+        console.log(`[DATABASE SYNC] Task [${taskId}] updated to: ${newStatus} by ${req.actor}`);
+
+        // Governance: append an immutable, attributable audit_log entry.
+        try {
+            await supabase.from('audit_log').insert({
+                actor: req.actor,
+                role: 'operator',
+                action: 'hitl.action',
+                resource: taskId,
+                outcome: 'success',
+                tenant_id: taskData.tenant_id || req.tenantId || null,
+                metadata: { decision: action, new_status: newStatus, vertical: taskData.vertical }
+            });
+        } catch (auditErr) {
+            console.warn(`[AUDIT] Failed to persist HITL audit entry (non-fatal): ${auditErr.message}`);
+        }
 
         // If approved, trigger n8n workflow / simulation asynchronously
         if (action === 'approve') {

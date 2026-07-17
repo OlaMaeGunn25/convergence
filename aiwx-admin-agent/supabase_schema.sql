@@ -151,3 +151,62 @@ CREATE POLICY knowledge_base_isolation_policy ON knowledge_base
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_tenant ON knowledge_base(tenant_id);
 
 
+-- 8. Immutable Audit Trail (governance layer)
+-- Records who did what, when, and with what outcome for every governed mutation
+-- and HITL decision across the gateway and admin orchestrator. Written by
+-- aiwx-smb-auditor/lib/audit.js and the admin HITL action handler.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actor TEXT NOT NULL,                 -- authenticated identity (API key actor / admin email)
+    role TEXT,                           -- 'operator' | 'viewer' | admin role
+    action TEXT NOT NULL,                -- e.g. 'audit.run', 'post.publish', 'crm.export', 'hitl.action'
+    resource TEXT,                       -- target (domain, post id, task id, ...)
+    outcome TEXT NOT NULL DEFAULT 'success', -- 'success' | 'failure' | 'pending'
+    status INTEGER,                      -- HTTP status, if applicable
+    ip TEXT,
+    tenant_id UUID,                      -- owning tenant, when known
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_tenant ON audit_log(tenant_id);
+
+-- Audit rows are append-only. Enable RLS; reads are tenant-scoped, and there is
+-- deliberately no UPDATE/DELETE policy so entries cannot be mutated via the API.
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY audit_log_read_policy ON audit_log
+    FOR SELECT
+    USING (
+        tenant_id IS NULL
+        OR tenant_id = (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb -> 'user_metadata' ->> 'tenant_id')::uuid
+    );
+CREATE POLICY audit_log_insert_policy ON audit_log
+    FOR INSERT
+    WITH CHECK (true);
+
+-- =========================================================================
+-- GOVERNANCE NOTE — Row-Level Security vs. the service-role key
+-- =========================================================================
+-- The RLS policies above are enforced ONLY for connections that carry an
+-- end-user JWT (Supabase anon/authenticated keys). The application servers
+-- currently connect with the SERVICE-ROLE key, which BYPASSES RLS entirely.
+-- Therefore, with the current connection model, tenant isolation is enforced at
+-- the APPLICATION layer (explicit tenant_id filters), not by these policies.
+--
+-- To make RLS actually govern app traffic (recommended, Phase-2b), do ONE of:
+--   (a) Connect with a per-user/anon JWT that carries user_metadata.tenant_id,
+--       so the policies fire; OR
+--   (b) Before each query on the service-role connection, scope the session:
+--         SELECT set_config('request.jwt.claims',
+--                json_build_object('user_metadata',
+--                  json_build_object('tenant_id', <tenant>))::text, true);
+--       so current_setting('request.jwt.claims') resolves per request; OR
+--   (c) Route all tenant data access through a single data-access module that
+--       appends `.eq('tenant_id', ctx.tenantId)` to every query (belt-and-braces
+--       even once (a)/(b) is in place).
+-- Until then, treat service-role queries as trusted-but-unscoped and rely on the
+-- application tenant guard.
+

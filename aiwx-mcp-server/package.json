@@ -1,0 +1,23 @@
+{
+  "name": "aiwx-mcp-server",
+  "version": "1.0.0",
+  "description": "CONVERGENCE-Ai MCP orchestration server — exposes the governed gateway (audit, scholar, publish, CRM, HITL) as Model Context Protocol tools for AI agents.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "aiwx-mcp-server": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "author": "AiWorXmiths",
+  "license": "UNLICENSED"
+}
