@@ -829,32 +829,47 @@ app.get('/api/integrations/:provider/health', async (req, res) => {
 });
 
 // 4. Multi-Provider OAuth REST Integration Endpoints
+// Vault crypto: authenticated AES-256-GCM with a per-record scrypt-derived key.
+// Replaces the previous AES-256-CBC + zero-padded key (unauthenticated, weak-key)
+// scheme. ENCRYPTION_KEY is validated at boot (see requiredEnvVars).
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-const IV_LENGTH = 16;
 
+// Derive a 32-byte key from the configured secret and a per-record random salt.
+function deriveVaultKey(salt) {
+    return crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
+}
+
+// Format: v2:<salt>:<iv>:<authTag>:<ciphertext> (all hex).
 function encryptToken(text) {
-    try {
-        let iv = crypto.randomBytes(IV_LENGTH);
-        const key = Buffer.concat([Buffer.from(ENCRYPTION_KEY), Buffer.alloc(32)], 32);
-        let cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-        let encrypted = cipher.update(text);
-        encrypted = Buffer.concat([encrypted, cipher.final()]);
-        return iv.toString('hex') + ':' + encrypted.toString('hex');
-    } catch (err) {
-        console.error("Encryption error:", err);
-        return text;
-    }
+    const salt = crypto.randomBytes(16);
+    const iv = crypto.randomBytes(12); // 96-bit nonce for GCM
+    const key = deriveVaultKey(salt);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(String(text), 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return `v2:${salt.toString('hex')}:${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
 function decryptToken(text) {
+    // Authenticated GCM path — tampering or a wrong key fails loudly (no silent
+    // plaintext fallback, which was a footgun in the old CBC implementation).
+    if (typeof text === 'string' && text.startsWith('v2:')) {
+        const [, saltHex, ivHex, tagHex, dataHex] = text.split(':');
+        const key = deriveVaultKey(Buffer.from(saltHex, 'hex'));
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+        decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+        const decrypted = Buffer.concat([decipher.update(Buffer.from(dataHex, 'hex')), decipher.final()]);
+        return decrypted.toString('utf8');
+    }
+    // Legacy AES-256-CBC records (iv:ciphertext). Decrypt for backward compat so
+    // existing vault entries keep working; re-encrypt with GCM on the next write.
     try {
-        let textParts = text.split(':');
-        let iv = Buffer.from(textParts.shift(), 'hex');
-        let encryptedText = Buffer.from(textParts.join(':'), 'hex');
-        const key = Buffer.concat([Buffer.from(ENCRYPTION_KEY), Buffer.alloc(32)], 32);
-        let decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-        let decrypted = decipher.update(encryptedText);
-        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        const parts = text.split(':');
+        const iv = Buffer.from(parts.shift(), 'hex');
+        const encryptedText = Buffer.from(parts.join(':'), 'hex');
+        const legacyKey = Buffer.concat([Buffer.from(ENCRYPTION_KEY), Buffer.alloc(32)], 32);
+        const decipher = crypto.createDecipheriv('aes-256-cbc', legacyKey, iv);
+        const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
         return decrypted.toString();
     } catch (err) {
         return text;

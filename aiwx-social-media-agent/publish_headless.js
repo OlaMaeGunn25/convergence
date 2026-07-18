@@ -2,6 +2,42 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const dns = require('dns').promises;
+const net = require('net');
+
+// SSRF guard: block requests that would reach internal/private infrastructure.
+// A public hostname can still resolve to a private IP, so we resolve DNS and
+// check every returned address, not just literal-IP hosts.
+function isPrivateIp(ip) {
+  if (net.isIPv4(ip)) {
+    const p = ip.split('.').map(Number);
+    if (p[0] === 10) return true;                                  // 10.0.0.0/8
+    if (p[0] === 127) return true;                                 // loopback
+    if (p[0] === 0) return true;                                   // 0.0.0.0/8
+    if (p[0] === 169 && p[1] === 254) return true;                 // link-local (incl. cloud metadata 169.254.169.254)
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;     // 172.16.0.0/12
+    if (p[0] === 192 && p[1] === 168) return true;                 // 192.168.0.0/16
+    if (p[0] === 100 && p[1] >= 64 && p[1] <= 127) return true;    // CGNAT 100.64.0.0/10
+    return false;
+  }
+  const lower = String(ip).toLowerCase();
+  return lower === '::1' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80') || lower.startsWith('::ffff:127') || lower.startsWith('::ffff:10.');
+}
+
+async function assertSafeRemoteImageUrl(urlStr) {
+  let u;
+  try { u = new URL(urlStr); } catch (e) { throw new Error('Invalid image URL.'); }
+  if (u.protocol !== 'https:') throw new Error('Image URL must use HTTPS.');
+  const host = u.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) {
+    throw new Error('Image URL host is not permitted.');
+  }
+  if (net.isIP(host) && isPrivateIp(host)) throw new Error('Image URL host is not permitted.');
+  const resolved = await dns.lookup(host, { all: true });
+  if (resolved.some(r => isPrivateIp(r.address))) {
+    throw new Error('Image URL resolves to a private address; refusing to fetch.');
+  }
+}
 
 // CLI Arguments
 const args = process.argv.slice(2);
@@ -95,6 +131,8 @@ async function publishPost() {
       const tempFilename = `temp_headless_${Date.now()}_${path.basename(image)}`;
       const tempPath = path.join(__dirname, tempFilename);
       try {
+        // Reject non-HTTPS and any URL that resolves to internal infrastructure.
+        await assertSafeRemoteImageUrl(image);
         await new Promise((resolve, reject) => {
           const file = fs.createWriteStream(tempPath);
           https.get(image, response => {

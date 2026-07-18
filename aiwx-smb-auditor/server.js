@@ -1255,108 +1255,6 @@ app.post('/api/update-post', (req, res) => {
   }
 });
 
-// Endpoint to retrieve and parse the local markdown posts library
-app.get('/api/posts-library', (req, res) => {
-  const libraryPath = path.join(SOCIAL_AGENT_DIR, 'social_media_posts_library.md');
-  if (!fs.existsSync(libraryPath)) {
-    return res.status(404).json({ success: false, error: 'Markdown posts library not found.' });
-  }
-
-  try {
-    const content = fs.readFileSync(libraryPath, 'utf8');
-    const activeContent = content.split(/## 📦 Archived Product/)[0];
-    const postBlocks = activeContent.split(/### Post (\d+):/);
-    
-    if (postBlocks.length < 2) {
-      return res.json({ success: true, posts: [] });
-    }
-
-    const parsedPosts = [];
-    const monthMap = { "Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April", "May": "May", "Jun": "June", "Jul": "July", "Aug": "August", "Sep": "September", "Oct": "October", "Nov": "November", "Dec": "December" };
-    const monthNumMap = { "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04", "May": "05", "Jun": "06", "Jul": "07", "Aug": "08", "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12" };
-
-    for (let i = 1; i < postBlocks.length; i += 2) {
-      const postNum = parseInt(postBlocks[i], 10);
-      const body = postBlocks[i+1];
-      
-      const lines = body.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      if (lines.length === 0) continue;
-      
-      const titleLine = lines[0];
-      const titleParts = titleLine.split(" - ");
-      const datePart = titleParts[0].trim();
-      const timePart = titleParts[1] ? titleParts[1].trim() : "10:00 AM EST";
-      const titlePart = titleParts[2] ? titleParts[2].trim() : "Untitled Post";
-      
-      const dateWords = datePart.split(/\s+/);
-      const monthAbbrev = dateWords[1];
-      const dayVal = parseInt(dateWords[2], 10);
-      const monthName = monthMap[monthAbbrev] || "June";
-      const monthNum = monthNumMap[monthAbbrev] || "06";
-      const yyyymmdd = `2026-${monthNum}-${String(dayVal).padStart(2, '0')}`;
-      
-      let campaign = "consultancy_sprints";
-      let campaignMatch = body.match(/\*\s+\*\*Campaign:\*\*\s+`(.*?)`|\*\s+\*\*Campaign:\*\*\s+(.*)/);
-      if (campaignMatch) campaign = (campaignMatch[1] || campaignMatch[2]).trim();
-      
-      let type = "AI Strategy & Consulting";
-      let typeMatch = body.match(/\*\s+\*\*Content Type \/ Pillar:\*\*\s+(.*)/);
-      if (typeMatch) {
-        type = typeMatch[1].trim().replace(/`/g, '');
-      } else {
-        let labelMatch = body.match(/\*\s+\*\*Campaign Label:\*\*\s+`(.*?)`|\*\s+\*\*Campaign Label:\*\*\s+(.*)/);
-        if (labelMatch) type = (labelMatch[1] || labelMatch[2]).trim().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      }
-      
-      let image = "black_female_founder_consultant.png";
-      let imgMatch = body.match(/\*\s+\*\*Visual Asset:\*\*\s+`(.*?)`|\*\s+\*\*Visual Asset:\*\*\s+(.*)/);
-      if (imgMatch) image = (imgMatch[1] || imgMatch[2]).trim();
-      
-      const sections = body.split('#### 📝 ');
-      const extractCopy = (platformHeader) => {
-        const sec = sections.find(s => s.trim().startsWith(platformHeader));
-        if (!sec) return "";
-        const lines = sec.split('\n');
-        return lines.slice(1)
-          .map(l => l.trim())
-          .filter(l => l.startsWith('>'))
-          .map(l => l.replace(/^>\s?/, ''))
-          .join('\n').trim();
-      };
-      
-      const linkedin = extractCopy("LinkedIn Copy");
-      const threads = extractCopy("Threads Copy");
-      const instagram = extractCopy("Instagram Slides");
-      const blog = extractCopy("Blog Post");
-      
-      const debugObj = {
-        id: `post_${String(postNum).padStart(2, '0')}`,
-        week: String(Math.floor((postNum - 1) / 3) + 1),
-        date: yyyymmdd,
-        dayNum: dayVal,
-        month: monthName,
-        campaign: campaign,
-        type: type,
-        title: titlePart,
-        image: image,
-        imgAlt: `${titlePart} visual representation.`,
-        status: [2, 5, 8, 11, 14, 17].includes(postNum) ? "PENDING" : "APPROVED",
-        linkedin: linkedin,
-        threads: threads,
-        instagram: instagram,
-        blog: blog,
-        comments: []
-      };
-      
-      parsedPosts.push(debugObj);
-    }
-    
-    res.json({ success: true, posts: parsedPosts });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message || 'Failed to parse library.' });
-  }
-});
-
 const LOCAL_ANALYTICS_FILE = path.resolve(__dirname, 'config/local_analytics.json');
 
 function loadLocalAnalytics() {
@@ -1370,7 +1268,27 @@ function loadLocalAnalytics() {
   return { pageviews: [], events: [] };
 }
 
+// Bound the local analytics store so unauthenticated /api/track-event traffic
+// can't grow the file without limit (disk-fill DoS). Each array is capped to the
+// most-recent MAX entries; overflow is rotated to a dated JSONL archive.
+const ANALYTICS_MAX_ENTRIES = parseInt(process.env.ANALYTICS_MAX_ENTRIES, 10) || 5000;
+
+function trimWithArchive(arr, kind) {
+  if (!Array.isArray(arr) || arr.length <= ANALYTICS_MAX_ENTRIES) return arr || [];
+  const overflow = arr.slice(0, arr.length - ANALYTICS_MAX_ENTRIES);
+  try {
+    const logsDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+    const date = new Date().toISOString().split('T')[0];
+    const archivePath = path.join(logsDir, `analytics-${kind}-${date}.jsonl`);
+    fs.appendFileSync(archivePath, overflow.map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
+  } catch (e) { /* archiving is best-effort */ }
+  return arr.slice(arr.length - ANALYTICS_MAX_ENTRIES);
+}
+
 function saveLocalAnalytics(data) {
+  data.pageviews = trimWithArchive(data.pageviews, 'pageviews');
+  data.events = trimWithArchive(data.events, 'events');
   const dir = path.dirname(LOCAL_ANALYTICS_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(LOCAL_ANALYTICS_FILE, JSON.stringify(data, null, 2), 'utf8');
