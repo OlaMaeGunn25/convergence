@@ -53,6 +53,7 @@ Thumbs.db
 **/config/activity_alerts.json
 **/config/prospects_outreach.json
 **/config/local_analytics.json
+**/config/audit_queue.json
 
 # Local keys
 **/id_rsa_github

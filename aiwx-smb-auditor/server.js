@@ -20,7 +20,9 @@ const { generateAgentReply } = require('./lib/conversational_agent');
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
 const { authenticate, isAuthConfigured } = require('./lib/auth');
-const { auditOnFinish } = require('./lib/audit');
+const { auditOnFinish, recordAudit } = require('./lib/audit');
+const { negotiate, isNegotiationLLMConfigured } = require('./lib/negotiation');
+const { runAuditPipeline } = require('./lib/audit_runner');
 
 // Structured application logger (JSON in production, colorized in dev)
 const logger = winston.createLogger({
@@ -54,6 +56,13 @@ if (isAuthConfigured()) {
   logger.info('[BOOT] Gateway governance ACTIVE — mutating endpoints require an API key (audit trail enabled).');
 } else {
   logger.warn('[BOOT] GATEWAY_API_KEY not set — mutating endpoints are UNAUTHENTICATED. Set it before production to enforce the governance layer.');
+}
+
+// Multi-agent negotiation: live Claude reasoning vs. simulated fallback.
+if (isNegotiationLLMConfigured()) {
+  logger.info('[BOOT] Multi-agent negotiation active (Anthropic API).');
+} else {
+  logger.warn('[BOOT] ANTHROPIC_API_KEY not set — multi-agent negotiation will use the simulated fallback.');
 }
 
 // Sibling-folder path resolution — overridable so the container/cloud host can
@@ -198,7 +207,9 @@ const PROTECTED_MUTATIONS = [
   '/api/generate-reply',
   '/api/activity-alerts/resolve',
   '/api/export-crm',
-  '/api/generate-monthly-posts'
+  '/api/generate-monthly-posts',
+  '/api/negotiate',
+  '/api/audit-queue'
 ];
 app.use(PROTECTED_MUTATIONS, authenticate);
 app.use('/api/audit', auditOnFinish('audit.run'));
@@ -391,6 +402,115 @@ function isLegalVertical(explicitVertical, scrapedVertical, businessName) {
   const haystack = `${explicitVertical || ''} ${scrapedVertical || ''} ${businessName || ''}`.toLowerCase();
   return /\b(legal|law|attorney|counsel|litigation|esq)\b/.test(haystack);
 }
+
+/**
+ * Multi-Agent Negotiation Endpoint
+ * Runs a Proposer/Critic/Arbiter negotiation to a consensus recommendation,
+ * escalating to the HITL queue when consensus fails or the vertical is high-risk.
+ */
+app.post('/api/negotiate', async (req, res) => {
+  const { topic, context, vertical, options } = req.body || {};
+  if (!topic || !String(topic).trim()) {
+    return res.status(400).json({ success: false, error: 'A negotiation "topic" is required.' });
+  }
+  try {
+    const result = await negotiate({ topic, context, vertical, options });
+    return res.json(result);
+  } catch (err) {
+    console.error('[Server] Negotiation failed:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Negotiation failed.' });
+  }
+});
+
+// ===================================================================
+// AUTOMATED AUDIT SCHEDULER — enqueue domains for governed, hands-off
+// audits run by a crash-safe background loop.
+// ===================================================================
+const AUDIT_QUEUE_FILE = path.join(REPO_ROOT, 'aiwx-smb-auditor', 'config', 'audit_queue.json');
+
+function loadAuditQueue() {
+  try {
+    if (fs.existsSync(AUDIT_QUEUE_FILE)) return JSON.parse(fs.readFileSync(AUDIT_QUEUE_FILE, 'utf8'));
+  } catch (e) { /* fall through */ }
+  return { active: false, jobs: [] };
+}
+function saveAuditQueue(data) {
+  const dir = path.dirname(AUDIT_QUEUE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(AUDIT_QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+// Enqueue one or more domains for automated auditing (and toggle the loop).
+app.post('/api/audit-queue', (req, res) => {
+  const { domains, active, vertical } = req.body || {};
+  const queue = loadAuditQueue();
+  if (Array.isArray(domains)) {
+    for (const d of domains) {
+      const domain = String(d || '').trim();
+      if (!DOMAIN_REGEX.test(domain)) continue;
+      if (queue.jobs.some(j => j.domain === domain && j.status === 'queued')) continue;
+      queue.jobs.push({ id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, domain, vertical: vertical || null, status: 'queued', queuedAt: new Date().toISOString() });
+    }
+  }
+  if (active !== undefined) queue.active = Boolean(active);
+  saveAuditQueue(queue);
+  res.json({ success: true, active: queue.active, queued: queue.jobs.filter(j => j.status === 'queued').length });
+});
+
+// Inspect the automated audit queue.
+app.get('/api/audit-queue', (req, res) => {
+  res.json({ success: true, ...loadAuditQueue() });
+});
+
+// Crash-safe background loop: processes one queued audit per tick with backoff.
+let auditLoopFailures = 0;
+let auditLoopSkipUntil = 0;
+let auditLoopBusy = false;
+
+async function processAuditQueueTick() {
+  if (Date.now() < auditLoopSkipUntil || auditLoopBusy) return;
+  const queue = loadAuditQueue();
+  if (!queue.active) return;
+  const job = queue.jobs.find(j => j.status === 'queued');
+  if (!job) return;
+
+  auditLoopBusy = true;
+  job.status = 'running';
+  job.startedAt = new Date().toISOString();
+  saveAuditQueue(queue);
+
+  try {
+    const pkg = await runAuditPipeline(job.domain, { vertical: job.vertical });
+    try {
+      const cacheDir = path.join(__dirname, 'audits_cache');
+      if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+      const safe = job.domain.replace(/[^a-zA-Z0-9.-]/g, '_') + '.json';
+      fs.writeFileSync(path.join(cacheDir, safe), JSON.stringify(pkg, null, 2), 'utf-8');
+    } catch (e) { /* cache write is best-effort */ }
+
+    const fresh = loadAuditQueue();
+    const fj = fresh.jobs.find(j => j.id === job.id);
+    if (fj) { fj.status = 'completed'; fj.completedAt = new Date().toISOString(); }
+    saveAuditQueue(fresh);
+    auditLoopFailures = 0;
+    recordAudit({ actor: 'audit-scheduler', role: 'operator', action: 'audit.auto', resource: job.domain, outcome: 'success' });
+    logger.info(`[AuditScheduler] Completed automated audit for ${job.domain}`);
+  } catch (err) {
+    auditLoopFailures++;
+    const backoff = Math.min(60000 * Math.pow(2, auditLoopFailures - 1), 15 * 60 * 1000);
+    auditLoopSkipUntil = Date.now() + backoff;
+    const fresh = loadAuditQueue();
+    const fj = fresh.jobs.find(j => j.id === job.id);
+    if (fj) { fj.status = 'failed'; fj.error = err.message; }
+    saveAuditQueue(fresh);
+    recordAudit({ actor: 'audit-scheduler', role: 'operator', action: 'audit.auto', resource: job.domain, outcome: 'failure', metadata: { error: err.message } });
+    logger.error(`[AuditScheduler] Automated audit for ${job.domain} failed: ${err.message}. Backing off ${Math.round(backoff / 1000)}s.`);
+  } finally {
+    auditLoopBusy = false;
+  }
+}
+
+setInterval(() => { processAuditQueueTick().catch(e => logger.error(`[AuditScheduler] tick error: ${e.message}`)); }, 90 * 1000);
 
 function withTimeout(promise, ms = 30000) {
   const timeout = new Promise((_, reject) =>

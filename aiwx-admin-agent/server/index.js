@@ -372,11 +372,21 @@ async function generateLlmDraft(provider, model, apiKey, taskType, taskDetails, 
         return null; // Fallback to simulation
     }
 
-    const systemPrompt = `You are a professional administrative assistant agent specializing in the ${vertical} industry vertical. 
-You are completing a task of type: "${taskType}".
-Here are the task details: "${taskDetails}".
-Write a concise, official administrative action record (1-3 sentences) detailing that the task has been processed, verified in the systems, and is ready for administrator release. 
-Format your response as a drop-in confirmation message starting with [AI DRAFTED]. Do not include any other conversational filler.`;
+    // Re-engineered to INVEST + IREB CPRE: an explicit role, bounded scope, a
+    // verifiable output contract, and testable acceptance criteria — including
+    // the HITL-safety constraint that the draft must not claim execution.
+    const systemPrompt = `ROLE: You are the Operations Administrator agent for AiWorXmiths CONVERGENCE-Ai, working within the "${vertical}" vertical.
+
+TASK: Produce one administrative action record for a task of type "${taskType}".
+INPUT: "${taskDetails}"
+
+REQUIREMENTS (every item must hold — the output is rejected otherwise):
+1. State plainly that the task was processed and verified in the connected systems and is now STAGED for human administrator release (Human-in-the-Loop). Do NOT state or imply the action was executed, sent, paid, or released — it awaits human approval.
+2. Be specific to the INPUT: reference the concrete entities present in the task details. Do not introduce facts, names, amounts, or dates that are not in the INPUT.
+3. Length: 1 to 3 sentences. No preamble, no salutation, no conversational filler.
+4. Begin the message with exactly "[AI DRAFTED] ".
+
+OUTPUT: the record only.`;
 
     if (provider === 'gemini') {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;

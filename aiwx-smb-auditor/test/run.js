@@ -225,6 +225,35 @@ async function runTests() {
     assert(false, `Google Scholar integration tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 6: Multi-Agent Negotiation Engine ---
+  try {
+    delete process.env.ANTHROPIC_API_KEY; // force the simulated path
+    const { negotiate, isNegotiationLLMConfigured } = require('../lib/negotiation');
+
+    assert(isNegotiationLLMConfigured() === false, 'Negotiation reports simulated mode when no ANTHROPIC_API_KEY');
+
+    // A. Standard vertical reaches consensus and approves
+    const neg = await negotiate({ topic: 'Automate invoice reminders for a retail client', vertical: 'retail' });
+    assert(neg.success === true && neg.simulated === true, 'negotiate() runs and reports simulated');
+    assert(Array.isArray(neg.rounds) && neg.rounds.length > 0, 'negotiate() returns a non-empty transcript');
+    const roundKeys = ['round', 'proposal', 'critique', 'arbitration'];
+    assert(roundKeys.every(k => k in neg.rounds[0]), 'Each negotiation round has proposal/critique/arbitration');
+    assert(typeof neg.consensus.score === 'number', 'Negotiation reports a numeric consensus score');
+    assert(neg.outcome === 'approved', 'Low-risk vertical negotiation approves on consensus');
+
+    // B. High-risk vertical escalates to HITL regardless of consensus
+    const legalNeg = await negotiate({ topic: 'Send a settlement offer to opposing counsel', vertical: 'legal' });
+    assert(legalNeg.highRisk === true, 'Legal vertical flagged high-risk');
+    assert(legalNeg.outcome === 'escalated_to_hitl', 'High-risk vertical escalates to the HITL queue');
+    assert(legalNeg.hitl && legalNeg.hitl.status === 'pending', 'Escalated negotiation carries a pending HITL marker');
+
+    // C. Empty topic rejected
+    const bad = await negotiate({ topic: '' });
+    assert(bad.success === false, 'negotiate() rejects an empty topic');
+  } catch (e) {
+    assert(false, `Multi-agent negotiation tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
