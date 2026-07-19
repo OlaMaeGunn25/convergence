@@ -1,6 +1,7 @@
 const dns = require('dns').promises;
 const https = require('https');
 const { detectTechnologies, extractContactIntel, inferTrafficSignals } = require('./tech_classifier');
+const { DATA_SOURCE } = require('./fact_checker');
 
 /**
  * Checks a live HTTPS domain to retrieve headers and detect WAFs
@@ -676,11 +677,45 @@ async function scrapeDomain(inputDomain, apiKey) {
       : 'Standard DNS';
     const trafficSignals = inferTrafficSignals(domain, ['/', '/about', '/contact', ...resolvedSubdomains], dnsProvider);
 
+    // Tag each live-detected tech with provenance source
+    const taggedLiveTech = detectedTech.map(t => ({
+      ...t,
+      dataSource: DATA_SOURCE.LIVE_CRAWL
+    }));
+
+    // Only merge baseline tech for enrichment — tagged as template_estimate
+    const mergedBaseline = baseline.technologies
+      .filter(t => !detectedTech.some(dt => dt.name === t.name))
+      .map(t => ({
+        ...t,
+        dataSource: DATA_SOURCE.TEMPLATE_ESTIMATE,
+        provenanceNote: 'Supplemented from vertical industry template — not directly detected on target domain'
+      }));
+
+    const teamData = (() => {
+      const combinedContent = `${title} ${description} ${markdownContent} ${htmlContent}`;
+      const extractedNames = extractNamesFromText(combinedContent);
+      if (extractedNames.length > 0) {
+        return {
+          members: extractedNames.map(name => ({
+            name,
+            role: 'Key Executive / Attorney',
+            bio: `Identified key representative on the audited corporate portal.`
+          })),
+          dataSource: DATA_SOURCE.LIVE_CRAWL
+        };
+      }
+      return {
+        members: baseline.rawTeamData,
+        dataSource: DATA_SOURCE.TEMPLATE_ESTIMATE
+      };
+    })();
+
     return {
       domain,
       businessName,
       vertical,
-      technologies: detectedTech.concat(baseline.technologies.filter(t => !detectedTech.some(dt => dt.name === t.name))),
+      technologies: taggedLiveTech.concat(mergedBaseline),
       subdomains: resolvedSubdomains,
       metaData: {
         title,
@@ -688,19 +723,10 @@ async function scrapeDomain(inputDomain, apiKey) {
         socialLinks: contactIntel.socialProfiles
       },
       scrapedPages: ['/', '/about', '/contact'],
-      rawTeamData: (() => {
-        const combinedContent = `${title} ${description} ${markdownContent} ${htmlContent}`;
-        const extractedNames = extractNamesFromText(combinedContent);
-        if (extractedNames.length > 0) {
-          return extractedNames.map(name => ({
-            name,
-            role: 'Key Executive / Attorney',
-            bio: `Identified key representative on the audited corporate portal.`
-          }));
-        }
-        return baseline.rawTeamData;
-      })(),
+      rawTeamData: teamData.members,
+      rawTeamDataSource: teamData.dataSource,
       rawJobPostings: baseline.rawJobPostings,
+      rawJobPostingsSource: DATA_SOURCE.TEMPLATE_ESTIMATE,
       firewallAudit,
       contactIntel,
       trafficSignals

@@ -959,7 +959,26 @@ function initializeAdminConsole() {
     }
   }
 
+  // Provenance-tagged scourer fields arrive as { value, provenance }. Unwrap to
+  // the display value once, in place, so every downstream render site is
+  // unchanged. Idempotent + safe on untagged/degraded data.
+  function unwrapProvenance(x) {
+    return (x && typeof x === 'object' && 'value' in x && 'provenance' in x) ? x.value : x;
+  }
+  function normalizeScourerForDisplay(sc) {
+    if (!sc) return;
+    ['revenueEstimate', 'headcountEstimate', 'growthRate', 'publicMentions', 'registryVerification'].forEach(f => {
+      if (sc[f] !== undefined) sc[f] = unwrapProvenance(sc[f]);
+    });
+    if (sc.filings) {
+      ['state', 'federal', 'regulatoryCompliance'].forEach(f => {
+        if (sc.filings[f] !== undefined) sc.filings[f] = unwrapProvenance(sc.filings[f]);
+      });
+    }
+  }
+
   function renderAdminDashboard(data) {
+    normalizeScourerForDisplay(data.scourerData);
     // Banner info
     document.getElementById('adm-business-name').textContent = data.businessName;
     document.getElementById('adm-domain-name').textContent = data.domain;

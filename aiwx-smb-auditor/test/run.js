@@ -114,12 +114,12 @@ async function runTests() {
   try {
     // A. Validate Scourer simulated outputs
     const scoured = await scourBusiness('test-vintage.com', 'Test Vintage', 'E-Commerce & Retail', null);
-    assert(scoured.revenueEstimate === '$1,850,000', 'Scourer infers vertical-correct estimated revenue');
-    assert(scoured.headcountEstimate === '12 employees', 'Scourer infers vertical-correct headcount');
-    assert(scoured.filings.state.agency === 'California Secretary of State', 'Scourer maps correct state filing agency');
-    assert(scoured.filings.state.status === 'Active / Good Standing', 'Scourer maps good filing standing');
-    assert(scoured.filings.federal.samGovStatus === 'Not Registered (B2C direct retail)', 'Scourer maps correct federal SAM status');
-    assert(scoured.publicMentions.length === 2, 'Scourer maps correct number of news mentions');
+    assert(scoured.revenueEstimate.value === '$1,850,000', 'Scourer infers vertical-correct estimated revenue');
+    assert(scoured.headcountEstimate.value === '12 employees', 'Scourer infers vertical-correct headcount');
+    assert(scoured.filings.state.value.agency === 'California Secretary of State', 'Scourer maps correct state filing agency');
+    assert(scoured.filings.state.value.status === 'Active / Good Standing', 'Scourer maps good filing standing');
+    assert(scoured.filings.federal.value.samGovStatus === 'Not Registered (B2C direct retail)', 'Scourer maps correct federal SAM status');
+    assert(scoured.publicMentions.value.length === 2, 'Scourer maps correct number of news mentions');
 
     // B. Validate live scraper wrapper additions
     const crawled = await scrapeDomain('apex-tech.com', null);
@@ -132,8 +132,8 @@ async function runTests() {
     assert(greentechData.businessName === 'Smart Optimal Solutions', 'Business name derived as Smart Optimal Solutions');
 
     const greentechScoured = await scourBusiness(greentechData.domain, greentechData.businessName, greentechData.vertical, null);
-    assert(greentechScoured.filings.state.agency.includes('Washington') && greentechScoured.filings.state.status.includes('MBE Certified'), 'Scourer dynamically infers MBE certified Washington state filings');
-    assert(greentechScoured.filings.federal.samGovStatus === 'Active Registration (CAGE Code: 9ZG28)', 'Scourer resolves active federal CAGE registration');
+    assert(greentechScoured.filings.state.value.agency.includes('Washington') && greentechScoured.filings.state.value.status.includes('MBE Certified'), 'Scourer dynamically infers MBE certified Washington state filings');
+    assert(greentechScoured.filings.federal.value.samGovStatus === 'Active Registration (CAGE Code: 9ZG28)', 'Scourer resolves active federal CAGE registration');
 
     const greentechAnalysis = analyzeFootprint(greentechData);
     const iotPitch = greentechAnalysis.pitchOpportunities.find(p => p.gapTitle.includes('Lack of Interactive Clean Energy ROI'));

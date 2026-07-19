@@ -1,6 +1,11 @@
 /**
  * Deep Internet Scouring Module - Regulatory Filings & Financial Analytics
+ * ────────────────────────────────────────────────────────────────────────
+ * All data points tagged with provenance via fact_checker.js.
+ * Simulation data is EXPLICITLY labeled — never silently injected.
  */
+
+const { tagDataPoint, DATA_SOURCE, verifyBusinessRegistry, verifyNPIRegistry, verifySAMRegistration, crossReference } = require('./fact_checker');
 
 // Safely load Firecrawl library
 let FirecrawlApp;
@@ -419,7 +424,20 @@ async function scourBusiness(domain, businessName, vertical, apiKey, teamNames =
     if (process.env.NODE_ENV === 'test') {
       console.log(`[Scourer] Executing SMART filings & financial simulator for: ${domain} (NODE_ENV=test)`);
       await new Promise(resolve => setTimeout(resolve, 10));
-      return getSimulatedRegulatoryData(domain, businessName, vertical);
+      const simData = getSimulatedRegulatoryData(domain, businessName, vertical);
+      // Tag ALL simulation data with explicit provenance
+      return {
+        revenueEstimate: tagDataPoint(simData.revenueEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Test-mode simulation — no API key provided', 'Vertical template estimate'),
+        headcountEstimate: tagDataPoint(simData.headcountEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Test-mode simulation', 'Vertical template estimate'),
+        growthRate: tagDataPoint(simData.growthRate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'No real-time growth extraction', 'Static template'),
+        filings: {
+          state: tagDataPoint(simData.filings.state, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not registry-verified', 'Test mode template'),
+          federal: tagDataPoint(simData.filings.federal, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not registry-verified', 'Test mode template'),
+          regulatoryCompliance: tagDataPoint(simData.filings.regulatoryCompliance, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Template — NOT a certified compliance audit', 'Test mode template')
+        },
+        publicMentions: tagDataPoint(simData.publicMentions, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Simulated press mentions — not real', 'Test mode template'),
+        registryVerification: null
+      };
     }
     throw new Error('API key is required. Simulation mode is disabled.');
   }
@@ -429,7 +447,19 @@ async function scourBusiness(domain, businessName, vertical, apiKey, teamNames =
   if (!FirecrawlApp) {
     if (process.env.NODE_ENV === 'test') {
       console.warn("Firecrawl SDK not loaded or failed to compile. Using simulated data (NODE_ENV=test).");
-      return getSimulatedRegulatoryData(domain, businessName, vertical);
+      const simData = getSimulatedRegulatoryData(domain, businessName, vertical);
+      return {
+        revenueEstimate: tagDataPoint(simData.revenueEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Firecrawl SDK unavailable — simulation fallback', 'Template estimate'),
+        headcountEstimate: tagDataPoint(simData.headcountEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback', 'Template estimate'),
+        growthRate: tagDataPoint(simData.growthRate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'No extraction logic', 'Static template'),
+        filings: {
+          state: tagDataPoint(simData.filings.state, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not verified', 'Template'),
+          federal: tagDataPoint(simData.filings.federal, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not verified', 'Template'),
+          regulatoryCompliance: tagDataPoint(simData.filings.regulatoryCompliance, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'NOT a certified compliance audit', 'Template')
+        },
+        publicMentions: tagDataPoint(simData.publicMentions, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Simulated — not real press', 'Template'),
+        registryVerification: null
+      };
     }
     throw new Error("Firecrawl SDK is unavailable. Cannot proceed with search.");
   }
@@ -461,7 +491,19 @@ async function scourBusiness(domain, businessName, vertical, apiKey, teamNames =
       console.warn(`[Scourer] Firecrawl search failed: ${e.message}.`);
       if (process.env.NODE_ENV === 'test') {
         console.warn("Using simulated data fallback for test suite execution.");
-        return getSimulatedRegulatoryData(domain, businessName, vertical);
+        const simData = getSimulatedRegulatoryData(domain, businessName, vertical);
+        return {
+          revenueEstimate: tagDataPoint(simData.revenueEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Firecrawl search failed — simulation fallback', 'Template estimate'),
+          headcountEstimate: tagDataPoint(simData.headcountEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback', 'Template estimate'),
+          growthRate: tagDataPoint(simData.growthRate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'No extraction logic', 'Static template'),
+          filings: {
+            state: tagDataPoint(simData.filings.state, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not verified', 'Template'),
+            federal: tagDataPoint(simData.filings.federal, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation — not verified', 'Template'),
+            regulatoryCompliance: tagDataPoint(simData.filings.regulatoryCompliance, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'NOT a certified compliance audit', 'Template')
+          },
+          publicMentions: tagDataPoint(simData.publicMentions, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Simulated — not real press', 'Template'),
+          registryVerification: null
+        };
       }
       throw e;
     }
@@ -532,65 +574,111 @@ async function scourBusiness(domain, businessName, vertical, apiKey, teamNames =
       }
     }
 
-    // Load defaults if extraction fails to ensure rich presentation
+    // Load defaults if extraction fails — PROVENANCE: all fallback data is explicitly tagged
     const baseline = getSimulatedRegulatoryData(domain, businessName, vertical);
     const isTest = process.env.NODE_ENV === 'test';
 
-    // Extract State Registry info
-    let stateAgency = isTest ? baseline.filings.state.agency : 'N/A';
-    let stateStatus = isTest ? baseline.filings.state.status : 'N/A';
-    let stateFilingDate = isTest ? baseline.filings.state.filingDate : 'N/A';
-    let stateEntityType = isTest ? baseline.filings.state.entityType : 'N/A';
-    let stateEntityId = isTest ? baseline.filings.state.entityId : 'N/A';
+    // ── PROVENANCE-TAGGED State Registry Extraction ────────────────────────
+    let stateAgency, stateStatus, stateFilingDate, stateEntityType, stateEntityId;
+    let stateSource = DATA_SOURCE.TEMPLATE_ESTIMATE;
+    let stateConfidence = 0.20;
+    let stateCitation = 'Vertical industry template estimate';
 
-    // Check for Secretary of State mentions
+    // Initialize from baseline (template)
+    stateAgency = isTest ? baseline.filings.state.agency : 'N/A';
+    stateStatus = isTest ? baseline.filings.state.status : 'N/A';
+    stateFilingDate = isTest ? baseline.filings.state.filingDate : 'N/A';
+    stateEntityType = isTest ? baseline.filings.state.entityType : 'N/A';
+    stateEntityId = isTest ? baseline.filings.state.entityId : 'N/A';
+
+    // Attempt real extraction from Firecrawl search text — upgrade provenance if found
     const sosMatch = searchText.match(/(California|Delaware|New\s*York|Texas|Florida)\s+Secretary\s+of\s+State/i);
     if (sosMatch) {
       stateAgency = `${sosMatch[1]} Secretary of State`;
+      stateSource = DATA_SOURCE.REGEX_EXTRACTION;
+      stateConfidence = 0.65;
+      stateCitation = 'Extracted from Firecrawl web search results via regex pattern match';
     }
 
     const statusMatch = searchText.match(/status\s*[:\-–—]\s*(Active|Good\s*Standing|Inactive|Dissolved|Suspended)/i);
     if (statusMatch) {
       stateStatus = statusMatch[1].trim();
+      stateSource = DATA_SOURCE.REGEX_EXTRACTION;
+      stateConfidence = Math.max(stateConfidence, 0.60);
     }
 
     const dateMatch = searchText.match(/(?:incorporated|filed|registered)\s*(?:on|date)?\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4}|\d{2}\/\d{2}\/\d{4})/i);
     if (dateMatch) {
       stateFilingDate = dateMatch[1].trim();
+      stateSource = DATA_SOURCE.REGEX_EXTRACTION;
+      stateConfidence = Math.max(stateConfidence, 0.60);
     }
 
     const typeMatch = searchText.match(/(Limited\s*Liability\s*Company|LLC|C-Corporation|C\s*Corp|S-Corporation|Partnership|Sole\s*Proprietorship)/i);
     if (typeMatch) {
       stateEntityType = typeMatch[1].trim();
+      stateSource = DATA_SOURCE.REGEX_EXTRACTION;
+      stateConfidence = Math.max(stateConfidence, 0.55);
     }
 
     const idMatch = searchText.match(/(?:Entity|Filing|Registration)\s*(?:ID|Number|#)?\s*[:\-–—]?\s*([A-Z0-9\-]{5,15})/i);
     if (idMatch) {
       stateEntityId = idMatch[1].trim();
+      stateSource = DATA_SOURCE.REGEX_EXTRACTION;
+      stateConfidence = Math.max(stateConfidence, 0.55);
     }
 
-    // Federal EIN/SAM
+    // ── PROVENANCE-TAGGED Federal Filing Extraction ────────────────────────
     let samGovStatus = isTest ? baseline.filings.federal.samGovStatus : 'N/A';
     let secCik = isTest ? baseline.filings.federal.secCik : 'N/A';
     let einStatus = isTest ? baseline.filings.federal.einStatus : 'N/A';
+    let federalSource = isTest ? DATA_SOURCE.TEMPLATE_ESTIMATE : DATA_SOURCE.UNCITED;
+    let federalConfidence = isTest ? 0.20 : 0.0;
+    let federalCitation = isTest ? 'Vertical industry template estimate' : 'No data available';
 
     const cageMatch = searchText.match(/CAGE\s*(?:code)?\s*[:\-–—]?\s*([A-Z0-9]{5})/i);
     if (cageMatch) {
       samGovStatus = `Active Registration (CAGE Code: ${cageMatch[1].toUpperCase()})`;
+      federalSource = DATA_SOURCE.REGEX_EXTRACTION;
+      federalConfidence = 0.70;
+      federalCitation = 'CAGE code extracted from web search results';
     }
 
     const cikMatch = searchText.match(/CIK\s*(?:number)?\s*[:\-–—]?\s*(\d{10})/i);
     if (cikMatch) {
       secCik = `${cikMatch[1]} (SEC filings active)`;
+      federalSource = DATA_SOURCE.REGEX_EXTRACTION;
+      federalConfidence = Math.max(federalConfidence, 0.65);
     }
 
     const einMatch = searchText.match(/EIN\s*[:\-–—]?\s*(\d{2}-\d{7})/i);
     if (einMatch) {
       einStatus = `Verified Active (EIN: ${einMatch[1]})`;
+      federalSource = DATA_SOURCE.REGEX_EXTRACTION;
+      federalConfidence = Math.max(federalConfidence, 0.65);
+      federalCitation = `EIN ${einMatch[1]} extracted from web search results`;
     }
 
+    // ── Attempt API verification if keys are available ─────────────────────
+    let registryVerification = null;
+    try {
+      registryVerification = await verifyBusinessRegistry(businessName, 'us');
+      if (registryVerification && registryVerification.value) {
+        const reg = registryVerification.value;
+        if (reg.status) stateStatus = reg.status;
+        if (reg.companyNumber) stateEntityId = reg.companyNumber;
+        if (reg.incorporationDate) stateFilingDate = reg.incorporationDate;
+        stateSource = DATA_SOURCE.API_VERIFIED;
+        stateConfidence = 0.90;
+        stateCitation = registryVerification.provenance.citation;
+      }
+    } catch (regErr) {
+      console.warn(`[Scourer] Registry verification skipped: ${regErr.message}`);
+    }
+
+    // ── Build provenance-tagged filings object ─────────────────────────────
     const filingsObj = {
-      state: {
+      state: tagDataPoint({
         agency: stateAgency,
         status: stateStatus,
         filingDate: stateFilingDate,
@@ -598,35 +686,88 @@ async function scourBusiness(domain, businessName, vertical, apiKey, teamNames =
         entityId: stateEntityId,
         agent: isTest ? baseline.filings.state.agent : 'N/A',
         lastAmended: isTest ? baseline.filings.state.lastAmended : 'N/A'
-      },
-      federal: {
+      }, stateSource, stateConfidence, stateCitation, 'State registry extraction + API verification'),
+      federal: tagDataPoint({
         agency: isTest ? baseline.filings.federal.agency : 'N/A',
         taxExemption: isTest ? baseline.filings.federal.taxExemption : 'N/A',
         einStatus: einStatus,
         samGovStatus: samGovStatus,
         secCik: secCik
-      },
-      regulatoryCompliance: isTest ? baseline.filings.regulatoryCompliance : {
-        pciCompliance: 'N/A',
-        gdprCompliant: 'N/A',
-        adaCompliance: 'N/A'
-      }
+      }, federalSource, federalConfidence, federalCitation, 'Federal filings regex extraction'),
+      regulatoryCompliance: tagDataPoint(
+        isTest ? baseline.filings.regulatoryCompliance : { pciCompliance: 'N/A', gdprCompliant: 'N/A', adaCompliance: 'N/A' },
+        isTest ? DATA_SOURCE.TEMPLATE_ESTIMATE : DATA_SOURCE.UNCITED,
+        isTest ? 0.20 : 0.0,
+        isTest ? 'Vertical industry template — NOT a certified compliance audit' : 'No compliance data available',
+        'Template-based estimate — requires independent audit verification'
+      )
     };
 
+    // ── Provenance-tagged revenue/headcount/growth ─────────────────────────
+    const revenueValue = extractedRevenue ? extractedRevenue : (isTest ? baseline.revenueEstimate : 'N/A');
+    const revenueTagged = tagDataPoint(
+      revenueValue,
+      extractedRevenue ? DATA_SOURCE.REGEX_EXTRACTION : (isTest ? DATA_SOURCE.TEMPLATE_ESTIMATE : DATA_SOURCE.UNCITED),
+      extractedRevenue ? 0.55 : (isTest ? 0.20 : 0.0),
+      extractedRevenue ? 'Revenue figure extracted from web search results via regex' : (isTest ? 'Vertical industry template estimate — not verified' : 'No revenue data found'),
+      extractedRevenue ? 'Regex extraction from Firecrawl search text' : 'Template fallback'
+    );
+
+    const headcountValue = extractedHeadcount ? extractedHeadcount : (isTest ? baseline.headcountEstimate : 'N/A');
+    const headcountTagged = tagDataPoint(
+      headcountValue,
+      extractedHeadcount ? DATA_SOURCE.REGEX_EXTRACTION : (isTest ? DATA_SOURCE.TEMPLATE_ESTIMATE : DATA_SOURCE.UNCITED),
+      extractedHeadcount ? 0.50 : (isTest ? 0.20 : 0.0),
+      extractedHeadcount ? 'Headcount extracted from web search results via regex' : (isTest ? 'Vertical industry template estimate' : 'No headcount data found'),
+      extractedHeadcount ? 'Regex extraction from Firecrawl search text' : 'Template fallback'
+    );
+
+    const growthTagged = tagDataPoint(
+      isTest ? baseline.growthRate : 'N/A',
+      DATA_SOURCE.TEMPLATE_ESTIMATE,
+      0.15,
+      'No real-time growth rate extraction implemented — template estimate only',
+      'Static template value — no extraction logic exists for this field'
+    );
+
+    // ── Provenance-tagged public mentions ──────────────────────────────────
     const finalMentions = publicMentions.length > 0 ? publicMentions : (isTest ? baseline.publicMentions : []);
+    const mentionsSource = publicMentions.length > 0 ? DATA_SOURCE.FIRECRAWL_SEARCH : (isTest ? DATA_SOURCE.TEMPLATE_ESTIMATE : DATA_SOURCE.UNCITED);
+    const mentionsTagged = tagDataPoint(
+      filterRecentMentions(finalMentions),
+      mentionsSource,
+      publicMentions.length > 0 ? 0.65 : (isTest ? 0.15 : 0.0),
+      publicMentions.length > 0 ? 'Public mentions scraped from Firecrawl search results' : (isTest ? 'Template-generated sample mentions — not real press' : 'No mentions found'),
+      publicMentions.length > 0 ? 'Firecrawl search API — top 3 results parsed' : 'Template fallback'
+    );
+
     return {
-      revenueEstimate: extractedRevenue ? extractedRevenue : (isTest ? baseline.revenueEstimate : 'N/A'),
-      headcountEstimate: extractedHeadcount ? extractedHeadcount : (isTest ? baseline.headcountEstimate : 'N/A'),
-      growthRate: isTest ? baseline.growthRate : 'N/A',
+      revenueEstimate: revenueTagged,
+      headcountEstimate: headcountTagged,
+      growthRate: growthTagged,
       filings: filingsObj,
-      publicMentions: filterRecentMentions(finalMentions)
+      publicMentions: mentionsTagged,
+      registryVerification: registryVerification
     };
 
   } catch (error) {
     console.error(`[Scourer] Scour sequence hit an error: ${error.message}.`);
     if (process.env.NODE_ENV === 'test') {
       console.warn("Triaging to simulated model for test suite execution.");
-      return getSimulatedRegulatoryData(domain, businessName, vertical);
+      const simData = getSimulatedRegulatoryData(domain, businessName, vertical);
+      // Tag ALL simulation fallback data explicitly
+      return {
+        revenueEstimate: tagDataPoint(simData.revenueEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback — Firecrawl unavailable', 'Test mode template'),
+        headcountEstimate: tagDataPoint(simData.headcountEstimate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback', 'Test mode template'),
+        growthRate: tagDataPoint(simData.growthRate, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Simulation fallback — no extraction logic', 'Test mode template'),
+        filings: {
+          state: tagDataPoint(simData.filings.state, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback', 'Test mode template'),
+          federal: tagDataPoint(simData.filings.federal, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.20, 'Simulation fallback', 'Test mode template'),
+          regulatoryCompliance: tagDataPoint(simData.filings.regulatoryCompliance, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Template — NOT a certified compliance audit', 'Test mode template')
+        },
+        publicMentions: tagDataPoint(simData.publicMentions, DATA_SOURCE.TEMPLATE_ESTIMATE, 0.15, 'Simulation fallback — not real press', 'Test mode template'),
+        registryVerification: null
+      };
     }
     throw error;
   }

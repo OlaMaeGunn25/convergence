@@ -226,7 +226,25 @@ function initializeConsumerApp() {
   /**
    * Main rendering router
    */
+  // Provenance-tagged scourer fields ({ value, provenance }) -> unwrap in place
+  // for display. Idempotent + safe on untagged/degraded data.
+  function unwrapProvenance(x) {
+    return (x && typeof x === 'object' && 'value' in x && 'provenance' in x) ? x.value : x;
+  }
+  function normalizeScourerForDisplay(sc) {
+    if (!sc) return;
+    ['revenueEstimate', 'headcountEstimate', 'growthRate', 'publicMentions', 'registryVerification'].forEach(f => {
+      if (sc[f] !== undefined) sc[f] = unwrapProvenance(sc[f]);
+    });
+    if (sc.filings) {
+      ['state', 'federal', 'regulatoryCompliance'].forEach(f => {
+        if (sc.filings[f] !== undefined) sc.filings[f] = unwrapProvenance(sc.filings[f]);
+      });
+    }
+  }
+
   function renderDashboard(data) {
+    normalizeScourerForDisplay(data.scourerData);
     // A. Populate Top Overview Banner
     document.getElementById('result-business-name').textContent = data.businessName;
     document.getElementById('result-domain-name').textContent = data.domain;

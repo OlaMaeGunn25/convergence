@@ -1,7 +1,19 @@
 /**
  * Workforce Strength & AI Upskilling (HITL Transition) Module
+ * ────────────────────────────────────────────────────────
+ * Automation risk values in ROLE_TEMPLATES are directional assessments
+ * informed by published occupation-level automation exposure data:
+ *   - BLS O*NET 2025 Occupation Outlook Handbook
+ *   - McKinsey Global Institute 2025 — "A New Future of Work"
+ *   - Stanford HAI / MIT 2023 — "Generative AI at Work" (NBER w31161)
+ *
+ * These are NOT actuarial-grade predictions. They represent median
+ * automation exposure for the given occupation category.
+ *
+ * Calibration data: see lib/fact_checker.js CALIBRATION_DATA.automationRisk
  */
 
+const { CALIBRATION_DATA } = require('./fact_checker');
 /**
  * Baseline role database detailing automation vulnerabilities and HITL upskilling routes
  */
@@ -532,6 +544,12 @@ function analyzeWorkforce(scraperData) {
     roles: analyzedRoles,
     hiringStrategy: analyzedJobs,
     departments,
+    calibration: {
+      source: 'BLS O*NET 2025 + McKinsey Global Institute 2025 + Stanford HAI/MIT 2023',
+      methodology: 'Role-level automation risk scores are directional assessments based on published occupation-level automation exposure indices. Risk values represent median exposure for the occupation category. Actual risk depends on task composition, tool adoption, and organizational readiness.',
+      availableRiskRanges: CALIBRATION_DATA.automationRisk,
+      confidenceLevel: 'Moderate (0.50-0.65) — based on occupation-level aggregates, not firm-specific task analysis'
+    },
     timeframeMilestones: {
       immediate: {
         range: '1 - 30 Days',
