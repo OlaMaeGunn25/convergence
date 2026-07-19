@@ -13,18 +13,8 @@ const { analyzeWorkforce } = require('./workforce');
 const { scourBusiness } = require('./scourer');
 const { searchScholar } = require('./scholar');
 
-function withTimeout(promise, ms = 30000) {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error(`External request timed out after ${ms}ms`)), ms)
-  );
-  return Promise.race([promise, timeout]);
-}
-
-// Legal-vertical detection shared with the gateway (case-law / expert vetting).
-function isLegalVertical(explicitVertical, scrapedVertical, businessName) {
-  const haystack = `${explicitVertical || ''} ${scrapedVertical || ''} ${businessName || ''}`.toLowerCase();
-  return /\b(legal|law|attorney|counsel|litigation|esq)\b/.test(haystack);
-}
+// withTimeout / isLegalVertical are shared with the HTTP gateway — see lib/util.js.
+const { withTimeout, isLegalVertical } = require('./util');
 
 /**
  * runAuditPipeline(domain, { apiKey, vertical })

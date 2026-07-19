@@ -23,6 +23,9 @@ const { authenticate, isAuthConfigured } = require('./lib/auth');
 const { auditOnFinish, recordAudit } = require('./lib/audit');
 const { negotiate, isNegotiationLLMConfigured } = require('./lib/negotiation');
 const { runAuditPipeline } = require('./lib/audit_runner');
+const { CampaignStore } = require('./lib/stores/campaign_store');
+const { AlertsStore } = require('./lib/stores/alerts_store');
+const { AuditQueueStore } = require('./lib/stores/audit_queue_store');
 
 // Structured application logger (JSON in production, colorized in dev)
 const logger = winston.createLogger({
@@ -190,9 +193,20 @@ const scholarLimiter = rateLimit({
   message: { success: false, error: 'Google Scholar search rate limit reached. Please wait.' }
 });
 
-// --- Governance: authentication + immutable audit trail on mutating routes ---
-// Authentication (fail-closed once a key is configured) is applied to every
-// side-effectful endpoint; high-value actions also emit an audit_log entry.
+// --- Governance: authentication + immutable audit trail ---
+// Authentication is fail-closed once a key is configured. Two classes of route
+// are gated:
+//
+//   PROTECTED_MUTATIONS — side-effectful endpoints. Viewer-role keys are
+//     rejected on these by the role gate in lib/auth.js; high-value actions
+//     also emit an audit_log entry below.
+//   PROTECTED_READS — non-mutating GETs that either spend money on a metered
+//     third-party API or return internal business data. These accept both
+//     operator and viewer roles.
+//
+// Deliberately left PUBLIC: /api/track-event and /api/track-events-batch (the
+// client-side tracking pixel fires from unauthenticated browsers) and /health
+// (must stay reachable by load balancers and uptime probes).
 const PROTECTED_MUTATIONS = [
   '/api/audit',
   '/api/publish-post',
@@ -209,9 +223,20 @@ const PROTECTED_MUTATIONS = [
   '/api/export-crm',
   '/api/generate-monthly-posts',
   '/api/negotiate',
+  // Also serves GET (the HITL queue listing) — app.use() matches every method,
+  // so this single entry gates both the POST and the read.
   '/api/audit-queue'
 ];
+const PROTECTED_READS = [
+  // Each call bills a SerpApi credit — must not be open to anonymous callers.
+  '/api/scholar/search',
+  // Returns live campaign performance and local visitor telemetry.
+  '/api/analytics',
+  // Exposes the scheduled-post queue and its contents.
+  '/api/scheduler-status'
+];
 app.use(PROTECTED_MUTATIONS, authenticate);
+app.use(PROTECTED_READS, authenticate);
 app.use('/api/audit', auditOnFinish('audit.run'));
 app.use('/api/publish-post', auditOnFinish('post.publish'));
 app.use('/api/outreach-send', auditOnFinish('outreach.send'));
@@ -427,59 +452,50 @@ app.post('/api/negotiate', async (req, res) => {
 // audits run by a crash-safe background loop.
 // ===================================================================
 const AUDIT_QUEUE_FILE = path.join(REPO_ROOT, 'aiwx-smb-auditor', 'config', 'audit_queue.json');
-
-function loadAuditQueue() {
-  try {
-    if (fs.existsSync(AUDIT_QUEUE_FILE)) return JSON.parse(fs.readFileSync(AUDIT_QUEUE_FILE, 'utf8'));
-  } catch (e) { /* fall through */ }
-  return { active: false, jobs: [] };
-}
-function saveAuditQueue(data) {
-  const dir = path.dirname(AUDIT_QUEUE_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(AUDIT_QUEUE_FILE, JSON.stringify(data, null, 2), 'utf8');
-}
+const auditQueueStore = new AuditQueueStore(AUDIT_QUEUE_FILE);
 
 // Enqueue one or more domains for automated auditing (and toggle the loop).
-app.post('/api/audit-queue', (req, res) => {
+app.post('/api/audit-queue', async (req, res) => {
   const { domains, active, vertical } = req.body || {};
-  const queue = loadAuditQueue();
-  if (Array.isArray(domains)) {
-    for (const d of domains) {
-      const domain = String(d || '').trim();
-      if (!DOMAIN_REGEX.test(domain)) continue;
-      if (queue.jobs.some(j => j.domain === domain && j.status === 'queued')) continue;
-      queue.jobs.push({ id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, domain, vertical: vertical || null, status: 'queued', queuedAt: new Date().toISOString() });
-    }
+  const valid = Array.isArray(domains)
+    ? domains.map(d => String(d || '').trim()).filter(d => DOMAIN_REGEX.test(d))
+    : [];
+  try {
+    const result = await auditQueueStore.enqueue(valid, active, vertical);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error(`[AuditScheduler] Failed to update audit queue: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Failed to update the audit queue.' });
   }
-  if (active !== undefined) queue.active = Boolean(active);
-  saveAuditQueue(queue);
-  res.json({ success: true, active: queue.active, queued: queue.jobs.filter(j => j.status === 'queued').length });
 });
 
 // Inspect the automated audit queue.
-app.get('/api/audit-queue', (req, res) => {
-  res.json({ success: true, ...loadAuditQueue() });
+app.get('/api/audit-queue', async (req, res) => {
+  try {
+    res.json({ success: true, ...(await auditQueueStore.getQueue()) });
+  } catch (err) {
+    logger.error(`[AuditScheduler] Failed to read audit queue: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Failed to read the audit queue.' });
+  }
 });
 
 // Crash-safe background loop: processes one queued audit per tick with backoff.
+// The claim is atomic (FOR UPDATE SKIP LOCKED on the Supabase backend), so
+// several auditor instances can run this loop concurrently without two of them
+// picking up the same job.
 let auditLoopFailures = 0;
 let auditLoopSkipUntil = 0;
 let auditLoopBusy = false;
 
 async function processAuditQueueTick() {
   if (Date.now() < auditLoopSkipUntil || auditLoopBusy) return;
-  const queue = loadAuditQueue();
-  if (!queue.active) return;
-  const job = queue.jobs.find(j => j.status === 'queued');
-  if (!job) return;
 
   auditLoopBusy = true;
-  job.status = 'running';
-  job.startedAt = new Date().toISOString();
-  saveAuditQueue(queue);
-
+  let job;
   try {
+    job = await auditQueueStore.claimNextJob();
+    if (!job) return;
+
     const pkg = await runAuditPipeline(job.domain, { vertical: job.vertical });
     try {
       const cacheDir = path.join(__dirname, 'audits_cache');
@@ -488,10 +504,7 @@ async function processAuditQueueTick() {
       fs.writeFileSync(path.join(cacheDir, safe), JSON.stringify(pkg, null, 2), 'utf-8');
     } catch (e) { /* cache write is best-effort */ }
 
-    const fresh = loadAuditQueue();
-    const fj = fresh.jobs.find(j => j.id === job.id);
-    if (fj) { fj.status = 'completed'; fj.completedAt = new Date().toISOString(); }
-    saveAuditQueue(fresh);
+    await auditQueueStore.completeJob(job.id, true);
     auditLoopFailures = 0;
     recordAudit({ actor: 'audit-scheduler', role: 'operator', action: 'audit.auto', resource: job.domain, outcome: 'success' });
     logger.info(`[AuditScheduler] Completed automated audit for ${job.domain}`);
@@ -499,18 +512,33 @@ async function processAuditQueueTick() {
     auditLoopFailures++;
     const backoff = Math.min(60000 * Math.pow(2, auditLoopFailures - 1), 15 * 60 * 1000);
     auditLoopSkipUntil = Date.now() + backoff;
-    const fresh = loadAuditQueue();
-    const fj = fresh.jobs.find(j => j.id === job.id);
-    if (fj) { fj.status = 'failed'; fj.error = err.message; }
-    saveAuditQueue(fresh);
-    recordAudit({ actor: 'audit-scheduler', role: 'operator', action: 'audit.auto', resource: job.domain, outcome: 'failure', metadata: { error: err.message } });
-    logger.error(`[AuditScheduler] Automated audit for ${job.domain} failed: ${err.message}. Backing off ${Math.round(backoff / 1000)}s.`);
+    if (job) {
+      try {
+        await auditQueueStore.completeJob(job.id, false, err.message);
+      } catch (e) {
+        logger.error(`[AuditScheduler] Could not record failure for ${job.id}: ${e.message}`);
+      }
+      recordAudit({ actor: 'audit-scheduler', role: 'operator', action: 'audit.auto', resource: job.domain, outcome: 'failure', metadata: { error: err.message } });
+      logger.error(`[AuditScheduler] Automated audit for ${job.domain} failed: ${err.message}. Backing off ${Math.round(backoff / 1000)}s.`);
+    } else {
+      logger.error(`[AuditScheduler] Could not claim a job: ${err.message}. Backing off ${Math.round(backoff / 1000)}s.`);
+    }
   } finally {
     auditLoopBusy = false;
   }
 }
 
 setInterval(() => { processAuditQueueTick().catch(e => logger.error(`[AuditScheduler] tick error: ${e.message}`)); }, 90 * 1000);
+
+// Recover jobs whose worker died mid-run, so they don't sit in 'running' forever.
+const STALE_JOB_MINUTES = parseInt(process.env.STALE_JOB_MINUTES, 10) || 30;
+setInterval(() => {
+  auditQueueStore.requeueStale(STALE_JOB_MINUTES)
+    .then(rows => {
+      if (rows.length) logger.warn(`[AuditScheduler] Requeued ${rows.length} stale audit job(s).`);
+    })
+    .catch(e => logger.error(`[AuditScheduler] Stale-job sweep failed: ${e.message}`));
+}, 10 * 60 * 1000);
 
 function withTimeout(promise, ms = 30000) {
   const timeout = new Promise((_, reject) =>
@@ -706,24 +734,10 @@ app.post('/api/publish-post', (req, res) => {
  */
 const SCHEDULE_FILE = path.join(SOCIAL_AGENT_DIR, 'config', 'campaign_schedule.json');
 const AGENT_DIR = SOCIAL_AGENT_DIR;
+const campaignStore = new CampaignStore(SCHEDULE_FILE);
 
-function parseScheduledTime(dateStr, timeStr) {
-  try {
-    let timeOnly = timeStr.replace(' EST', '').replace(' EDT', '').trim();
-    let [time, modifier] = timeOnly.split(' ');
-    let [hours, minutes] = time.split(':');
-    if (hours === '12') {
-      hours = '00';
-    }
-    if (modifier === 'PM') {
-      hours = parseInt(hours, 10) + 12;
-    }
-    const formattedTime = `${String(hours).padStart(2, '0')}:${minutes}:00`;
-    return new Date(`${dateStr}T${formattedTime}`);
-  } catch (e) {
-    return new Date(0);
-  }
-}
+// LinkedIn posts are published by a separate flow, so the scheduler skips them.
+const SCHEDULER_EXCLUDED_PLATFORMS = ['linkedin'];
 
 function sendNotification(title, message) {
   // Desktop toast notifications only exist on the Windows dev host; in a Linux
@@ -745,10 +759,10 @@ function sendNotification(title, message) {
 let schedulerConsecutiveFailures = 0;
 let schedulerSkipUntil = 0;
 
-function schedulerTick() {
+async function schedulerTick() {
   if (Date.now() < schedulerSkipUntil) return;
   try {
-    runSchedulerScan();
+    await runSchedulerScan();
     schedulerConsecutiveFailures = 0;
   } catch (e) {
     schedulerConsecutiveFailures++;
@@ -758,186 +772,90 @@ function schedulerTick() {
   }
 }
 
-function runSchedulerScan() {
-  if (!fs.existsSync(SCHEDULE_FILE)) return;
-
-  let data;
-  try {
-    data = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-  } catch (e) {
-    console.error('[Server] Failed to parse schedule file in loop:', e);
-    return;
-  }
-
-  if (!data.schedulerActive) return;
-  console.log(`[Scheduler] Scanning campaign queue of ${data.posts ? data.posts.length : 0} posts...`);
-
-  const now = new Date();
-  let updated = false;
-
-  for (let post of data.posts) {
-    if (post.status !== 'APPROVED') continue;
-    if (post.platform.toLowerCase() === 'linkedin') continue;
-
-    const scheduledTime = parseScheduledTime(post.date, post.time);
-    
-    if (scheduledTime <= now) {
-      console.log(`[Scheduler] Post ${post.id} is due. Starting direct publish...`);
-      post.status = 'PUBLISHING';
-      updated = true;
-
-      // Save immediately to prevent duplicate runs
-      fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(data, null, 2));
-
-      sendNotification('AiWorXmiths Campaign Scheduler', `Posting Post ${post.id.replace('post_', '')} to ${post.platform}...`);
-
-      const args = ['publish_api.js', '--platform', post.platform.toLowerCase(), '--text', post.text];
-      if (post.image) {
-        args.push('--image', post.image);
-      }
-      
-      execFile('node', args, { cwd: AGENT_DIR }, (err, stdout, stderr) => {
-        console.log(`[Scheduler] publish_api output for ${post.id}:\n${stdout}`);
-        
-        let freshData;
-        try {
-          freshData = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-        } catch (e) {
-          freshData = data;
-        }
-
-        const freshPost = freshData.posts.find(p => p.id === post.id);
-        if (!freshPost) return;
-
-        let result = { success: false };
-        const lines = stdout.split('\n');
-        for (let line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-            try {
-              const parsed = JSON.parse(trimmed);
-              if (parsed.hasOwnProperty('success')) {
-                result = parsed;
-                break;
-              }
-            } catch (e) {}
-          }
-        }
-
-        if (err || !result.success) {
-          console.error(`[Scheduler] Post ${freshPost.id} failed:`, err || (result.error || 'Browser execution failed.'));
-          freshPost.status = 'FAILED';
-          freshPost.error = err ? err.message : (result.error || 'Browser execution failed.');
-          freshPost.logs = stdout + '\n' + stderr;
-          if (result.screenshot) freshPost.screenshot = result.screenshot;
-
-          sendNotification('AiWorXmiths Campaign Scheduler', `❌ Failed to publish Post ${freshPost.id.replace('post_', '')} to ${freshPost.platform}!`);
-        } else {
-          console.log(`[Scheduler] Post ${freshPost.id} published successfully!`);
-          freshPost.status = 'PUBLISHED';
-          freshPost.logs = stdout;
-          if (result.screenshot) freshPost.screenshot = result.screenshot;
-
-          sendNotification('AiWorXmiths Campaign Scheduler', `✓ Post ${freshPost.id.replace('post_', '')} published successfully to ${freshPost.platform}!`);
-        }
-
-        fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(freshData, null, 2));
-      });
-    }
-  }
-
-  if (updated) {
-    fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(data, null, 2));
-  }
-}
-
-setInterval(schedulerTick, 60000);
-
-// Persisted Activity Alerts Database Helpers
-const ALERTS_FILE = path.join(SOCIAL_AGENT_DIR, 'config', 'activity_alerts.json');
-
-function loadAlerts() {
-  if (!fs.existsSync(ALERTS_FILE)) {
-    const initialAlerts = [
-      {
-        id: "alert_01",
-        platform: "linkedin",
-        userName: "Sarah Jenkins",
-        userHandle: "Sarah Jenkins (Operations Director, Apex Legal)",
-        avatar: "african_american_female_lawyer.png",
-        postId: "post_01",
-        postTitle: "The Silent Cost of Disconnected Operations",
-        commentText: "This upskilling approach is exactly what we need. How do we get started with the Operational Capacity Audit?",
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
-        status: "UNRESOLVED",
-        aiDraft: "Hello Sarah! Thanks for reaching out. We would love to map your workflows. You can schedule a Free Scoping Diagnostics call directly at https://aiworxmiths.com/services. We focus on upskilling your existing staff into Growth Coordinators to manage these systems.",
-        replyText: null,
-        repliedAt: null
-      },
-      {
-        id: "alert_02",
-        platform: "instagram",
-        userName: "Dr. Keith Miller",
-        userHandle: "@miller_dental_nyc",
-        avatar: "african_american_male_advisor.png",
-        postId: "post_03",
-        postTitle: "Stop Copy-Pasting: Connecting Your Billing and CRM",
-        commentText: "Does your CRM to QuickBooks ledger sync support HIPAA compliance for patient intake?",
-        timestamp: new Date(Date.now() - 1800000).toISOString(), // 30 mins ago
-        status: "UNRESOLVED",
-        aiDraft: "Hi Dr. Miller! Yes, absolutely. Our containerized integrations run inside your private VPC (AWS/GCP) using Row-Level Security (RLS) and Key Management Service (KMS) encryption to ensure complete HIPAA compliance. Your data never leaves your secure cloud.",
-        replyText: null,
-        repliedAt: null
-      },
-      {
-        id: "alert_03",
-        platform: "threads",
-        userName: "Marcus Vance",
-        userHandle: "@marcus_vance",
-        avatar: "diverse_male_entrepreneur_1779798785119.png",
-        postId: "post_02",
-        postTitle: "Sustainable AI Scale: Countering Hype",
-        commentText: "I like the idea of flat-fee hosting instead of per-seat licensing. It’s hard to predict SaaS bills as we grow.",
-        timestamp: new Date(Date.now() - 900000).toISOString(), // 15 mins ago
-        status: "UNRESOLVED",
-        aiDraft: "Thanks Marcus! That’s the exact margin drain we resolve. By deploying the Operations Administrator container natively in your own cloud, we eliminate per-seat SaaS taxes, capping hosting at flat, predictable rates (~$35/month).",
-        replyText: null,
-        repliedAt: null
-      }
-    ];
-    // Ensure config directory exists
-    const configDir = path.dirname(ALERTS_FILE);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-    }
-    fs.writeFileSync(ALERTS_FILE, JSON.stringify(initialAlerts, null, 2));
-    return initialAlerts;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(ALERTS_FILE, 'utf8'));
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveAlerts(alerts) {
-  if (alerts.length > 100) {
-    const overflow = alerts.splice(100);
+/** Extract the publisher's `{"success": ...}` result line from its stdout. */
+function parsePublisherResult(stdout) {
+  for (const line of String(stdout || '').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) continue;
     try {
-      const logsDir = path.resolve(__dirname, 'logs');
-      if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true });
-      }
-      const date = new Date().toISOString().split('T')[0];
-      const archivePath = path.join(logsDir, `alerts-${date}.json`);
-      fs.appendFileSync(archivePath, JSON.stringify(overflow, null, 2) + '\n', 'utf8');
-      console.log(`[Alerts] Archived ${overflow.length} overflow alert(s) to: ${archivePath}`);
-    } catch (archiveErr) {
-      console.error('[Alerts] Failed to archive overflow alerts:', archiveErr);
-    }
+      const parsed = JSON.parse(trimmed);
+      if (Object.prototype.hasOwnProperty.call(parsed, 'success')) return parsed;
+    } catch (e) { /* not the result line */ }
   }
-  fs.writeFileSync(ALERTS_FILE, JSON.stringify(alerts, null, 2));
+  return { success: false };
 }
+
+/** Publish one already-claimed post and record its outcome. */
+function publishClaimedPost(post) {
+  return new Promise((resolve) => {
+    sendNotification('AiWorXmiths Campaign Scheduler', `Posting Post ${post.id.replace('post_', '')} to ${post.platform}...`);
+
+    const args = ['publish_api.js', '--platform', post.platform.toLowerCase(), '--text', post.text];
+    if (post.image) args.push('--image', post.image);
+
+    execFile('node', args, { cwd: AGENT_DIR }, async (err, stdout, stderr) => {
+      console.log(`[Scheduler] publish_api output for ${post.id}:\n${stdout}`);
+      const result = parsePublisherResult(stdout);
+      const failed = Boolean(err) || !result.success;
+
+      try {
+        if (failed) {
+          const message = err ? err.message : (result.error || 'Browser execution failed.');
+          console.error(`[Scheduler] Post ${post.id} failed:`, message);
+          await campaignStore.completePost(post.id, false, {
+            error: message,
+            logs: `${stdout || ''}\n${stderr || ''}`,
+            screenshot: result.screenshot
+          });
+          sendNotification('AiWorXmiths Campaign Scheduler', `❌ Failed to publish Post ${post.id.replace('post_', '')} to ${post.platform}!`);
+        } else {
+          console.log(`[Scheduler] Post ${post.id} published successfully!`);
+          await campaignStore.completePost(post.id, true, {
+            logs: stdout,
+            screenshot: result.screenshot
+          });
+          sendNotification('AiWorXmiths Campaign Scheduler', `✓ Post ${post.id.replace('post_', '')} published successfully to ${post.platform}!`);
+        }
+      } catch (storeErr) {
+        // The post stays in PUBLISHING; the stale sweep below returns it to
+        // APPROVED so it is retried rather than lost.
+        logger.error(`[Scheduler] Could not record outcome for ${post.id}: ${storeErr.message}`);
+      }
+      resolve();
+    });
+  });
+}
+
+async function runSchedulerScan() {
+  // One atomic claim replaces the old read → mark PUBLISHING → write sequence.
+  // Any post returned here is exclusively owned by this process, so the
+  // standalone scheduler_daemon.js cannot publish it as well.
+  const claimed = await campaignStore.claimDuePosts(SCHEDULER_EXCLUDED_PLATFORMS);
+  if (!claimed.length) return;
+
+  console.log(`[Scheduler] Claimed ${claimed.length} due post(s) for publishing.`);
+  for (const post of claimed) {
+    publishClaimedPost(post);
+  }
+}
+
+setInterval(() => { schedulerTick().catch(e => logger.error(`[Scheduler] tick error: ${e.message}`)); }, 60000);
+
+// Return posts stranded in PUBLISHING by a crashed publisher back to APPROVED.
+setInterval(() => {
+  campaignStore.requeueStale(STALE_JOB_MINUTES)
+    .then(rows => {
+      if (rows.length) logger.warn(`[Scheduler] Requeued ${rows.length} stale campaign post(s).`);
+    })
+    .catch(e => logger.error(`[Scheduler] Stale-post sweep failed: ${e.message}`));
+}, 10 * 60 * 1000);
+
+// Persisted Activity Alerts — backed by Supabase `activity_alerts` in
+// production, or config/activity_alerts.json (with the seed set) in local dev.
+// Resolve/reply are single-row updates, so two operators acting at the same
+// time can no longer overwrite each other's change.
+const ALERTS_FILE = path.join(SOCIAL_AGENT_DIR, 'config', 'activity_alerts.json');
+const alertsStore = new AlertsStore(ALERTS_FILE, path.resolve(__dirname, 'logs'));
 
 // Real daily prospecting agent scheduler (runs between 12:00 PM and 12:30 PM EST)
 let lastProspectRunDate = null;
@@ -1002,77 +920,63 @@ app.post('/api/run-prospecting', (req, res) => {
 });
 
 // API Endpoints for Activity Alerts
-app.get('/api/activity-alerts', (req, res) => {
+app.get('/api/activity-alerts', async (req, res) => {
   try {
-    const alerts = loadAlerts();
+    const alerts = await alertsStore.listAlerts();
     res.json({ success: true, alerts });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load alerts.' });
   }
 });
 
-app.post('/api/activity-alerts/resolve', (req, res) => {
+app.post('/api/activity-alerts/resolve', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ success: false, error: 'Alert ID is required.' });
 
   try {
-    const alerts = loadAlerts();
-    const alert = alerts.find(a => a.id === id);
-    if (alert) {
-      alert.status = 'RESOLVED';
-      saveAlerts(alerts);
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ success: false, error: 'Alert not found.' });
-    }
+    const alert = await alertsStore.resolveAlert(id);
+    if (!alert) return res.status(404).json({ success: false, error: 'Alert not found.' });
+    res.json({ success: true });
   } catch (err) {
+    logger.error(`[Alerts] Failed to resolve ${id}: ${err.message}`);
     res.status(500).json({ success: false, error: 'Failed to update alert status.' });
   }
 });
 
-app.post('/api/generate-reply', (req, res) => {
+app.post('/api/generate-reply', async (req, res) => {
   const { commentId } = req.body;
   if (!commentId) return res.status(400).json({ success: false, error: 'Comment ID is required.' });
 
   try {
-    const alerts = loadAlerts();
-    const alert = alerts.find(a => a.id === commentId);
-    if (alert) {
-      res.json({ success: true, replyDraft: alert.aiDraft });
-    } else {
-      res.status(404).json({ success: false, error: 'Comment alert not found.' });
-    }
+    const alert = await alertsStore.getAlert(commentId);
+    if (!alert) return res.status(404).json({ success: false, error: 'Comment alert not found.' });
+    res.json({ success: true, replyDraft: alert.aiDraft });
   } catch (err) {
+    logger.error(`[Alerts] Failed to generate reply for ${commentId}: ${err.message}`);
     res.status(500).json({ success: false, error: 'Failed to generate reply.' });
   }
 });
 
-app.post('/api/post-reply', (req, res) => {
+app.post('/api/post-reply', async (req, res) => {
   const { commentId, replyText } = req.body;
   if (!commentId || !replyText) {
     return res.status(400).json({ success: false, error: 'Comment ID and reply copy are required.' });
   }
 
   try {
-    const alerts = loadAlerts();
-    const alert = alerts.find(a => a.id === commentId);
-    if (alert) {
-      alert.status = 'REPLIED';
-      alert.replyText = replyText;
-      alert.repliedAt = new Date().toISOString();
-      saveAlerts(alerts);
-      
-      console.log(`[Server] Response mock-posted back to ${alert.platform}: "${replyText}"`);
-      sendNotification('AiWorXmiths Campaign Manager', `✓ Successfully posted response to ${alert.userName} on ${alert.platform}!`);
+    const alert = await alertsStore.recordReply(commentId, replyText);
+    if (!alert) return res.status(404).json({ success: false, error: 'Comment alert not found.' });
 
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ success: false, error: 'Comment alert not found.' });
-    }
+    console.log(`[Server] Response mock-posted back to ${alert.platform}: "${replyText}"`);
+    sendNotification('AiWorXmiths Campaign Manager', `✓ Successfully posted response to ${alert.userName} on ${alert.platform}!`);
+
+    res.json({ success: true });
   } catch (err) {
+    logger.error(`[Alerts] Failed to post reply for ${commentId}: ${err.message}`);
     res.status(500).json({ success: false, error: 'Failed to post reply on server.' });
   }
 });
+
 
 // Endpoint for simulated analytics time-series charts
 app.get('/api/simulated-analytics', (req, res) => {
@@ -1107,153 +1011,96 @@ app.get('/api/simulated-analytics', (req, res) => {
 
 
 // Endpoint to schedule the entire campaign
-app.post('/api/schedule-campaign', (req, res) => {
+app.post('/api/schedule-campaign', async (req, res) => {
   const { posts } = req.body;
   if (!posts || !Array.isArray(posts)) {
     return res.status(400).json({ success: false, error: 'Valid posts array is required.' });
   }
 
-  // Preserve existing schedulerActive state if present
-  let active = false;
-  if (fs.existsSync(SCHEDULE_FILE)) {
-    try {
-      const existing = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-      active = existing.schedulerActive || false;
-    } catch (e) {}
-  }
-
-  const scheduleData = {
-    schedulerActive: active,
-    posts: posts.map(p => {
-      let status = p.status || 'APPROVED';
-      if (status === 'PENDING') {
-        status = 'APPROVED';
-      }
-      return {
-        ...p,
-        status
-      };
-    })
-  };
-
   try {
-    fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(scheduleData, null, 2));
-    res.json({ success: true, schedulerActive: active });
+    // The store preserves the existing schedulerActive switch and, when
+    // CAMPAIGN_HITL_APPROVAL is enabled, opens a hitl_queue task for each post
+    // that still needs a human release instead of auto-approving it.
+    const { schedulerActive, pendingHitl } = await campaignStore.replaceSchedule(posts);
+    res.json({ success: true, schedulerActive, pendingHitl });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to write schedule file.' });
+    logger.error(`[Scheduler] Failed to write campaign schedule: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Failed to save the campaign schedule.' });
   }
 });
 
 // Endpoint to get the scheduler status and queue
-app.get('/api/scheduler-status', (req, res) => {
-  if (!fs.existsSync(SCHEDULE_FILE)) {
-    return res.json({ success: true, schedulerActive: false, posts: [] });
-  }
-
+app.get('/api/scheduler-status', async (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-    res.json({ success: true, schedulerActive: data.schedulerActive || false, posts: data.posts || [] });
-  } catch (e) {
-    res.status(500).json({ success: false, error: 'Failed to read schedule file.' });
+    const { schedulerActive, posts } = await campaignStore.getSchedule();
+    res.json({ success: true, schedulerActive, posts });
+  } catch (err) {
+    logger.error(`[Scheduler] Failed to read campaign schedule: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Failed to read the campaign schedule.' });
   }
 });
 
 // Endpoint to toggle scheduler state
-app.post('/api/toggle-scheduler', (req, res) => {
+app.post('/api/toggle-scheduler', async (req, res) => {
   const { active } = req.body;
   if (active === undefined) {
     return res.status(400).json({ success: false, error: 'Active toggle state is required.' });
   }
 
-  if (!fs.existsSync(SCHEDULE_FILE)) {
-    return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet. Please schedule posts first.' });
-  }
-
   try {
-    const data = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-    data.schedulerActive = active;
-    fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(data, null, 2));
-    
-    sendNotification('AiWorXmiths Campaign Scheduler', `Campaign Auto-Scheduler has been turned ${active ? 'ON' : 'OFF'}.`);
-    
-    res.json({ success: true, schedulerActive: active });
-  } catch (e) {
+    if (!(await campaignStore.hasSchedule())) {
+      return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet. Please schedule posts first.' });
+    }
+
+    const schedulerActive = await campaignStore.setSchedulerActive(active);
+    sendNotification('AiWorXmiths Campaign Scheduler', `Campaign Auto-Scheduler has been turned ${schedulerActive ? 'ON' : 'OFF'}.`);
+    res.json({ success: true, schedulerActive });
+  } catch (err) {
+    logger.error(`[Scheduler] Failed to toggle scheduler: ${err.message}`);
     res.status(500).json({ success: false, error: 'Failed to update schedule status.' });
   }
 });
 
 // Endpoint to update a single post status in the schedule
-app.post('/api/update-post-status', (req, res) => {
+app.post('/api/update-post-status', async (req, res) => {
   const { id, status } = req.body;
   if (!id || !status) {
     return res.status(400).json({ success: false, error: 'Post ID and status are required.' });
   }
 
-  if (!fs.existsSync(SCHEDULE_FILE)) {
-    return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet.' });
-  }
-
   try {
-    const data = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-    let updated = false;
-
-    if (data.posts && Array.isArray(data.posts)) {
-      data.posts.forEach(post => {
-        const baseId = post.id.split('_').slice(0, 2).join('_');
-        if (baseId === id || post.id === id) {
-          post.status = status;
-          updated = true;
-        }
-      });
+    if (!(await campaignStore.hasSchedule())) {
+      return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet.' });
     }
-
-    if (updated) {
-      fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(data, null, 2));
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ success: false, error: 'Post not found in schedule.' });
-    }
+    const updated = await campaignStore.updatePostStatus(id, status);
+    if (!updated) return res.status(404).json({ success: false, error: 'Post not found in schedule.' });
+    res.json({ success: true });
   } catch (err) {
+    logger.error(`[Scheduler] Failed to update status for ${id}: ${err.message}`);
     res.status(500).json({ success: false, error: 'Failed to update post status on server.' });
   }
 });
 
 // Endpoint to update a single post text and/or image in the schedule (real-time sync)
-app.post('/api/update-post', (req, res) => {
+app.post('/api/update-post', async (req, res) => {
   const { id, text, image } = req.body;
   if (!id || text === undefined) {
     return res.status(400).json({ success: false, error: 'Post ID and text content are required.' });
   }
 
-  if (!fs.existsSync(SCHEDULE_FILE)) {
-    return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet.' });
-  }
-
   try {
-    const data = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-    let updated = false;
-
-    if (data.posts && Array.isArray(data.posts)) {
-      data.posts.forEach(post => {
-        const baseId = post.id.split('_').slice(0, 2).join('_');
-        if (baseId === id || post.id === id) {
-          post.text = text;
-          if (image !== undefined) post.image = image;
-          updated = true;
-        }
-      });
+    if (!(await campaignStore.hasSchedule())) {
+      return res.status(400).json({ success: false, error: 'Campaign schedule has not been set yet.' });
     }
-
-    if (updated) {
-      fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(data, null, 2), 'utf8');
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ success: false, error: 'Post not found in schedule.' });
-    }
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    const updated = await campaignStore.updatePostContent(id, text, image);
+    if (!updated) return res.status(404).json({ success: false, error: 'Post not found in schedule.' });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error(`[Scheduler] Failed to update post ${id}: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
+
 
 const LOCAL_ANALYTICS_FILE = path.resolve(__dirname, 'config/local_analytics.json');
 
@@ -1397,16 +1244,25 @@ app.get('/api/analytics', async (req, res) => {
 
     let totalLocalClicks = local.pageviews.length;
     let totalLocalConversions = local.events.filter(e => e.type && e.type.startsWith('cta_click')).length;
-    let totalLocalImpressions = totalLocalClicks * 15 + Math.floor(Math.random() * 5);
     let localCtr = totalLocalClicks > 0 ? ((totalLocalConversions / totalLocalClicks) * 100).toFixed(2) + '%' : '0.00%';
-    
+
+    // Provenance rule for this endpoint: `summary` carries only figures we
+    // actually measured. The tracking pixel records pageviews and CTA clicks —
+    // it cannot observe an impression, and neither can the GA4 report we run
+    // (see lib/ga.js). Impressions therefore stay null and any modelled figure
+    // lives in the separately-named `estimated` block, never blended in.
+    const LOCAL_IMPRESSIONS_PER_CLICK = 15;
+
     let summary = {
-      impressions: totalLocalImpressions,
+      impressions: null,
       clicks: totalLocalClicks,
       ctr: localCtr,
       conversions: totalLocalConversions
     };
-    
+    let estimated = {
+      impressions: totalLocalClicks * LOCAL_IMPRESSIONS_PER_CLICK
+    };
+
     let campaigns = localCampaignsList;
     let ga4Connected = false;
 
@@ -1440,7 +1296,9 @@ app.get('/api/analytics', async (req, res) => {
       const ga4 = await getGA4Metrics();
       if (ga4 && ga4.success) {
         ga4Connected = true;
-        summary.impressions += ga4.summary.impressions;
+        // ga4.summary.impressions is null by contract; only the modelled figure
+        // crosses over, and it lands in `estimated` rather than `summary`.
+        estimated.impressions += ga4.summary.estimatedImpressions || 0;
         summary.clicks += ga4.summary.clicks;
         summary.conversions += ga4.summary.conversions;
         summary.ctr = summary.clicks > 0 ? ((summary.conversions / summary.clicks) * 100).toFixed(2) + '%' : '0.00%';
@@ -1482,7 +1340,21 @@ app.get('/api/analytics', async (req, res) => {
     res.json({
       success: true,
       ga4Connected,
+      // Measured figures only. `impressions` is null by design — see the
+      // provenance block and the note above the summary construction.
       summary,
+      // Modelled figures, kept structurally separate so a client cannot render
+      // one as fact by accident. Label these as estimates in any UI.
+      estimated,
+      provenance: {
+        clicks: ga4Connected ? 'verified:local-pixel+ga4' : 'verified:local-pixel',
+        conversions: ga4Connected ? 'verified:local-pixel+ga4' : 'verified:local-pixel',
+        ctr: 'derived:conversions/clicks',
+        impressions: 'unavailable:not-measured-by-pixel-or-ga4',
+        'estimated.impressions': `modelled:clicks*${LOCAL_IMPRESSIONS_PER_CLICK}`,
+        trend: 'verified:local-pixel',
+        breakdown: ga4Connected ? 'verified:local-pixel+ga4' : 'verified:local-pixel'
+      },
       campaigns,
       trend,
       breakdown

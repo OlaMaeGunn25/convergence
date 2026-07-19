@@ -40,7 +40,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function requestOnce(method, requestPath, payload) {
+function requestOnce(method, requestPath, payload, extraHeaders) {
   const { url, key } = getConfig();
   return new Promise((resolve, reject) => {
     const urlObj = new URL(`${url}${requestPath}`);
@@ -58,6 +58,7 @@ function requestOnce(method, requestPath, payload) {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation',
+        ...(extraHeaders || {}),
         ...(postData ? { 'Content-Length': Buffer.byteLength(postData) } : {})
       }
     };
@@ -93,11 +94,11 @@ function isTransient(err) {
   return false;
 }
 
-async function request(method, requestPath, payload) {
+async function request(method, requestPath, payload, extraHeaders) {
   let lastErr;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await requestOnce(method, requestPath, payload);
+      return await requestOnce(method, requestPath, payload, extraHeaders);
     } catch (err) {
       lastErr = err;
       if (!isTransient(err) || attempt === MAX_RETRIES) throw err;
@@ -117,8 +118,47 @@ function selectRows(table, queryString = '') {
   return request('GET', `/rest/v1/${table}${queryString ? `?${queryString}` : ''}`);
 }
 
+/**
+ * PATCH rows matching a PostgREST filter, e.g.
+ *   updateRows('campaign_posts', 'id=eq.post_01', { status: 'PUBLISHED' })
+ * The filter is required: an unfiltered PATCH would rewrite the whole table.
+ */
+function updateRows(table, filterQuery, payload) {
+  if (!filterQuery) throw new Error('updateRows requires a filter query (refusing to PATCH an entire table).');
+  return request('PATCH', `/rest/v1/${table}?${filterQuery}`, payload);
+}
+
+/**
+ * Insert-or-update on the table's primary key (PostgREST `resolution=merge-duplicates`).
+ * Accepts a single object or an array of rows.
+ */
+function upsertRows(table, payload, onConflict) {
+  const query = onConflict ? `?on_conflict=${encodeURIComponent(onConflict)}` : '';
+  return request('POST', `/rest/v1/${table}${query}`, payload, {
+    'Prefer': 'return=representation,resolution=merge-duplicates'
+  });
+}
+
+function deleteRows(table, filterQuery) {
+  if (!filterQuery) throw new Error('deleteRows requires a filter query (refusing to DELETE an entire table).');
+  return request('DELETE', `/rest/v1/${table}?${filterQuery}`);
+}
+
+/**
+ * Call a Postgres function via PostgREST. This is the only way to reach
+ * `SELECT ... FOR UPDATE SKIP LOCKED` — PostgREST's table endpoints cannot
+ * express row locks, so every atomic claim runs inside a SQL function.
+ */
+function rpc(fnName, args = {}) {
+  return request('POST', `/rest/v1/rpc/${fnName}`, args);
+}
+
 module.exports = {
   isSupabaseConfigured,
   insertRow,
-  selectRows
+  selectRows,
+  updateRows,
+  upsertRows,
+  deleteRows,
+  rpc
 };

@@ -2,6 +2,24 @@
 
 All notable changes to the **CONVERGENCE-Ai SMB Auditor & AI Workforce Planner** will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Campaign scheduler, activity alerts, and audit queue moved to Supabase.** These three stores were JSON files (`config/campaign_schedule.json`, `config/activity_alerts.json`, `config/audit_queue.json`) that every writer read, mutated, and rewrote whole, with no locking. Concurrent writers could double-publish a post, run an audit twice, or silently drop each other's edits. Each store is now a table, and the queues are drained through Postgres functions using `SELECT ... FOR UPDATE SKIP LOCKED` so a job or post can only ever be claimed once.
+- **`scheduler_daemon.js` and the in-process scheduler loop can now run concurrently.** Both claim work through the same locked queue instead of racing on the schedule file.
+- **Campaign approvals can route through the shared `hitl_queue`.** Set `CAMPAIGN_HITL_APPROVAL=true` to hold `PENDING` posts for human release in the same queue the admin console already renders; a database trigger releases the post when the task is approved. Defaults to off, preserving the previous auto-approve behaviour.
+- **Consolidated scheduled-time parsing into `lib/schedule_time.js`.** The copy in `server.js` built its `Date` from a bare `YYYY-MM-DDTHH:mm` string (interpreted in the host timezone rather than Eastern) and zeroed the hour for `12:xx PM` as well as `12:xx AM`. Both are fixed by adopting the daemon's correct implementation everywhere.
+
+### Added
+- `lib/stores/{campaign_store,alerts_store,audit_queue_store}.js` — one API per store, backed by Supabase in production and by the original JSON files in local dev when `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are unset.
+- `lib/stores/json_file.js` — the dev fallback, now with a per-file async mutex and atomic temp-file-then-rename writes, so local runs no longer lose interleaved writes or observe half-written files.
+- Stale-work recovery: posts stuck in `PUBLISHING` and jobs stuck in `running` after a worker crash are swept back to a runnable state (`STALE_JOB_MINUTES`, default 30).
+- `updateRows`, `upsertRows`, `deleteRows`, and `rpc` on the Supabase REST client.
+- Schema for `campaign_posts`, `campaign_schedule_state`, `activity_alerts`, `audit_queue_jobs`, and `audit_queue_state`, plus the claim/complete/requeue functions, in `aiwx-admin-agent/supabase_schema.sql`.
+
+### Fixed
+- Enqueuing the same domain twice concurrently no longer creates duplicate audit jobs; a partial unique index on `(domain) WHERE status = 'queued'` makes the check atomic.
+
 ## [1.1.0] - 2026-07-07
 
 ### Added

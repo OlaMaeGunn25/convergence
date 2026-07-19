@@ -1,29 +1,40 @@
 /**
  * AiWorXmiths Social Media Scheduler Daemon
  * ==========================================
- * Standalone Node.js process that reads campaign_schedule.json,
- * identifies APPROVED posts whose scheduled time has passed,
- * and fires publish_headless.js for each. Designed to be called
- * by Windows Task Scheduler every 15 minutes.
+ * Standalone Node.js process that claims APPROVED posts whose scheduled time
+ * has passed and fires publish_headless.js for each. Designed to be called by
+ * Windows Task Scheduler every 15 minutes.
+ *
+ * Posts are claimed through the shared campaign store rather than by rewriting
+ * campaign_schedule.json. On the Supabase backend the claim is a single
+ * UPDATE ... FOR UPDATE SKIP LOCKED, so this daemon and the in-process
+ * scheduler loop in server.js can run at the same time without both publishing
+ * the same post — which the previous file-based version allowed, since it
+ * re-read and rewrote the whole file on every transition.
  *
  * Usage:
  *   node scheduler_daemon.js
  *   node scheduler_daemon.js --dry-run
  */
 
+require('dotenv').config();
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { CampaignStore } = require('./lib/stores/campaign_store');
+
 const DRY_RUN = process.argv.includes('--dry-run');
 
 // Paths are relative to aiwx-smb-auditor; resolve sibling agent dirs
-const AGENT_DIR    = path.resolve(__dirname, '../aiwx-social-media-agent');
+const AGENT_DIR     = path.resolve(__dirname, '../aiwx-social-media-agent');
 const SCHEDULE_FILE = path.join(AGENT_DIR, 'config', 'campaign_schedule.json');
 const PUBLISH_SCRIPT = path.join(AGENT_DIR, 'publish_headless.js');
 const LOG_DIR       = path.join(AGENT_DIR, 'logs');
 const LOG_FILE      = path.join(LOG_DIR, 'scheduler_daemon.log');
 const MAX_LOG_BYTES = 2 * 1024 * 1024; // Rotate log after 2 MB
+
+const campaignStore = new CampaignStore(SCHEDULE_FILE);
 
 // ── Logging ──────────────────────────────────────────────────────────────────
 
@@ -44,43 +55,28 @@ function log(msg) {
   } catch (e) { /* ignore write errors */ }
 }
 
-// ── Time Parsing ──────────────────────────────────────────────────────────────
-// Schedule format: "10:00 AM EST" — treat "EST" as Eastern Time (UTC-5 in winter,
-// UTC-4 in summer). We use -4 during DST (May–Nov) and -5 otherwise.
-
-function getEasternOffsetHours() {
-  const now = new Date();
-  const jan = new Date(now.getFullYear(), 0, 1);
-  const jul = new Date(now.getFullYear(), 6, 1);
-  const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-  const isDST = now.getTimezoneOffset() < stdOffset;
-  // Eastern Standard = UTC-5, Eastern Daylight = UTC-4
-  return isDST ? -4 : -5;
-}
-
-function parseScheduledTime(dateStr, timeStr) {
-  try {
-    // Strip timezone label; handle "9:00 AM EST" or "10:00 AM EDT"
-    const cleaned = timeStr.replace(/ E[SD]T$/i, '').trim();
-    const [timePart, meridiem] = cleaned.split(' ');
-    let [h, m] = timePart.split(':').map(Number);
-    if (meridiem === 'PM' && h !== 12) h += 12;
-    if (meridiem === 'AM' && h === 12) h = 0;
-
-    const offset = getEasternOffsetHours();
-    const offsetStr = offset < 0 ? `-${String(Math.abs(offset)).padStart(2, '0')}:00`
-                                  : `+${String(offset).padStart(2, '0')}:00`;
-    const iso = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00${offsetStr}`;
-    const dt = new Date(iso);
-    return isNaN(dt) ? new Date(0) : dt;
-  } catch (e) {
-    return new Date(0);
-  }
-}
-
 // ── Post Execution ────────────────────────────────────────────────────────────
 
-function executePost(post, schedule) {
+/** Extract the publisher's `{"success": ...}` result line from its stdout. */
+function parsePublisherResult(stdout) {
+  let result = { success: false };
+  (stdout || '').split('\n').forEach(line => {
+    const t = line.trim();
+    if (t.startsWith('{') && t.endsWith('}')) {
+      try {
+        const p = JSON.parse(t);
+        if ('success' in p) result = p;
+      } catch (e) { /* not the result line */ }
+    }
+  });
+  return result;
+}
+
+/**
+ * Publish one post this process has already claimed, then write its terminal
+ * status. Only this row is touched, so a concurrent edit elsewhere survives.
+ */
+function executePost(post) {
   return new Promise((resolve) => {
     const args = [PUBLISH_SCRIPT, '--platform', post.platform.toLowerCase(), '--text', post.text];
     if (post.image) args.push('--image', post.image);
@@ -88,43 +84,30 @@ function executePost(post, schedule) {
 
     log(`  → Spawning: node publish_headless.js --platform ${post.platform} [image=${post.image || 'none'}]`);
 
-    const child = execFile('node', args, { cwd: AGENT_DIR, timeout: 180000 }, (err, stdout, stderr) => {
-      // Re-read schedule fresh to avoid race conditions if multiple posts run in parallel
-      let freshData;
-      try {
-        freshData = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-      } catch (e) {
-        freshData = schedule;
-      }
-      const freshPost = freshData.posts.find(p => p.id === post.id);
-      if (!freshPost) { resolve(); return; }
+    const child = execFile('node', args, { cwd: AGENT_DIR, timeout: 180000 }, async (err, stdout, stderr) => {
+      const result = parsePublisherResult(stdout);
+      const failed = Boolean(err) || !result.success;
 
-      // Parse JSON result line from stdout
-      let result = { success: false };
-      (stdout || '').split('\n').forEach(line => {
-        const t = line.trim();
-        if (t.startsWith('{') && t.endsWith('}')) {
-          try { const p = JSON.parse(t); if ('success' in p) result = p; } catch (e) {}
+      try {
+        if (failed) {
+          const message = err ? err.message : (result.error || 'Execution failed.');
+          log(`  ✗ FAILED [${post.id}]: ${message}`);
+          await campaignStore.completePost(post.id, false, {
+            error: message,
+            logs: `${stdout || ''}\n${stderr || ''}`,
+            screenshot: result.screenshot
+          });
+        } else {
+          log(`  ✓ PUBLISHED [${post.id}]`);
+          await campaignStore.completePost(post.id, true, {
+            logs: stdout || '',
+            screenshot: result.screenshot
+          });
         }
-      });
-
-      if (err || !result.success) {
-        log(`  ✗ FAILED [${post.id}]: ${err ? err.message : (result.error || 'Execution failed.')}`);
-        freshPost.status = 'FAILED';
-        freshPost.error  = err ? err.message : (result.error || 'Execution failed.');
-        freshPost.logs   = (stdout || '') + '\n' + (stderr || '');
-      } else {
-        log(`  ✓ PUBLISHED [${post.id}]`);
-        freshPost.status = 'PUBLISHED';
-        freshPost.logs   = stdout || '';
-        freshPost.publishedAt = new Date().toISOString();
-        if (result.screenshot) freshPost.screenshot = result.screenshot;
-      }
-
-      try {
-        fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(freshData, null, 2));
       } catch (e) {
-        log(`  ! Failed to update schedule file: ${e.message}`);
+        // The post stays PUBLISHING; the server's stale sweep returns it to
+        // APPROVED so it is retried rather than silently dropped.
+        log(`  ! Failed to record outcome for ${post.id}: ${e.message}`);
       }
 
       resolve();
@@ -142,34 +125,28 @@ async function runScheduler() {
   rotateLogIfNeeded();
   log('════════════════════════════════════════');
   log('AiWorXmiths Scheduler Daemon — Run Start');
+  log(campaignStore.usingSupabase
+    ? 'Backend: Supabase (row-locked claims)'
+    : `Backend: JSON file (local dev) — ${SCHEDULE_FILE}`);
   if (DRY_RUN) log('DRY-RUN MODE: Publish clicks will be skipped.');
 
-  if (!fs.existsSync(SCHEDULE_FILE)) {
+  if (!campaignStore.usingSupabase && !fs.existsSync(SCHEDULE_FILE)) {
     log('ERROR: campaign_schedule.json not found. Exiting.');
     process.exit(1);
   }
 
-  let schedule;
-  try {
-    schedule = JSON.parse(fs.readFileSync(SCHEDULE_FILE, 'utf8'));
-  } catch (e) {
-    log(`ERROR: Failed to parse campaign_schedule.json — ${e.message}`);
-    process.exit(1);
-  }
-
-  if (!schedule.schedulerActive) {
+  if (!(await campaignStore.isSchedulerActive())) {
     log('Scheduler is disabled (schedulerActive=false). Exiting.');
     process.exit(0);
   }
 
-  const now = new Date();
-  log(`Current UTC time: ${now.toISOString()}`);
+  log(`Current UTC time: ${new Date().toISOString()}`);
 
-  const duePosts = (schedule.posts || []).filter(post => {
-    if (post.status !== 'APPROVED') return false;
-    const t = parseScheduledTime(post.date, post.time);
-    return now >= t;
-  });
+  // Claim due posts atomically. Anything returned is exclusively ours; posts
+  // another scheduler already took are skipped rather than double-published.
+  // No platform is excluded here — unlike server.js, this daemon does publish
+  // LinkedIn.
+  const duePosts = await campaignStore.claimDuePosts([]);
 
   if (duePosts.length === 0) {
     log('No due posts found. Nothing to do.');
@@ -177,24 +154,13 @@ async function runScheduler() {
     process.exit(0);
   }
 
-  log(`Found ${duePosts.length} due post(s):`);
+  log(`Claimed ${duePosts.length} due post(s):`);
   duePosts.forEach(p => log(`  • ${p.id} (${p.platform}) — ${p.date} ${p.time}`));
-
-  // Mark all due posts as PUBLISHING before we begin (prevents re-runs if daemon overlaps)
-  duePosts.forEach(p => {
-    const livePost = schedule.posts.find(x => x.id === p.id);
-    if (livePost) livePost.status = 'PUBLISHING';
-  });
-  try {
-    fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(schedule, null, 2));
-  } catch (e) {
-    log(`WARNING: Could not pre-mark posts as PUBLISHING: ${e.message}`);
-  }
 
   // Execute sequentially to avoid hammering the OS with multiple headless browsers
   for (const post of duePosts) {
     log(`\nProcessing: ${post.id} (${post.platform})`);
-    await executePost(post, schedule);
+    await executePost(post);
   }
 
   log('\nScheduler Daemon — Run Complete.');

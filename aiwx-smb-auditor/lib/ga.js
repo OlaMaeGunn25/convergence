@@ -201,13 +201,19 @@ async function getGA4Metrics() {
   return parseGA4Data(rawData);
 }
 
+// Impressions are NOT a GA4 Data API metric on the report requested above
+// (activeUsers / sessions / conversions). Any impression figure is therefore a
+// model, not a measurement. We keep the model deterministic and expose it under
+// a separate, explicitly-named field so it can never be mistaken for GA4 data.
+const IMPRESSIONS_PER_SESSION = 20;
+
 // Parser for the report output
 function parseGA4Data(gaData) {
   const rows = gaData.rows || [];
-  let totalImpressions = 0;
+  let totalSessions = 0;
   let totalClicks = 0;
   let totalConversions = 0;
-  
+
   const campaignData = [];
 
   rows.forEach(row => {
@@ -226,8 +232,8 @@ function parseGA4Data(gaData) {
     if (isOurCampaign || isOurPlatform) {
       totalClicks += sessions;
       totalConversions += conversions;
-      totalImpressions += (sessions * 20) + Math.floor(Math.random() * 5); // Fallback estimate for impressions based on clicks
-      
+      totalSessions += sessions;
+
       const clickRate = (sessions > 0) ? ((conversions / sessions) * 100).toFixed(1) + '%' : '0.0%';
       
       campaignData.push({
@@ -244,10 +250,22 @@ function parseGA4Data(gaData) {
   return {
     success: true,
     summary: {
-      impressions: totalImpressions || 0,
+      // null, not 0: GA4 does not report impressions for this query. Callers
+      // must read estimatedImpressions and label it as a model if they show it.
+      impressions: null,
+      estimatedImpressions: totalSessions * IMPRESSIONS_PER_SESSION,
       clicks: totalClicks,
       ctr: ctr,
       conversions: totalConversions
+    },
+    provenance: {
+      clicks: 'verified:ga4',
+      conversions: 'verified:ga4',
+      // Note: this ratio is conversions/clicks — a conversion rate, not a
+      // click-through rate. The field name is retained for client compatibility.
+      ctr: 'derived:conversions/clicks',
+      impressions: 'unavailable:not-reported-by-ga4',
+      estimatedImpressions: `modelled:sessions*${IMPRESSIONS_PER_SESSION}`
     },
     campaigns: campaignData
   };
