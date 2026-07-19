@@ -254,6 +254,45 @@ async function runTests() {
     assert(false, `Multi-agent negotiation tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 7: Reporting Governance (provenance / fact-check / TRiSM) ---
+  try {
+    const { tagDataPoint, DATA_SOURCE, getConfidenceLevel } = require('../lib/fact_checker');
+    const { AuditTrailLogger, classifyDistribution, generateMethodologyDisclosure, generateDisclaimer, validateForDelivery } = require('../lib/reporting_framework');
+
+    // A. Provenance tagging wraps values with a source/confidence envelope
+    const dp = tagDataPoint('Shopify', DATA_SOURCE.LIVE_CRAWL, 0.9, 'detected', 'header scan');
+    assert(dp.value === 'Shopify' && dp.provenance && dp.provenance.confidence === 0.9, 'tagDataPoint wraps value with provenance + confidence');
+    assert(typeof getConfidenceLevel(0.9) === 'object' || typeof getConfidenceLevel(0.9) === 'string', 'getConfidenceLevel maps a score to a level');
+
+    // B. Audit trail logger collects data points and computes a reliability score
+    const logger = new AuditTrailLogger('example.com', 'Example Co');
+    logger.log('scraper', 'crawl', 'success');
+    logger.registerDataPoint(tagDataPoint('Cloudflare', DATA_SOURCE.LIVE_HEADER_SCAN, 0.95, 'waf', 'header'));
+    logger.registerDataPoint(tagDataPoint('WordPress', DATA_SOURCE.LIVE_CRAWL, 0.8, 'cms', 'html'));
+    const trail = logger.finalize();
+    assert(trail.reliability && typeof trail.reliability.score === 'number', 'AuditTrailLogger.finalize() produces a numeric reliability score');
+    assert(trail.reliability.score >= 0 && trail.reliability.score <= 100, 'Reliability score is bounded 0-100');
+    assert(typeof trail.reliability.grade === 'string', 'Reliability score carries a letter grade');
+
+    // C. Distribution gate classifies a report's readiness
+    const dist = classifyDistribution(trail.reliability);
+    assert(dist && (dist.classification || dist.class), 'classifyDistribution returns a distribution class');
+    assert(typeof dist.canDistribute === 'boolean', 'Distribution gate exposes a canDistribute flag');
+
+    // D. Methodology + disclaimer generated
+    const methodology = generateMethodologyDisclosure({ domain: 'example.com', businessName: 'Example Co', timestamp: new Date().toISOString() }, trail.reliability);
+    const disclaimer = generateDisclaimer(dist, trail.reliability);
+    assert(methodology && Object.keys(methodology).length > 0, 'Methodology disclosure generated');
+    assert(disclaimer && Object.keys(disclaimer).length > 0, 'Legal disclaimer blocks generated');
+
+    // E. Pre-delivery validation returns a checklist verdict
+    const pkg = { businessName: 'Example Co', vertical: 'Technology & SaaS', scrapedData: { technologies: [{}, {}, {}] }, analyzerData: { swot: { strengths: [1] } }, reportGovernance: { methodology, disclaimer } };
+    const validation = validateForDelivery(pkg, trail);
+    assert(validation && (validation.overallStatus || validation.status), 'validateForDelivery returns an overall status');
+  } catch (e) {
+    assert(false, `Reporting governance tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
