@@ -207,6 +207,8 @@
                 <span class="overview-meta-tag" id="adm-domain-name">client.com</span>
                 <span class="overview-meta-tag" id="adm-vertical-name">Vertical category</span>
                 <span class="overview-meta-tag simulated-badge" id="adm-simulated-badge">Simulated</span>
+                <span class="overview-meta-tag" id="adm-reliability-badge" title="Report Reliability Score — data provenance & fact-check governance" style="display:none;"></span>
+                <span class="overview-meta-tag" id="adm-distribution-badge" title="Distribution classification gate" style="display:none;"></span>
               </div>
             </div>
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -925,6 +927,38 @@ function initializeAdminConsole() {
     }
   }
 
+  // Surface the AI TRiSM report-governance summary as banner badges. Additive:
+  // hidden entirely when an audit carries no reportGovernance block.
+  function renderGovernanceBadges(gov) {
+    const relBadge = document.getElementById('adm-reliability-badge');
+    const distBadge = document.getElementById('adm-distribution-badge');
+    if (!relBadge || !distBadge) return;
+    if (!gov || !gov.reliability) {
+      relBadge.style.display = 'none';
+      distBadge.style.display = 'none';
+      return;
+    }
+    const score = gov.reliability.score;
+    const grade = gov.reliability.grade || '';
+    relBadge.textContent = `Reliability ${score}/100 (${grade})`;
+    relBadge.style.display = '';
+    // Green ≥70, amber 50–69, red <50
+    const good = score >= 70, mid = score >= 50;
+    relBadge.style.background = good ? 'var(--accent-emerald-glow)' : mid ? 'var(--accent-amber-glow)' : 'rgba(239,68,68,0.12)';
+    relBadge.style.color = good ? 'var(--accent-emerald)' : mid ? 'var(--accent-amber)' : '#ef4444';
+
+    const dist = gov.distribution || {};
+    const label = dist.classification || dist.class || '';
+    if (label) {
+      distBadge.textContent = label;
+      distBadge.style.display = '';
+      distBadge.style.background = dist.canDistribute ? 'var(--accent-indigo-glow, rgba(99,102,241,0.12))' : 'rgba(239,68,68,0.12)';
+      distBadge.style.color = dist.canDistribute ? 'var(--accent-indigo)' : '#ef4444';
+    } else {
+      distBadge.style.display = 'none';
+    }
+  }
+
   function renderAdminDashboard(data) {
     // Banner info
     document.getElementById('adm-business-name').textContent = data.businessName;
@@ -933,6 +967,9 @@ function initializeAdminConsole() {
 
     // Legal vertical: render the Google Scholar Case Precedents & Vetting tab
     renderScholarTab(data.scholarData);
+
+    // Reporting governance: reliability grade + distribution gate badges
+    renderGovernanceBadges(data.reportGovernance);
 
     const badgeSim = document.getElementById('adm-simulated-badge');
     if (data.isSimulated) {
