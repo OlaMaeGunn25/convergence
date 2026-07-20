@@ -384,6 +384,36 @@ async function runTests() {
     assert(false, `Tool registry tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 10: Route-parity guard (Phase 2.5 cutover safety) ---
+  // The modular routes/ tree is a mirror of the live inline server.js routes but
+  // is not yet mounted. This guard asserts routes/ actually covers the critical
+  // API surface, so the eventual cutover (mount routes/, delete inline) cannot
+  // silently drop an endpoint. If you add an inline route, add it to routes/ too.
+  try {
+    const combined = require('../routes');
+    // Recursively collect "METHOD /path" from an Express router stack.
+    const collect = (stack, acc) => {
+      for (const layer of stack || []) {
+        if (layer.route && layer.route.path) {
+          for (const m of Object.keys(layer.route.methods)) acc.add(`${m.toUpperCase()} ${layer.route.path}`);
+        } else if (layer.handle && layer.handle.stack) {
+          collect(layer.handle.stack, acc);
+        }
+      }
+      return acc;
+    };
+    const paths = collect(combined.stack, new Set());
+    assert(paths.size >= 25, `routes/ exposes the full API surface (found ${paths.size})`);
+    const mustHave = [
+      'POST /api/audit', 'GET /api/tools', 'POST /api/tools/:name', 'POST /api/negotiate',
+      'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health'
+    ];
+    const missing = mustHave.filter(r => !paths.has(r));
+    assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
+  } catch (e) {
+    assert(false, `Route-parity guard crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
