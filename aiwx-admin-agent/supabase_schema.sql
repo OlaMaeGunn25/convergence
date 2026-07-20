@@ -541,3 +541,79 @@ $$;
 -- Until then, treat service-role queries as trusted-but-unscoped and rely on the
 -- application tenant guard.
 
+
+
+-- =========================================================================
+-- 9. Task Model (orchestration spine — Phase 1)
+-- One row per unit of work (audit, publish, negotiation, HITL item) with a
+-- state machine and dependency edges. The orchestrator (Phase 3) composes work
+-- by creating dependent tasks and claiming ready ones atomically.
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS tasks (
+    id          TEXT PRIMARY KEY,
+    type        TEXT NOT NULL,               -- 'audit' | 'publish' | 'negotiation' | 'hitl' | ...
+    status      TEXT NOT NULL DEFAULT 'proposed',
+                -- proposed|negotiating|pending_approval|approved|executing|done|failed|rejected|cancelled
+    payload     JSONB DEFAULT '{}'::jsonb,   -- inputs for the task's tool
+    actor       TEXT,                        -- last identity to act on the task
+    tenant_id   UUID,                        -- owning tenant (RLS)
+    depends_on  TEXT[] DEFAULT '{}',         -- ids of tasks that must be 'done' first
+    result      JSONB,                       -- tool output on completion
+    provenance  JSONB,                       -- data-governance envelope, when relevant
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT tasks_status_chk CHECK (status IN
+      ('proposed','negotiating','pending_approval','approved','executing','done','failed','rejected','cancelled'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);
+CREATE INDEX IF NOT EXISTS idx_tasks_ready ON tasks(status, created_at) WHERE status = 'approved';
+
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tasks_isolation_policy ON tasks
+    FOR ALL
+    USING (
+        tenant_id IS NULL
+        OR tenant_id = (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb -> 'user_metadata' ->> 'tenant_id')::uuid
+    )
+    WITH CHECK (
+        tenant_id IS NULL
+        OR tenant_id = (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb -> 'user_metadata' ->> 'tenant_id')::uuid
+    );
+
+-- Atomically claim the next ready task: status 'approved', every dependency
+-- 'done', optionally filtered by type/tenant. FOR UPDATE SKIP LOCKED guarantees
+-- two orchestrator workers never claim the same row. Returns the claimed row
+-- (now 'executing') or nothing.
+CREATE OR REPLACE FUNCTION claim_next_task(p_types TEXT[] DEFAULT NULL, p_tenant_id UUID DEFAULT NULL)
+RETURNS SETOF tasks
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    claimed tasks;
+BEGIN
+    SELECT t.* INTO claimed
+    FROM tasks t
+    WHERE t.status = 'approved'
+      AND (p_types IS NULL OR t.type = ANY(p_types))
+      AND (p_tenant_id IS NULL OR t.tenant_id = p_tenant_id)
+      AND NOT EXISTS (
+          SELECT 1 FROM unnest(t.depends_on) AS dep_id
+          LEFT JOIN tasks d ON d.id = dep_id
+          WHERE d.id IS NULL OR d.status <> 'done'
+      )
+    ORDER BY t.created_at ASC
+    FOR UPDATE SKIP LOCKED
+    LIMIT 1;
+
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    UPDATE tasks SET status = 'executing', updated_at = NOW() WHERE id = claimed.id;
+    claimed.status := 'executing';
+    RETURN NEXT claimed;
+END;
+$$;

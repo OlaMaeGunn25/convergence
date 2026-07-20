@@ -293,6 +293,58 @@ async function runTests() {
     assert(false, `Reporting governance tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 8: Task Model (orchestration spine) ---
+  try {
+    const os = require('os');
+    const fsx = require('fs');
+    const pth = require('path');
+    const { TaskModel, canTransition } = require('../lib/task_model');
+    const tmpFile = pth.join(os.tmpdir(), `aiwx_tasks_test_${Date.now()}.json`);
+    const tm = new TaskModel({ file: tmpFile });
+
+    // A. Create defaults to 'proposed'
+    const t1 = await tm.create({ type: 'audit', payload: { domain: 'x.com' }, actor: 'tester' });
+    assert(t1.id && t1.status === 'proposed', 'create() returns a task in the proposed state');
+    assert((await tm.get(t1.id)).status === 'proposed', 'get() round-trips the created task');
+
+    // B. Valid transitions along the happy path
+    await tm.transition(t1.id, 'pending_approval', { actor: 'tester' });
+    await tm.transition(t1.id, 'approved', { actor: 'approver' });
+    assert((await tm.get(t1.id)).status === 'approved', 'Valid transitions proposed→pending_approval→approved apply');
+
+    // C. Illegal transition is rejected by the state machine
+    assert(canTransition('proposed', 'done') === false, 'State machine forbids proposed→done');
+    let threw = false;
+    try { await tm.transition(t1.id, 'done', {}); } catch (e) { threw = true; }
+    assert(threw, 'transition() throws on an illegal move (approved→done)');
+
+    // D. Dependency gating: a task blocked by an unfinished dependency is not claimed
+    const dep = await tm.create({ type: 'audit', actor: 'tester' });
+    const child = await tm.create({ type: 'publish', actor: 'tester', dependsOn: [dep.id] });
+    await tm.transition(child.id, 'pending_approval', {});
+    await tm.transition(child.id, 'approved', {});
+    // dep is still 'proposed' → child must not be claimable
+    let claimed = await tm.claimNext({ types: ['publish'] });
+    assert(claimed === null, 'claimNext() skips a task whose dependency is not done');
+
+    // E. Once the dependency completes, the child becomes claimable and goes executing
+    await tm.transition(dep.id, 'pending_approval', {});
+    await tm.transition(dep.id, 'approved', {});
+    await tm.transition(dep.id, 'executing', {});
+    await tm.transition(dep.id, 'done', { result: { ok: true } });
+    claimed = await tm.claimNext({ types: ['publish'] });
+    assert(claimed && claimed.id === child.id && claimed.status === 'executing', 'claimNext() claims a ready task and moves it to executing');
+
+    // F. Cancel is reachable from a non-terminal state
+    const t2 = await tm.create({ type: 'audit' });
+    const cancelled = await tm.transition(t2.id, 'cancelled', {});
+    assert(cancelled.status === 'cancelled', 'A non-terminal task can be cancelled');
+
+    try { fsx.unlinkSync(tmpFile); } catch (e) {}
+  } catch (e) {
+    assert(false, `Task model tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
