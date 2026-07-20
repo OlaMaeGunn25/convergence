@@ -66,7 +66,7 @@ function seedAlerts() {
       commentText: 'I like the idea of flat-fee hosting instead of per-seat licensing. It’s hard to predict SaaS bills as we grow.',
       timestamp: new Date(Date.now() - 900000).toISOString(),
       status: 'UNRESOLVED',
-      aiDraft: 'Thanks Marcus! That’s the exact margin drain we resolve. By deploying the Operations Administrator container natively in your own cloud, we eliminate per-seat SaaS taxes, capping hosting at flat, predictable rates (~$35/month).',
+      aiDraft: 'Thanks Marcus! That’s the exact margin drain we resolve. By deploying the Convergence-Ai container natively in your own cloud, we eliminate per-seat SaaS taxes, capping hosting at flat, predictable rates (~$35/month).',
       replyText: null,
       repliedAt: null
     }

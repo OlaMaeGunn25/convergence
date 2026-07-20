@@ -15,7 +15,7 @@ All notable changes to the **CONVERGENCE-Ai SMB Auditor & AI Workforce Planner**
 - `lib/stores/json_file.js` — the dev fallback, now with a per-file async mutex and atomic temp-file-then-rename writes, so local runs no longer lose interleaved writes or observe half-written files.
 - Stale-work recovery: posts stuck in `PUBLISHING` and jobs stuck in `running` after a worker crash are swept back to a runnable state (`STALE_JOB_MINUTES`, default 30).
 - `updateRows`, `upsertRows`, `deleteRows`, and `rpc` on the Supabase REST client.
-- Schema for `campaign_posts`, `campaign_schedule_state`, `activity_alerts`, `audit_queue_jobs`, and `audit_queue_state`, plus the claim/complete/requeue functions, in `aiwx-admin-agent/supabase_schema.sql`.
+- Schema for `campaign_posts`, `campaign_schedule_state`, `activity_alerts`, `audit_queue_jobs`, and `audit_queue_state`, plus the claim/complete/requeue functions, in `aiwx-convergence-ai/supabase_schema.sql`.
 
 ### Fixed
 - Enqueuing the same domain twice concurrently no longer creates duplicate audit jobs; a partial unique index on `(domain) WHERE status = 'queued'` makes the check atomic.

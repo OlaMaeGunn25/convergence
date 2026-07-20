@@ -118,13 +118,13 @@ We have diagnosed and resolved the fetch error and log output issues when trigge
 
 ---
 
-## 📅 Part 6: Operations Administrator Posts Archiving & Reverted Schedule
+## 📅 Part 6: Convergence-Ai Posts Archiving & Reverted Schedule
 
-Per your request, we have removed all the **Operations Administrator** campaign posts (Weeks 4–6 / Posts 10–18) from the active campaign schedule and archived them back to the content library backlog for future scheduling, since they are still undergoing testing.
+Per your request, we have removed all the **Convergence-Ai** campaign posts (Weeks 4–6 / Posts 10–18) from the active campaign schedule and archived them back to the content library backlog for future scheduling, since they are still undergoing testing.
 
 ### 🛠️ Key Modifications Completed:
 1. **Reorganized Content Library**:
-   - Updated **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)** to move Posts 10–18 out of the active parsing list and into a dedicated backlog section: `## 📦 Future Operations Administrator Campaign (Under Testing - Do Not Schedule)`.
+   - Updated **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)** to move Posts 10–18 out of the active parsing list and into a dedicated backlog section: `## 📦 Future Convergence-Ai Campaign (Under Testing - Do Not Schedule)`.
 2. **Reverted Calendar & Briefs**:
    - Reverted **[social_media_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_hub.html)**'s `defaultPosts` array back to the active **9-post services campaign** (Weeks 1–3: June 15 - July 3, 2026).
    - Removed Weeks 4–6 from **[aiwx_social_media_posting_plan.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/aiwx_social_media_posting_plan.md)** and **[social_media_campaign_brief.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_campaign_brief.md)**.
@@ -148,7 +148,7 @@ To keep the GTM campaign strictly focused on **Services & Audits** (and avoid me
    - Created purely service-focused copies for Post 5: **"Stop Automating Bad Workflows: Six Sigma Scoping"**.
    - Updated the content in **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)**, **[social_media_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_hub.html)**, **[aiwx_social_media_posting_plan.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/aiwx_social_media_posting_plan.md)**, and **[social_media_campaign_brief.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_campaign_brief.md)**.
 2. **Archived Previous Version**:
-   - Relabeled the old version as `Post J: [Archived Operations Administrator Campaign]` and filed it away in the backlog/archived section of the library.
+   - Relabeled the old version as `Post J: [Archived Convergence-Ai Campaign]` and filed it away in the backlog/archived section of the library.
 3. **Mockup Generation**:
    - Generated a fresh mockup representing the Slide 1 of the new Post 5 and saved it to the scratch folder at:
      - **[instagram_slide_post5_scoping_1781630136452.png](file:///C:/Users/dahao/.gemini/antigravity-ide/brain/2e9d0ea8-0cc1-41b6-b87a-4dff6e0f8f04/scratch/instagram_slide_post5_scoping_1781630136452.png)**

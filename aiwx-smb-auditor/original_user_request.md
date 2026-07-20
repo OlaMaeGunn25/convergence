@@ -1,5 +1,5 @@
 <USER_REQUEST>
-Add the new CONVERGENCE-Ai Admin agent system to this social media posting plan. Then retrench so that Antigravity will handle this plan originally built via Claude Code to work with Blotato. Instead. First tell me How will Antgravity handle these tasks instead, then show me the retrenched social media plan, then show me how you need to connect to my social accounts to provide these servies instead of claude and Blotato? # Service Tier Content Assets & SEO-Optimized Posts
+Add the new CONVERGENCE-Ai Convergence-Ai system to this social media posting plan. Then retrench so that Antigravity will handle this plan originally built via Claude Code to work with Blotato. Instead. First tell me How will Antgravity handle these tasks instead, then show me the retrenched social media plan, then show me how you need to connect to my social accounts to provide these servies instead of claude and Blotato? # Service Tier Content Assets & SEO-Optimized Posts
 
 ## PHASE 1: POST CONTENT CREATION (2-3 Posts Per Tier, SEO-Optimized)
 

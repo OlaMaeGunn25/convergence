@@ -118,13 +118,13 @@ We have diagnosed and resolved the fetch error and log output issues when trigge
 
 ---
 
-## 📅 Part 6: Operations Administrator Posts Archiving & Reverted Schedule
+## 📅 Part 6: Convergence-Ai Posts Archiving & Reverted Schedule
 
-Per your request, we have removed all the **Operations Administrator** campaign posts (Weeks 4–6 / Posts 10–18) from the active campaign schedule and archived them back to the content library backlog for future scheduling, since they are still undergoing testing.
+Per your request, we have removed all the **Convergence-Ai** campaign posts (Weeks 4–6 / Posts 10–18) from the active campaign schedule and archived them back to the content library backlog for future scheduling, since they are still undergoing testing.
 
 ### 🛠️ Key Modifications Completed:
 1. **Reorganized Content Library**:
-   - Updated **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)** to move Posts 10–18 out of the active parsing list and into a dedicated backlog section: `## 📦 Future Operations Administrator Campaign (Under Testing - Do Not Schedule)`.
+   - Updated **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)** to move Posts 10–18 out of the active parsing list and into a dedicated backlog section: `## 📦 Future Convergence-Ai Campaign (Under Testing - Do Not Schedule)`.
 2. **Reverted Calendar & Briefs**:
    - Reverted **[social_media_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_hub.html)**'s `defaultPosts` array back to the active **9-post services campaign** (Weeks 1–3: June 15 - July 3, 2026).
    - Removed Weeks 4–6 from **[aiwx_social_media_posting_plan.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/aiwx_social_media_posting_plan.md)** and **[social_media_campaign_brief.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_campaign_brief.md)**.
@@ -148,7 +148,7 @@ To keep the GTM campaign strictly focused on **Services & Audits** (and avoid me
    - Created purely service-focused copies for Post 5: **"Stop Automating Bad Workflows: Six Sigma Scoping"**.
    - Updated the content in **[social_media_posts_library.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_posts_library.md)**, **[social_media_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_hub.html)**, **[aiwx_social_media_posting_plan.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/aiwx_social_media_posting_plan.md)**, and **[social_media_campaign_brief.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_campaign_brief.md)**.
 2. **Archived Previous Version**:
-   - Relabeled the old version as `Post J: [Archived Operations Administrator Campaign]` and filed it away in the backlog/archived section of the library.
+   - Relabeled the old version as `Post J: [Archived Convergence-Ai Campaign]` and filed it away in the backlog/archived section of the library.
 3. **Mockup Generation**:
    - Generated a fresh mockup representing the Slide 1 of the new Post 5 and saved it to the scratch folder at:
      - **[instagram_slide_post5_scoping_1781630136452.png](file:///C:/Users/dahao/.gemini/antigravity-ide/brain/2e9d0ea8-0cc1-41b6-b87a-4dff6e0f8f04/scratch/instagram_slide_post5_scoping_1781630136452.png)**
@@ -167,10 +167,10 @@ Per your instructions, we have completely scrubbed the Agent Smithy avatar (`age
    - **[product-videos/index.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/product-videos/index.html)**: Replaced `assets/agent_smithy.png` in the voice/chat dock with a styled FontAwesome microphone icon (`fa-microphone-lines`). Updated headings and speech bubble greetings to refer to the **AI Operations Guide** instead of Agent Smithy.
    - **[product-videos/app.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/product-videos/app.js)**: Realigned the SpeechSynthesis voice dropdown labels from "Agent Smithy Standard/Natural/Professional/Premium" to "AI Guide Standard/Natural/Professional/Premium". Updated browser notification alerts and Q&A chat trigger answers to refer to the **AI Operations Guide** and use generic settings menus instead of referencing avatars.
 2. **Scrubbed Backup Layout Files**:
-   - **[backup_new_ui/operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/backup_new_ui/operations_hub.html)** & **[backup_new_ui/index.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/backup_new_ui/index.html)**: Replaced the onboarding card coach avatar image (`agent_smithy.png`) with a brand-neutral "Setup Assistant" card utilizing a system gauge icon (`fa-gauge-high`). Scrubbed default JS speech parameters from "I am Agent Smithy" to generic instructions.
-   - **[backup_new_ui/app.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/backup_new_ui/app.js)**: Scrubbed the brand logo image `agent_smithy.png` and replaced it with a network-wired icon (`fa-network-wired`) matching the active dashboard branding.
+   - **[backup_new_ui/operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/backup_new_ui/operations_hub.html)** & **[backup_new_ui/index.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/backup_new_ui/index.html)**: Replaced the onboarding card coach avatar image (`agent_smithy.png`) with a brand-neutral "Setup Assistant" card utilizing a system gauge icon (`fa-gauge-high`). Scrubbed default JS speech parameters from "I am Agent Smithy" to generic instructions.
+   - **[backup_new_ui/app.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/backup_new_ui/app.js)**: Scrubbed the brand logo image `agent_smithy.png` and replaced it with a network-wired icon (`fa-network-wired`) matching the active dashboard branding.
 3. **Landing Page Syntax Verification**:
-   - Fixed syntax errors on [solopreneur_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/solopreneur_landing.html), [smb_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/smb_landing.html), and [reseller_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/reseller_landing.html) caused by partial removal of the `triggerSmithy` function in previous edits. Deleted the unused script sections entirely.
+   - Fixed syntax errors on [solopreneur_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/solopreneur_landing.html), [smb_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/smb_landing.html), and [reseller_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/reseller_landing.html) caused by partial removal of the `triggerSmithy` function in previous edits. Deleted the unused script sections entirely.
 4. **Aligned Campaign Schedule JSON**:
    - Updated [campaign_schedule.json](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/config/campaign_schedule.json) to change all destination URLs to `/services` and updated Post 8's copywriting to use the capacity-focused audit details instead of product pricing.
 

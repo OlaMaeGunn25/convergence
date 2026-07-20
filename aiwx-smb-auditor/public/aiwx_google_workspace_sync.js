@@ -28,7 +28,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nThe invisible tax on your growing company: Disconnected operations...\nSchedule your Free Consultation call: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01\n\nTHREADS:\nWhy do most AI implementations fail? Book a free scoping consultation: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_01\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Silent Margin Drain; Slide 2: Manual copy-paste; Slide 3: Time loss; Slide 4: AI Starter Sprint; Slide 5: Free Scoping Audit Link in Bio!\n\nBLOG ARTICLE:\n# The Silent Cost of Disconnected Operations in Small Businesses\nEvery time an employee manually checks an invoice, copies email transcripts into a CRM, or reconciles bookings, they are paying an operational tax..."
     },
     {
-      week: "1", date: "2026-06-10", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "1", date: "2026-06-10", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "SMBs and Entrepreneurs",
       keywords: "employee sabotage, AI adoption, operational leverage, upskilling matrix, change management",
       image: "2_operations_director_smb.png",
@@ -44,12 +44,12 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nStop trying to automate everything at once...\nSchedule a free diagnostic scoping call to map your Problem Zero: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_03\n\nTHREADS:\nFocus on 'Problem Zero'—the single most repetitive, manual bottleneck. Book your free diagnostic scoping session: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_03\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Stop Trying to Automate Everything; Slide 2: Rebuilding every department creates confusion; Slide 3: Target Problem Zero; Slide 4: 30-day automation; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# The Problem Zero™ Framework: Automating the Critical Bottleneck First\nMost SMBs fail in digital transformation because they attempt to overhaul multiple departments simultaneously..."
     },
     {
-      week: "2", date: "2026-06-15", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "2", date: "2026-06-15", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "SMBs and Entrepreneurs",
       keywords: "growth coordinator, upskilling staff, business scalability, reclaiming capacity, talent management",
       image: "1_aiwx_consultants_team.png",
       title: "Meet the Growth Coordinator: Reclaiming Capacity",
-      copy: "LINKEDIN:\nWhat happens when you reclaim 20 hours a week from administrative dread?...\nDeploy the CONVERGENCE-Ai Operations Administrator inside your private KMS vault with a 7-day risk-free trial: https://convergence-ai.com/trial?utm_source=linkedin&utm_medium=social&utm_campaign=product_sales&utm_content=post_04\n\nTHREADS:\nTransition administrative team members into Growth Coordinators. Get started with our 7-day trial: https://convergence-ai.com/trial?utm_source=threads&utm_medium=social&utm_campaign=product_sales&utm_content=post_04\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Meet the Growth Coordinator; Slide 2: Reclaim 20+ hours; Slide 3: Shift from data entry to growth strategy; Slide 4: 3x business throughput; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Building a Resilient Team: Transitioning Admins to Growth Coordinators\nTransitioning administrative staff to Growth Coordinators is the core narrative of modern operational leverage..."
+      copy: "LINKEDIN:\nWhat happens when you reclaim 20 hours a week from administrative dread?...\nDeploy the Convergence-Ai inside your private KMS vault with a 7-day risk-free trial: https://convergence-ai.com/trial?utm_source=linkedin&utm_medium=social&utm_campaign=product_sales&utm_content=post_04\n\nTHREADS:\nTransition administrative team members into Growth Coordinators. Get started with our 7-day trial: https://convergence-ai.com/trial?utm_source=threads&utm_medium=social&utm_campaign=product_sales&utm_content=post_04\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Meet the Growth Coordinator; Slide 2: Reclaim 20+ hours; Slide 3: Shift from data entry to growth strategy; Slide 4: 3x business throughput; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Building a Resilient Team: Transitioning Admins to Growth Coordinators\nTransitioning administrative staff to Growth Coordinators is the core narrative of modern operational leverage..."
     },
     {
       week: "2", date: "2026-06-17", platform: "LinkedIn, Threads, Blog, Instagram", type: "Consulting Strategy (AI Starter Sprint)",
@@ -60,7 +60,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nCopy-pasting data between software is not a strategy...\nSchedule your Free Scoping Consultation call today: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_05\n\nTHREADS:\nSync your ledger and CRM natively. Book a free AI consulting audit: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_05\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Are You Still Copy-Pasting?; Slide 2: CRM to QuickBooks shouldn't be manual; Slide 3: delayed invoices; Slide 4: sync systems natively; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Eliminating the CRM-to-Ledger Delay in Small-to-Medium Businesses\nWhen systems do not speak to one another, staff members are forced to act as the human bridge..."
     },
     {
-      week: "2", date: "2026-06-19", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "2", date: "2026-06-19", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "Operations Leaders / SMBs",
       keywords: "virtual employee, autonomous AI, process compliance, risk management, operational stability",
       image: "3_empowered_systems_consultant.png",
@@ -76,7 +76,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nIs your invoice reconciliation leaking cash?...\nSchedule your free diagnostic scoping call: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_07\n\nTHREADS:\nManual ledger matching is a silent drain on cash flow. Automate invoice reconciliation securely: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_07\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Reclaim Your Billing Capacity; Slide 2: manual ledger entry delays reporting; Slide 3: Problem Zero invoice match; Slide 4: Reclaim 15+ hours weekly; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Streamlining Ledger Matching: How Automation Protects Cash Flow\nDelayed invoicing directly affects business cash flow. Manual ledger entry delays reporting, leaving leaders with stale numbers..."
     },
     {
-      week: "3", date: "2026-06-24", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "3", date: "2026-06-24", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "CTOs and Business Owners",
       keywords: "low COGS, docker container stack, Supabase database, open source B2B",
       image: "black_female_founder_consultant.png",
@@ -92,7 +92,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nThe 90-Day AI Transition Blueprint...\nSchedule your free consultation to plan your team's transition: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_09\n\nTHREADS:\nAI rollouts are 20% technology and 80% change management. Our 90-day roadmap upskills assistants into Growth Coordinators: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_09\n\nINSTAGRAM (Carousel Slides):\nSlide 1: The 90-Day AI Roadmap; Slide 2: Upskilling vs layoff fears; Slide 3: Month 1: Automate dread; Month 2: Vault audits; Month 3: Growth coordinators; Slide 4: Link in Bio!\n\nBLOG ARTICLE:\n# Change Management in AI: The 90-Day Upskilling Framework\nStaff anxiety is the primary cause of friction during software deployments. Introducing the Workforce Transition Matrix ensures a clear career growth path..."
     },
     {
-      week: "4", date: "2026-06-29", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "4", date: "2026-06-29", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "Medical Clinics, Law Firms, Financial Advisors",
       keywords: "private cloud AI, HIPAA compliant workflow, RLS database, KMS data privacy",
       image: "3_empowered_systems_consultant.png",
@@ -108,7 +108,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nSqueeze client intake delays out of your system...\nBook your free Scoping Consultation: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_11\n\nTHREADS:\nDelayed onboarding ruins client trust. Our AI Starter Sprint streamlines client intake, contract signatures, and project setup: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_11\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Onboard Clients 3x Faster; Slide 2: Manual intakes delay kickoffs; Slide 3: Automate document generation; Slide 4: Drop onboarding errors; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Automating Onboarding: Improving Client Retention from Day One\nThe period immediately after contract signing defines the client relationship. Manual onboarding delays create anxiety. Connecting your sales CRM, project setup folders, and billing systems automates the flow..."
     },
     {
-      week: "4", date: "2026-07-03", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "4", date: "2026-07-03", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "Growing SMBs",
       keywords: "Twilio call answering, lead capture, scheduling, CRM update",
       image: "2_operations_director_smb.png",
@@ -124,7 +124,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nDon't settle for fractional efficiency gains...\nBook your Free Diagnostics Call: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_13\n\nTHREADS:\nAutomating is only half the battle. If your team saves hours but spends them scrolling, your ROI is zero. We redirect capacity to growth: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_13\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Are Your Time Savings Real?; Slide 2: Saved hours must go to growth; Slide 3: Problem Zero redirects capacity; Slide 4: Track upskilling; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Reclaiming Capacity: Auditing Team Redeployment Post-Automation\nAutomated software can save hundreds of hours across an organization. However, without a structured upskilling strategy, these hours disappear into administrative clutter..."
     },
     {
-      week: "5", date: "2026-07-08", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "5", date: "2026-07-08", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "Aspiring AI Consultants / Resellers",
       keywords: "white-label operations, AI agency, consulting business model, recurring MRR",
       image: "1_aiwx_consultants_team.png",
@@ -140,7 +140,7 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nHow many hours is administrative burnout costing you?...\nSchedule your Free Consultation call: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_15\n\nTHREADS:\nReclaim your billable capacity. Spend hours on growth, not spreadsheets. Calculate your capacity savings and speak to our team: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_15\n\nINSTAGRAM (Carousel Slides):\nSlide 1: The Cost of Admin Burnout; Slide 2: 15+ hours weekly on admin caps growth; Slide 3: Automate schedules and invoicing; Slide 4: Flat hosting VM fees; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Auditing Admin Burnout: Reclaiming Founder Capacity\nAdministrative burnout acts as a ceiling on growing businesses. Founders who act as their own front desk delay client deliveries and limit sales..."
     },
     {
-      week: "6", date: "2026-07-13", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "6", date: "2026-07-13", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "CTOs and Developers",
       keywords: "docker container, private cloud deployment, security secrets, data ownership",
       image: "3_empowered_systems_consultant.png",
@@ -156,12 +156,12 @@ function runCONVERGENCE-AiSync() {
       copy: "LINKEDIN:\nThe real math behind your administrative overhead...\nSchedule your Free Consultation call: https://convergence-ai.com/consultation?utm_source=linkedin&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_17\n\nTHREADS:\nSpending $45k/yr on manual entry and ledger matching hurts profits. Automate with an AI Starter Sprint and upskill staff: https://convergence-ai.com/consultation?utm_source=threads&utm_medium=social&utm_campaign=consultancy_sprints&utm_content=post_17\n\nINSTAGRAM (Carousel Slides):\nSlide 1: Administrative Salary Math; Slide 2: basic entry tasks inflate overhead; Slide 3: Automate natively; Slide 4: Double revenue capacity; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# Auditing Overhead: The Real Cost of Administrative Bottlenecks\nGrowing businesses often default to hiring more staff to resolve data-entry bottlenecks. This headcount trap slows decision-making..."
     },
     {
-      week: "6", date: "2026-07-17", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (CONVERGENCE-Ai Operations Administrator)",
+      week: "6", date: "2026-07-17", platform: "LinkedIn, Threads, Blog, Instagram", type: "Product Sales (Convergence-Ai)",
       target: "CTOs and Security Officers",
       keywords: "row-level security, Supabase database, data privacy shield, compliance",
       image: "3_empowered_systems_consultant.png",
       title: "Row-Level Security (RLS): The Data Privacy Shield",
-      copy: "LINKEDIN:\nRow-Level Security: Multi-tenant safety for AI workloads...\nStart your 7-day risk-free trial today: https://convergence-ai.com/trial?utm_source=linkedin&utm_medium=social&utm_campaign=product_sales&utm_content=post_18\n\nTHREADS:\nDatabase security shouldn't rely on code filters. The CONVERGENCE-Ai Operations Administrator uses PostgreSQL Row-Level Security (RLS) at the database layer: https://convergence-ai.com/trial?utm_source=threads&utm_medium=social&utm_campaign=product_sales&utm_content=post_18\n\nINSTAGRAM (Carousel Slides):\nSlide 1: What is Row-Level Security?; Slide 2: Enforce tenant isolation at DB layer; Slide 3: Private KMS vault encryption; Slide 4: Compliance-ready; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# How Row-Level Security Protects Financial and Customer Data\nApplication-level filters are a primary vector for security leaks. Enforcing Row-Level Security (RLS) policies directly within PostgreSQL databases ensures data records remain fully isolated by tenant..."
+      copy: "LINKEDIN:\nRow-Level Security: Multi-tenant safety for AI workloads...\nStart your 7-day risk-free trial today: https://convergence-ai.com/trial?utm_source=linkedin&utm_medium=social&utm_campaign=product_sales&utm_content=post_18\n\nTHREADS:\nDatabase security shouldn't rely on code filters. The Convergence-Ai uses PostgreSQL Row-Level Security (RLS) at the database layer: https://convergence-ai.com/trial?utm_source=threads&utm_medium=social&utm_campaign=product_sales&utm_content=post_18\n\nINSTAGRAM (Carousel Slides):\nSlide 1: What is Row-Level Security?; Slide 2: Enforce tenant isolation at DB layer; Slide 3: Private KMS vault encryption; Slide 4: Compliance-ready; Slide 5: Link in Bio!\n\nBLOG ARTICLE:\n# How Row-Level Security Protects Financial and Customer Data\nApplication-level filters are a primary vector for security leaks. Enforcing Row-Level Security (RLS) policies directly within PostgreSQL databases ensures data records remain fully isolated by tenant..."
     }
   ];
 

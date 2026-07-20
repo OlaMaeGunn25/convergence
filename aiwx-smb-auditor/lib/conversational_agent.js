@@ -34,7 +34,7 @@ const KNOWLEDGE_BASE = [
   },
   {
     keys: ['trial', 'test', 'sandbox', 'free', 'demo', 'try'],
-    reply: "We offer a 7-day risk-free trial of the CONVERGENCE-Ai Operations Administrator container so you can test it in a local sandbox or your private cloud immediately. Note that we do not do legacy demos anymore. Let's connect on a free Clarity Call to set up your trial: https://convergence-ai.com/services"
+    reply: "We offer a 7-day risk-free trial of the Convergence-Ai container so you can test it in a local sandbox or your private cloud immediately. Note that we do not do legacy demos anymore. Let's connect on a free Clarity Call to set up your trial: https://convergence-ai.com/services"
   },
   {
     keys: ['crm', 'hubspot', 'salesforce', 'connect', 'integrate', 'sync', 'quickbooks', 'n8n', 'zapier'],

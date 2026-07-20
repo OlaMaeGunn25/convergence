@@ -315,7 +315,7 @@ def generate_posts_pdf(posts, output_path):
         "<b>Founders & Principal Consultants:</b><br/>"
         "Dahaomine Moody-Ward (CEO & Lead AI Consultant)<br/>"
         "Josette C. Kelley (CFO & AI Consultant)<br/><br/>"
-        "<b>System Engine:</b> AiWorXmiths Operations Administrator™"
+        "<b>System Engine:</b> Convergence-Ai™"
     )
     story.append(Paragraph(founders_text, intro_style))
     story.append(PageBreak())
