@@ -20,7 +20,7 @@ const SOCIAL_AGENT_DIR = process.env.SOCIAL_AGENT_DIR
 
 const ADMIN_DIST_DIR = process.env.ADMIN_DIST_DIR
   ? path.resolve(process.env.ADMIN_DIST_DIR)
-  : path.join(REPO_ROOT, 'aiwx-admin-agent', 'dist');
+  : path.join(REPO_ROOT, 'aiwx-convergence-ai', 'dist');
 
 const PUBLIC_DIR = path.join(APP_ROOT, 'public');
 const LOGS_DIR = path.join(APP_ROOT, 'logs');

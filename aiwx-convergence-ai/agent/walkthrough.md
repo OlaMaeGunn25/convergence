@@ -35,9 +35,9 @@ We have successfully built a production-grade, multi-tenant administrative autom
 
 5. **Visual Click-Funnel Landing Pages**:
    - Deployed three beautiful, highly converting click-funnel landing page prototypes in a complementary design style directly inside the workspace:
-     *   **[smb_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/smb_landing.html)**: Re-titled **"SMB Operations Hub - How to Install"**. Includes dynamic SEO meta tags, a 7-day free trial purchase funnel, secure Credit Card billing input forms, a 7-day cancellation deactivation policy warning, an embedded "Agent Smithy" conversational chatbot console with tailored vertical prompts, a "Contact a Consultant" lead modal, and numbered installation steps.
-     *   **[solopreneur_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/solopreneur_landing.html)**: Re-titled **"Solopreneurs Transition Hub - How to deploy"**. Optimized for solo practitioners to deploy immediately with **no IT staff required**. Features a highly interactive Administrative Burnout Capacity Calculator that computes weekly and monthly billable ROI gains in real-time under glowing cyan panels. It also includes secure Credit Card billing registration, 7-day trial cancellation terms (code deactivation on day 8), tailored Agent Smithy solo assistant workflows (lead triage, Stripe invoices, calendar syncs), and a "Contact a Consultant" modal.
-     *   **[reseller_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/reseller_landing.html)**: Titled **"Solopreneurs Reseller Hub - Build Your Agency"**. Tailored for consultants and resellers looking to build their own high-margin B2B SaaS consulting agency. It includes a dynamic **Agency Revenue Modeler** calculating gross MRR and estimated net monthly profits, custom Agent Smithy prompts specific to agency scaling and white-label tools, and a step-by-step agency deployment walkthrough.
+     *   **[smb_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/smb_landing.html)**: Re-titled **"SMB Operations Hub - How to Install"**. Includes dynamic SEO meta tags, a 7-day free trial purchase funnel, secure Credit Card billing input forms, a 7-day cancellation deactivation policy warning, an embedded "Agent Smithy" conversational chatbot console with tailored vertical prompts, a "Contact a Consultant" lead modal, and numbered installation steps.
+     *   **[solopreneur_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/solopreneur_landing.html)**: Re-titled **"Solopreneurs Transition Hub - How to deploy"**. Optimized for solo practitioners to deploy immediately with **no IT staff required**. Features a highly interactive Administrative Burnout Capacity Calculator that computes weekly and monthly billable ROI gains in real-time under glowing cyan panels. It also includes secure Credit Card billing registration, 7-day trial cancellation terms (code deactivation on day 8), tailored Agent Smithy solo assistant workflows (lead triage, Stripe invoices, calendar syncs), and a "Contact a Consultant" modal.
+     *   **[reseller_landing.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/reseller_landing.html)**: Titled **"Solopreneurs Reseller Hub - Build Your Agency"**. Tailored for consultants and resellers looking to build their own high-margin B2B SaaS consulting agency. It includes a dynamic **Agency Revenue Modeler** calculating gross MRR and estimated net monthly profits, custom Agent Smithy prompts specific to agency scaling and white-label tools, and a step-by-step agency deployment walkthrough.
    - **Live Demo/Super Admin Integration**: All pages support an instant demo bypass. Typing `aiworxmiths@gmail.com` or any email with the `@convergence-ai.com` suffix into the registration portal will bypass credit card validation, cryptographically generate a license key, store it in local storage, and open `index.html` (or `deployment_hub.html` for resellers) as a Super Admin bypass session instantly!
 
 6. **Global Styling & Shared Scripts (`styles.css`, `app.js`)**:
@@ -55,12 +55,12 @@ We have successfully built a production-grade, multi-tenant administrative autom
 Follow these steps to experience the complete flow locally:
 
 ### Step 1: Open the Deployment Hub
-1. Open the file [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/deployment_hub.html) in your web browser.
+1. Open the file [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/deployment_hub.html) in your web browser.
 2. Select your client's industry (e.g. **Logistics & Supply Chain**), adjust the primary and secondary branding colors, and click **Activate Deployment & Generate Token**.
 3. Copy the resulting **Activation Token** from the green success panel.
 
 ### Step 2: Open the Operations Hub
-1. Open the file [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/operations_hub.html) (or the entrypoint [index.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/index.html)) in another browser tab.
+1. Open the file [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/operations_hub.html) (or the entrypoint [index.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/index.html)) in another browser tab.
 2. Paste the copied **Activation Token** into the secure prompt field.
 3. In the **Administrator Email Address** field, enter `aiworxmiths@gmail.com` or any email ending with `@convergence-ai.com`.
 4. Click **Authorize & Unlock Environment** (or simply click *Auto-Fill Local Test Token* to try the live demo configuration, which has been upgraded to automatically authenticate you as `aiworxmiths@gmail.com`).
@@ -71,6 +71,6 @@ Follow these steps to experience the complete flow locally:
 - The **Process Mapping** select controls and the **HITL Queue** will automatically synchronize to match the active vertical sandbox!
 
 ### Step 4: Explore the Consultant Training Hub
-1. Open [training_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/training_hub.html) in your browser.
+1. Open [training_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/training_hub.html) in your browser.
 2. Click **Config Generator**, input dynamic values, and observe the Docker compose YAML manifest compile in real-time.
 3. Click **Certification Quiz** to answer multiple-choice questions on system prerequisites and security bypass configurations to test your onboarding knowledge!

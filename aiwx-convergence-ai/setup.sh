@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# "AIWX Operations Administrator" by AiWorXmiths: Single-Click GCP Bootstrap Installer Script
+# "AIWX Convergence-Ai" by AiWorXmiths: Single-Click GCP Bootstrap Installer Script
 # Product Owner: aiworxmiths.com | Version: 2.0 | PROPRIETARY
 # Designed for: Debian/Ubuntu Linux VM on Google Cloud Compute Engine (GCP)
 # ==============================================================================
@@ -14,7 +14,7 @@ AMBER='\033[0;33m'
 NC='\033[0m' # No Color
 
 echo -e "${CYAN}======================================================================${NC}"
-echo -e "${GREEN}   AIWX Operations Administrator by AiWorXmiths: GCP BOOTSTRAP INITIALIZATION         ${NC}"
+echo -e "${GREEN}   AIWX Convergence-Ai by AiWorXmiths: GCP BOOTSTRAP INITIALIZATION         ${NC}"
 echo -e "${CYAN}======================================================================${NC}"
 
 # 1. Root Check
@@ -60,7 +60,7 @@ if [ ! -f /opt/operations-hub/secrets/vault.env ]; then
     JWT_SECRET=$(openssl rand -hex 32)
     
     cat <<EOF > /opt/operations-hub/secrets/vault.env
-# AIWX Operations Administrator Decryption Sandbox Keys
+# AIWX Convergence-Ai Decryption Sandbox Keys
 OPS_HUB_ENCRYPT_KEY=${ENCRYPT_KEY}
 N8N_ENCRYPTION_KEY=${N8N_KEY}
 SUPABASE_JWT_SECRET=${JWT_SECRET}
@@ -139,7 +139,7 @@ echo -e "\n${BLUE}[5/5] Elevating services into local staging container cluster.
 docker-compose -f /opt/operations-hub/docker-compose.yml up -d
 
 echo -e "\n${GREEN}======================================================================${NC}"
-echo -e "${GREEN}   [COMPLETED] AIWX Operations Administrator Operations Suite is successfully deployed! ${NC}"
+echo -e "${GREEN}   [COMPLETED] AIWX Convergence-Ai Operations Suite is successfully deployed! ${NC}"
 echo -e "${CYAN}======================================================================${NC}"
 echo -e "   - Supabase DB running on:  ${CYAN}localhost:5432${NC}"
 echo -e "   - n8n Workflows running on: ${CYAN}localhost:5678${NC}"

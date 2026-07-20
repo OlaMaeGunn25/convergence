@@ -2,7 +2,7 @@
 # CONVERGENCE-Ai — single-container production image
 #
 # One container runs the whole hub:
-#   1. Vite production build of aiwx-admin-agent (served at /admin)
+#   1. Vite production build of aiwx-convergence-ai (served at /admin)
 #   2. Express gateway aiwx-smb-auditor/server.js on :3003
 #   3. System Chromium so aiwx-social-media-agent Puppeteer scripts run
 #      headless with --no-sandbox / --disable-setuid-sandbox
@@ -14,10 +14,10 @@
 # ---- Stage 1: build the admin dashboard (Vite) ------------------------------
 FROM node:20-bookworm-slim AS admin-build
 
-WORKDIR /build/aiwx-admin-agent
-COPY aiwx-admin-agent/package*.json ./
+WORKDIR /build/aiwx-convergence-ai
+COPY aiwx-convergence-ai/package*.json ./
 RUN npm ci
-COPY aiwx-admin-agent/ ./
+COPY aiwx-convergence-ai/ ./
 RUN npm run build
 
 # ---- Stage 2: runtime with Chromium -----------------------------------------
@@ -75,7 +75,7 @@ COPY aiwx-smb-auditor/ ./aiwx-smb-auditor/
 COPY aiwx-social-media-agent/ ./aiwx-social-media-agent/
 
 # Bring in the compiled admin dashboard from the build stage
-COPY --from=admin-build /build/aiwx-admin-agent/dist ./aiwx-admin-agent/dist
+COPY --from=admin-build /build/aiwx-convergence-ai/dist ./aiwx-convergence-ai/dist
 
 # Run as a non-root user; Chromium runs with --no-sandbox so no SUID needed.
 RUN groupadd -r convergence && useradd -r -g convergence -G audio,video convergence \

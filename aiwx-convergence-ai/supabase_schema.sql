@@ -1,5 +1,5 @@
 -- =========================================================================
--- "AIWX Operations Administrator™" by CONVERGENCE-Ai Production Database Migration Schema
+-- "AIWX Convergence-Ai™" by CONVERGENCE-Ai Production Database Migration Schema
 -- Product Owner: convergence-ai.com | Version: 2.0 | PROPRIETARY
 -- Targets: PostgreSQL (Supabase) Database Setup
 -- =========================================================================
@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_hitl_queue_vertical ON hitl_queue(vertical);
 INSERT INTO tenant_configs (id, company_name, vertical, logo_text, primary_color, secondary_color, api_endpoint, vault_key, upskill_matrix)
 VALUES (
     'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', -- Static UUID for Demo
-    'AIWX Operations Administrator: A Cloud-Native AI Operations Hub.',
+    'AIWX Convergence-Ai: A Cloud-Native AI Operations Hub.',
     'medical',
     'CONV',
     '#0b57d0',
@@ -338,7 +338,7 @@ $$;
 -- row in the shared hitl_queue (the same queue the admin console already
 -- renders and acts on — see the seeded 'Social Post Release Audit' task). This
 -- trigger propagates the admin's decision back onto the linked post, so
--- aiwx-admin-agent/server/index.js needs no changes: its existing PATCH of
+-- aiwx-convergence-ai/server/index.js needs no changes: its existing PATCH of
 -- hitl_queue.status releases or rejects the post.
 -- -------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION sync_hitl_decision_to_campaign_post()

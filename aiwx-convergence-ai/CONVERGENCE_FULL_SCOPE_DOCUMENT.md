@@ -132,8 +132,8 @@ graph TB
 - **🔔 Native Windows OS Notifications**: Utilizes a PowerShell script [send_notification.ps1](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/send_notification.ps1) and the `node-notifier` library to dispatch desktop balloon alerts when scheduling posts succeed or fail.
 
 ### 3.4. Security, Multi-Tenancy & Licensing Gateway
-- **🔑 Cryptographic License Token**: The Super Admin uses the [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/deployment_hub.html) to input client configs, target industry verticals, and custom styling overrides, generating a signed Base64 token.
-- **🔒 Operations Lockdown Overlay**: Unlocking the [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/operations_hub.html) requires pasting this token. Decrypting it locks the entire workspace instance exclusively to the designated vertical, disabling access to other sectors.
+- **🔑 Cryptographic License Token**: The Super Admin uses the [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/deployment_hub.html) to input client configs, target industry verticals, and custom styling overrides, generating a signed Base64 token.
+- **🔒 Operations Lockdown Overlay**: Unlocking the [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/operations_hub.html) requires pasting this token. Decrypting it locks the entire workspace instance exclusively to the designated vertical, disabling access to other sectors.
 - **🛡️ Database Row-Level Security**: Persistence is managed in Supabase PostgreSQL tables where access to configuration credentials is isolated by tenant hash IDs, and database keys are encrypted at rest using AES-256-GCM.
 - **🛡️ XSS Hardened History Ledger**: Replaced legacy vulnerable `innerHTML` templates in [smb-auditor.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/smb-auditor.html) and [admin.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/public/admin/admin.js) with secure DOM element trees utilizing `textContent` filters, preventing malicious domains from clearing active client storage configurations.
 
@@ -154,13 +154,13 @@ The modular system is divided across three key directory repositories representi
 | **`index.html`** | [aiwx-smb-auditor/public](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/public/index.html) | Main SMB Auditor Client Dashboard. Renders domain audits, tech graphs, and ROI metrics. |
 | **`smb-auditor.html`**| [aiwx-smb-auditor](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/smb-auditor.html) | Consultant Audit Command Center featuring the client audit ledger and domain scoping form. |
 | **`product.html`** | [aiwx-smb-auditor/public](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/public/product.html) | Public pricing page featuring subscription tiers, pricing sliders, and competitor matrix. |
-| **`deployment_hub.html`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/deployment_hub.html) | Super Admin portal for styling configurations, vertical locking, and token generation. |
-| **`operations_hub.html`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/operations_hub.html) | Client Operations console containing the onboarding wizard and the HITL pending queue. |
-| **`training_hub.html`** | [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/training_hub.html) | Consultant training academy containing the Workforce Upskilling Matrix. |
+| **`deployment_hub.html`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/deployment_hub.html) | Super Admin portal for styling configurations, vertical locking, and token generation. |
+| **`operations_hub.html`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/operations_hub.html) | Client Operations console containing the onboarding wizard and the HITL pending queue. |
+| **`training_hub.html`** | [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/training_hub.html) | Consultant training academy containing the Workforce Upskilling Matrix. |
 | **`social_media_hub.html`**| [aiwx-social-media-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/social_media_hub.html) | Campaign posting board with auto-scheduler controls, Puppeteer logs, and cookie guide. |
 | **`media_library_manager.html`**| [aiwx-smb-auditor](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/media_library_manager.html) | Client asset storage and uploads dashboard. |
-| **`product_documentation.html`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/product_documentation.html) | Master documentation portal detailing roadmaps, PRD, SDD, APIs, and release logs. |
-| **`styles.css`** | [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/styles.css) | Core styles file specifying the slate-blue glassmorphic theme tokens. |
+| **`product_documentation.html`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/product_documentation.html) | Master documentation portal detailing roadmaps, PRD, SDD, APIs, and release logs. |
+| **`styles.css`** | [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/styles.css) | Core styles file specifying the slate-blue glassmorphic theme tokens. |
 | **`lib/scraper.js`** | [aiwx-smb-auditor/lib](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/lib/scraper.js) | Scrapes domain HTTP headers, parses metadata, and flags edge WAF layers. |
 | **`lib/scourer.js`** | [aiwx-smb-auditor/lib](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/lib/scourer.js) | Integrates Firecrawl search APIs to compile financial, headcount, and regulatory history. |
 | **`lib/analyzer.js`** | [aiwx-smb-auditor/lib](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/lib/analyzer.js) | Calculates tech vulnerability indices, SWOT outputs, pricing estimates, and outreach. |
@@ -168,16 +168,16 @@ The modular system is divided across three key directory repositories representi
 | **`publish_headless.js`**| [aiwx-social-media-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/publish_headless.js) | Headless Puppeteer engine script using cookies to bypass Meta walls. |
 | **`test_headless_connection.js`**| [aiwx-social-media-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/test_headless_connection.js) | Diagnostic script to test active cookie sessions on Facebook, Instagram, Threads. |
 | **`parse_netscape_cookies.js`**| [aiwx-social-media-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/parse_netscape_cookies.js) | Utility that parses Netscape Netscape text cookies into Puppeteer JSON formats. |
-| **`build_pdfs.py`** | [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/build_pdfs.py) | Python generator script creating three PDF deliverables (PRD, SOP manual, verticals). |
+| **`build_pdfs.py`** | [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/build_pdfs.py) | Python generator script creating three PDF deliverables (PRD, SOP manual, verticals). |
 | **`generate_assets.py`**| [aiwx-social-media-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/generate_assets.py) | Python compiler executing pdf compilations for posting plans and editorial calendars. |
-| **`supabase_schema.sql`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/supabase_schema.sql) | SQL schema creating tenant encryption tables, logs metrics, and RLS guidelines. |
+| **`supabase_schema.sql`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/supabase_schema.sql) | SQL schema creating tenant encryption tables, logs metrics, and RLS guidelines. |
 | **`campaign_schedule.json`**| [aiwx-social-media-agent/config](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/config/campaign_schedule.json) | Central campaign calendar tracking the 9 services-focused posts and execution states. |
 | **`cookies_*.json`** | [aiwx-social-media-agent/config](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-social-media-agent/config/) | Decrypted cookie structures containing verified session identifiers. |
 | **`test/run.js`** | [aiwx-smb-auditor/test](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-smb-auditor/test/run.js) | Node command testing framework validating 31 core backend methods. |
-| **`test_suite.html`** | [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/test_suite.html) | Visual HTML UI for triggering diagnostic unit test sets. |
-| **`smb_landing.html`** | [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/smb_landing.html) | SMB Landing marketing page. |
-| **`solopreneur_landing.html`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/solopreneur_landing.html) | Solopreneur Landing marketing page. |
-| **`reseller_landing.html`**| [aiwx-admin-agent](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/reseller_landing.html) | Reseller Landing marketing page. |
+| **`test_suite.html`** | [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/test_suite.html) | Visual HTML UI for triggering diagnostic unit test sets. |
+| **`smb_landing.html`** | [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/smb_landing.html) | SMB Landing marketing page. |
+| **`solopreneur_landing.html`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/solopreneur_landing.html) | Solopreneur Landing marketing page. |
+| **`reseller_landing.html`**| [aiwx-convergence-ai](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/reseller_landing.html) | Reseller Landing marketing page. |
 
 ---
 

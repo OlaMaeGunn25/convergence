@@ -43,25 +43,25 @@ graph TD
 
 ## Proposed Technical File Architecture in Workspace
 
-We will build the following production-ready application layout in `c:\Users\dahao\.gemini\antigravity\scratch\aiwx-admin-agent`:
+We will build the following production-ready application layout in `c:\Users\dahao\.gemini\antigravity\scratch\aiwx-convergence-ai`:
 
-* **[NEW] [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/deployment_hub.html)**: 
+* **[NEW] [deployment_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/deployment_hub.html)**: 
   - The Remote Super Admin console.
   - Generates client deployments, manages endpoints, configures security keys, selects 1-of-12 industry verticals, and outputs activation tokens.
   - Stunning premium deep blue and gold aesthetic matching `CONVERGENCE-Ai.com`.
-* **[NEW] [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/operations_hub.html)** (also copied to `index.html` as the entrypoint):
+* **[NEW] [operations_hub.html](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/operations_hub.html)** (also copied to `index.html` as the entrypoint):
   - The secure back-office platform.
   - Interactive "Login / Activation" modal to paste the token.
   - Once active, renders the custom SMB workspace (12 verticals, locked to the selected one).
   - Fully white-labelable theme builder (modify name, logo, colors in real-time).
   - Dynamic Process Mapping Studio (SVG-based visualizer for BPMN flowcharts, Swimlanes, and SIPOCs).
   - HITL Approval console with simulated tasks (emails, invoices, travel bookings).
-* **[NEW] [styles.css](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/styles.css)**: 
+* **[NEW] [styles.css](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/styles.css)**: 
   - Premium CSS design system shared across hubs.
   - Features custom properties for color systems, interactive animations, custom typography, glassmorphism layers, and mobile-responsive cards.
-* **[NEW] [app.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/app.js)**: 
+* **[NEW] [app.js](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/app.js)**: 
   - Shared JavaScript controller handling state, process parsing, security verification simulation, rebranding, and interactive dashboards.
-* **[NEW] [DEPLOYMENT.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-admin-agent/DEPLOYMENT.md)**:
+* **[NEW] [DEPLOYMENT.md](file:///c:/Users/dahao/.gemini/antigravity/scratch/aiwx-convergence-ai/DEPLOYMENT.md)**:
   - Technical blueprint detailing the open-source production stack (Supabase, Docker, Dify.ai, LangGraph, n8n) and vault security integration instructions.
 
 ---

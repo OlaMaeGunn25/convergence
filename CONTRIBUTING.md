@@ -25,7 +25,7 @@ governance exists to prevent. The rule below prevents recurrence.
 2. **Every change is a commit in this repo.** No out-of-band edits.
 3. **Prefer a branch + PR** for anything non-trivial; require review before merge.
 4. **Keep the suite green.** `cd aiwx-smb-auditor && node test/run.js` must pass
-   (currently 79/79) before committing.
+   (currently 128/128) before committing.
 5. **Never commit secrets.** `.env`, cookies, credential JSON, and session dumps
    are gitignored — keep it that way; use `.env.example` as the template.
 
@@ -33,7 +33,7 @@ governance exists to prevent. The rule below prevents recurrence.
 
 - `aiwx-smb-auditor/` — Express gateway (:3003): routes, lib (audit pipeline,
   governance, scholar, negotiation, stores), tests.
-- `aiwx-admin-agent/` — Vite dashboard + tenant-provisioning middleware (RLS).
+- `aiwx-convergence-ai/` — Vite dashboard + tenant-provisioning middleware (RLS).
 - `aiwx-social-media-agent/` — publishing agent (Graph API primary; headless
   emergency-only).
 - `aiwx-mcp-server/` — MCP orchestration surface over the governed gateway.

@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — System Assessment, Gaps Matrix & Rearchitecture Plan
 
-**Date:** 2026-07-12 · **Author:** Claude (Fable 5) systems review · **Scope:** `aiwx-admin-agent/`, `aiwx-smb-auditor/`, `aiwx-social-media-agent/`
+**Date:** 2026-07-12 · **Author:** Claude (Fable 5) systems review · **Scope:** `aiwx-convergence-ai/`, `aiwx-smb-auditor/`, `aiwx-social-media-agent/`
 
 ---
 
@@ -36,7 +36,7 @@ benchmark competitor bundles prospecting → audit → deployment → HITL opera
 flowchart TB
     subgraph client["Browsers / Lovable frontends"]
         UI["public/ SPA (auditor cockpit)"]
-        ADMIN["aiwx-admin-agent Vite pages"]
+        ADMIN["aiwx-convergence-ai Vite pages"]
     end
 
     subgraph auditor["aiwx-smb-auditor  ·  Express :3003 (single entry point)"]
@@ -53,7 +53,7 @@ flowchart TB
         CFG["config/*.json  (cookies, meta/linkedin creds, schedule)"]
     end
 
-    subgraph adminsrv["aiwx-admin-agent/server  ·  Express :8080 (tenant middleware)"]
+    subgraph adminsrv["aiwx-convergence-ai/server  ·  Express :8080 (tenant middleware)"]
         MID["index.js — JWT, tenant provisioning (Cloud Run), HITL queue, QuickBooks OAuth"]
     end
 
@@ -126,7 +126,7 @@ flowchart TB
         direction TB
         GW["Express gateway :3003 (server.js)\nhelmet · winston · morgan · rate-limits · strict CORS"]
         STATIC1["/  → aiwx-smb-auditor/public"]
-        STATIC2["/admin → aiwx-admin-agent/dist (Vite build)"]
+        STATIC2["/admin → aiwx-convergence-ai/dist (Vite build)"]
         STATIC3["/logs → social agent logs (screenshots only)"]
         ASSETS["/assets-social → social agent images (denylist: config/, *.json, dotfiles)"]
         SCHEDL["Crash-safe scheduler loop (try/catch + exponential backoff)"]

@@ -22,7 +22,7 @@
 **/*.log
 
 # Build output (rebuilt in stage 1)
-aiwx-admin-agent/dist
+aiwx-convergence-ai/dist
 
 # Heavy non-runtime assets
 **/Todays Lovabled Uploads

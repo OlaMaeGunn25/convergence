@@ -248,12 +248,12 @@ function applyMiddleware(app) {
   // Mount the social media logs directory to serve execution screenshots
   app.use('/logs', express.static(path.join(SOCIAL_AGENT_DIR, 'logs'), { dotfiles: 'deny' }));
 
-  // Serve the admin agent's production Vite build (if present) under /admin
+  // Serve the Convergence-Ai's production Vite build (if present) under /admin
   if (fs.existsSync(ADMIN_DIST_DIR)) {
     app.use('/admin', express.static(ADMIN_DIST_DIR, { dotfiles: 'deny' }));
     logger.info(`[BOOT] Admin dashboard mounted at /admin from ${ADMIN_DIST_DIR}`);
   } else {
-    logger.warn(`[BOOT] Admin Vite build not found at ${ADMIN_DIST_DIR} — /admin not mounted. Run "npm run build" in aiwx-admin-agent.`);
+    logger.warn(`[BOOT] Admin Vite build not found at ${ADMIN_DIST_DIR} — /admin not mounted. Run "npm run build" in aiwx-convergence-ai.`);
   }
 
   app.use('/', socialAssetGuard);

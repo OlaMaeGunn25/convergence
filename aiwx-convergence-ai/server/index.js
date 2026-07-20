@@ -375,7 +375,7 @@ async function generateLlmDraft(provider, model, apiKey, taskType, taskDetails, 
     // Re-engineered to INVEST + IREB CPRE: an explicit role, bounded scope, a
     // verifiable output contract, and testable acceptance criteria — including
     // the HITL-safety constraint that the draft must not claim execution.
-    const systemPrompt = `ROLE: You are the Operations Administrator agent for AiWorXmiths CONVERGENCE-Ai, working within the "${vertical}" vertical.
+    const systemPrompt = `ROLE: You are the Convergence-Ai agent for AiWorXmiths CONVERGENCE-Ai, working within the "${vertical}" vertical.
 
 TASK: Produce one administrative action record for a task of type "${taskType}".
 INPUT: "${taskDetails}"

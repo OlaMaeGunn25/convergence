@@ -4,8 +4,8 @@
   "description": "CONVERGENCE-Ai — Cloud-based HITL AI Automation Hub (multi-agent cockpit & pre-sales auditor)",
   "private": true,
   "scripts": {
-    "install:all": "cd aiwx-smb-auditor && npm install && cd ../aiwx-social-media-agent && npm install && cd ../aiwx-admin-agent && npm install",
-    "build": "cd aiwx-admin-agent && npm run build",
+    "install:all": "cd aiwx-smb-auditor && npm install && cd ../aiwx-social-media-agent && npm install && cd ../aiwx-convergence-ai && npm install",
+    "build": "cd aiwx-convergence-ai && npm run build",
     "start": "node aiwx-smb-auditor/server.js",
     "docker:build": "docker build -t convergence-ai .",
     "docker:run": "docker run --env-file .env -p 3003:3003 convergence-ai"

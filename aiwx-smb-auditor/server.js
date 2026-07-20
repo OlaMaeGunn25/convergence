@@ -78,7 +78,7 @@ const SOCIAL_AGENT_DIR = process.env.SOCIAL_AGENT_DIR
   : path.join(REPO_ROOT, 'aiwx-social-media-agent');
 const ADMIN_DIST_DIR = process.env.ADMIN_DIST_DIR
   ? path.resolve(process.env.ADMIN_DIST_DIR)
-  : path.join(REPO_ROOT, 'aiwx-admin-agent', 'dist');
+  : path.join(REPO_ROOT, 'aiwx-convergence-ai', 'dist');
 
 for (const [label, dir] of [['SOCIAL_AGENT_DIR', SOCIAL_AGENT_DIR]]) {
   if (!fs.existsSync(dir)) {
@@ -320,12 +320,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // Mount the social media logs directory to serve execution screenshots
 app.use('/logs', express.static(path.join(SOCIAL_AGENT_DIR, 'logs'), { dotfiles: 'deny' }));
 
-// Serve the admin agent's production Vite build (if present) under /admin
+// Serve the Convergence-Ai's production Vite build (if present) under /admin
 if (fs.existsSync(ADMIN_DIST_DIR)) {
   app.use('/admin', express.static(ADMIN_DIST_DIR, { dotfiles: 'deny' }));
   logger.info(`[BOOT] Admin dashboard mounted at /admin from ${ADMIN_DIST_DIR}`);
 } else {
-  logger.warn(`[BOOT] Admin Vite build not found at ${ADMIN_DIST_DIR} — /admin not mounted. Run "npm run build" in aiwx-admin-agent.`);
+  logger.warn(`[BOOT] Admin Vite build not found at ${ADMIN_DIST_DIR} — /admin not mounted. Run "npm run build" in aiwx-convergence-ai.`);
 }
 
 // Serve visual assets from the social agent directory. SECURITY: the agent

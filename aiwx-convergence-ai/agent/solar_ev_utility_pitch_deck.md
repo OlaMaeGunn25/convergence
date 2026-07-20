@@ -11,7 +11,7 @@ Utility companies, commercial solar developers, and EV charging station networks
 2.  **Supply Chain & Sourcing Friction**: Procuring heavy switchgear, solar panels, inverters, and EV pedestals involves matching thousands of purchase orders (POs) and invoices.
 3.  **Field Dispatch Latency**: Repairing grid downtime and maintaining physical station networks is slow when field dispatch coordinates manually.
 
-The **ops Operations Administrator™** is deployed natively inside the utility's private cloud firewall, serving as a secure, flat-rate, automated back-office manager that solves these bottlenecks without adding administrative headcount.
+The **ops Convergence-Ai™** is deployed natively inside the utility's private cloud firewall, serving as a secure, flat-rate, automated back-office manager that solves these bottlenecks without adding administrative headcount.
 
 ---
 

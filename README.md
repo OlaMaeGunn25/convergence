@@ -5,7 +5,7 @@ Multi-agent automation cockpit and pre-sales auditor by **AiWorXmiths**.
 | Module | Role |
 |---|---|
 | `aiwx-smb-auditor/` | Express gateway (:3003) — HTTPS audits, Firecrawl lookups, campaign scheduler, analytics, Supabase CRM export. Single entry point. |
-| `aiwx-admin-agent/` | Vite dashboard (deployment hub, upskilling console) — built to `dist/`, served at `/admin`. Also contains the tenant-provisioning middleware (`server/`). |
+| `aiwx-convergence-ai/` | Vite dashboard (deployment hub, upskilling console) — built to `dist/`, served at `/admin`. Also contains the tenant-provisioning middleware (`server/`). |
 | `aiwx-social-media-agent/` | Direct-posting agent — Meta/LinkedIn REST (`publish_api.js`) with Puppeteer headless fallback (`publish_headless.js`), prospecting agent, cron loop. |
 
 ## Quick start (Docker — production)
