@@ -20,6 +20,7 @@ const { searchScholar } = require('./scholar');
 const { negotiate } = require('./negotiation');
 const { TaskModel } = require('./task_model');
 const { isSupabaseConfigured, insertRow } = require('./supabase');
+const { buildGovernanceReport } = require('./governance_report');
 
 const taskModel = new TaskModel();
 
@@ -200,6 +201,15 @@ register({
     // acknowledgement so the approved-path contract is explicit and testable.
     return { staged: true, platform: input.platform, approvedBy: ctx.actor || 'unknown', note: 'Approved; queued for publisher execution.' };
   }
+});
+
+register({
+  name: 'get_governance_report',
+  title: 'Unified AI TRiSM governance report',
+  description: 'Cross-references the audit_log actor trail (WHO), audit reliability/distribution/validation (WHAT), and task-model state into one governance snapshot with a health headline.',
+  inputSchema: z.object({ limit: z.number().int().min(1).max(500).optional(), tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  handler: (input, ctx) => buildGovernanceReport({ limit: input.limit, tenantId: input.tenantId || ctx.tenantId })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONVERGENCE-Ai — AI TRiSM Governance Dashboard</title>
+<style>
+  :root { --bg:#0b1020; --card:#141a2e; --line:#26304d; --text:#e6ebf5; --muted:#93a0bd; --indigo:#818cf8; --emerald:#34d399; --amber:#fbbf24; --red:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:1.5rem 2rem; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+  h1 { font-size:1.25rem; margin:0; }
+  .sub { color:var(--muted); font-size:.85rem; }
+  main { padding:2rem; max-width:1100px; margin:0 auto; }
+  .controls { display:flex; gap:.6rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+  input, button { font:inherit; padding:.55rem .8rem; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--text); }
+  button { cursor:pointer; background:var(--indigo); color:#0b1020; border:none; font-weight:600; }
+  .headline { display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+  .kpi { flex:1; min-width:150px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem 1.2rem; }
+  .kpi .v { font-size:1.9rem; font-weight:700; }
+  .kpi .l { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+  .status { padding:.3rem .7rem; border-radius:999px; font-weight:700; font-size:.8rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.2rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1.2rem 1.4rem; }
+  .card h2 { font-size:1rem; margin:0 0 .8rem; }
+  .card .dim { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  td { padding:.3rem 0; border-bottom:1px solid var(--line); }
+  td:last-child { text-align:right; color:var(--muted); }
+  .note { color:var(--muted); font-size:.8rem; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>⚖️ AI TRiSM Governance Dashboard</h1>
+    <div class="sub">CONVERGENCE-Ai — WHO may act × WHAT is true × orchestration</div>
+  </div>
+</header>
+<main>
+  <div class="controls">
+    <input id="apiKey" type="password" placeholder="Operator API key (x-api-key)" style="flex:1;min-width:220px;">
+    <input id="base" type="text" placeholder="Gateway base URL" value="" style="flex:1;min-width:180px;">
+    <button id="load">Load report</button>
+  </div>
+  <div id="headline" class="headline"></div>
+  <div id="grid" class="grid"></div>
+  <p id="msg" class="note"></p>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, text, cls) { var e = document.createElement(tag); if (text != null) e.textContent = String(text); if (cls) e.className = cls; return e; }
+  function kpi(value, label, color) {
+    var box = el('div', null, 'kpi');
+    var v = el('div', value, 'v'); if (color) v.style.color = color;
+    box.appendChild(v); box.appendChild(el('div', label, 'l')); return box;
+  }
+  function kvTable(obj) {
+    var t = el('table'); var body = el('tbody');
+    var keys = Object.keys(obj || {});
+    if (!keys.length) { body.appendChild(el('tr')).appendChild(el('td', '(none)')); }
+    keys.forEach(function (k) {
+      var tr = el('tr'); tr.appendChild(el('td', k)); tr.appendChild(el('td', obj[k])); body.appendChild(tr);
+    });
+    t.appendChild(body); return t;
+  }
+  function card(title, dim, node) {
+    var c = el('div', null, 'card');
+    c.appendChild(el('div', dim, 'dim'));
+    c.appendChild(el('h2', title));
+    if (node) c.appendChild(node); return c;
+  }
+  var STATUS_COLOR = { healthy: 'var(--emerald)', watch: 'var(--amber)', attention: 'var(--red)' };
+
+  function render(rep) {
+    var head = $('headline'); head.innerHTML = '';
+    var t = rep.trism || {};
+    var statusBadge = el('span', (t.status || 'unknown').toUpperCase(), 'status');
+    statusBadge.style.background = STATUS_COLOR[t.status] || 'var(--muted)';
+    statusBadge.style.color = '#0b1020';
+    var sBox = el('div', null, 'kpi'); var sv = el('div', null, 'v'); sv.appendChild(statusBadge);
+    sBox.appendChild(sv); sBox.appendChild(el('div', 'TRiSM status', 'l')); head.appendChild(sBox);
+    head.appendChild(kpi(t.avgReliability == null ? 'n/a' : t.avgReliability + '/100', 'Avg reliability', t.avgReliability >= 70 ? 'var(--emerald)' : t.avgReliability >= 50 ? 'var(--amber)' : 'var(--red)'));
+    head.appendChild(kpi(t.pendingApprovals || 0, 'Pending approvals', 'var(--amber)'));
+    head.appendChild(kpi(t.failedTasks || 0, 'Failed tasks', (t.failedTasks || 0) > 0 ? 'var(--red)' : 'var(--emerald)'));
+    head.appendChild(kpi(t.accessTrail || 0, 'Audit-trail entries'));
+
+    var grid = $('grid'); grid.innerHTML = '';
+    // WHO
+    var acc = rep.access || {};
+    var accNode = acc.available
+      ? kvTable({ 'Total entries': acc.total, 'Unique actors': acc.uniqueActors })
+      : el('p', acc.note || acc.error || 'Access trail unavailable.', 'note');
+    grid.appendChild(card('Access — audit trail', 'WHO MAY ACT', accNode));
+    if (acc.available) grid.lastChild.appendChild(kvTable(acc.byOutcome || {}));
+    // WHAT
+    var d = rep.data || {};
+    var whatWrap = el('div');
+    whatWrap.appendChild(kvTable({ 'Audits scored': d.totalAudits, 'Avg reliability': d.avgReliability == null ? 'n/a' : d.avgReliability, 'Validation pass rate': d.validationPassRate == null ? 'n/a' : d.validationPassRate + '%' }));
+    whatWrap.appendChild(el('div', 'Distribution gate', 'dim'));
+    whatWrap.appendChild(kvTable(d.distributionBreakdown || {}));
+    grid.appendChild(card('Data quality — provenance', 'WHAT IS TRUE', whatWrap));
+    // Orchestration
+    var o = rep.orchestration || {};
+    grid.appendChild(card('Orchestration — tasks', 'WORK STATE', kvTable(o.byStatus || {})));
+    $('msg').textContent = 'Generated ' + (rep.generatedAt || '');
+  }
+
+  $('load').addEventListener('click', function () {
+    var key = $('apiKey').value.trim();
+    var base = $('base').value.trim().replace(/\/+$/, '');
+    $('msg').textContent = 'Loading…';
+    fetch(base + '/api/tools/get_governance_report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ input: {} })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.success) { $('msg').textContent = 'Error: ' + (j.error || JSON.stringify(j)); return; }
+      render(j.result);
+    }).catch(function (e) { $('msg').textContent = 'Request failed: ' + e.message; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -501,6 +501,45 @@ async function runTests() {
     assert(false, `MCP bridge tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 13: Governance report (unified AI TRiSM surface) ---
+  try {
+    const os = require('os');
+    const fsx = require('fs');
+    const pth = require('path');
+    const { buildGovernanceReport } = require('../lib/governance_report');
+    const { TaskModel } = require('../lib/task_model');
+    const reg = require('../lib/tool_registry');
+
+    // Temp audits_cache with two governance-scored packages (one healthy, one poor)
+    const auditsDir = pth.join(os.tmpdir(), `aiwx_audits_${Date.now()}`);
+    fsx.mkdirSync(auditsDir, { recursive: true });
+    fsx.writeFileSync(pth.join(auditsDir, 'a.json'), JSON.stringify({ reportGovernance: { reliability: { score: 90, grade: 'A' }, distribution: { classification: 'Client-Ready Benchmark Report' }, validation: { overallStatus: 'PASS' } } }));
+    fsx.writeFileSync(pth.join(auditsDir, 'b.json'), JSON.stringify({ reportGovernance: { reliability: { score: 40, grade: 'F' }, distribution: { classification: 'Quarantined' }, validation: { overallStatus: 'FAIL' } } }));
+
+    // Temp task store with a pending approval and a failure
+    const tmFile = pth.join(os.tmpdir(), `aiwx_gov_tasks_${Date.now()}.json`);
+    const tm = new TaskModel({ file: tmFile });
+    const p = await tm.create({ type: 'publish' }); await tm.transition(p.id, 'pending_approval', {});
+    const f = await tm.create({ type: 'audit' }); await tm.transition(f.id, 'pending_approval', {}); await tm.transition(f.id, 'approved', {}); await tm.transition(f.id, 'executing', {}); await tm.transition(f.id, 'failed', {});
+
+    const rep = await buildGovernanceReport({ auditsDir, taskModel: tm });
+    assert(rep.data.totalAudits === 2 && rep.data.avgReliability === 65, 'Report aggregates audit reliability (avg of 90 & 40 = 65)');
+    assert(rep.data.gradeBreakdown.A === 1 && rep.data.gradeBreakdown.F === 1, 'Report breaks down reliability grades');
+    assert(rep.data.validationPassRate === 50, 'Report computes the validation pass rate (1 of 2)');
+    assert(rep.orchestration.pendingApproval === 1 && rep.orchestration.failed === 1, 'Report counts orchestration state (pending approval + failed)');
+    assert(rep.trism && rep.trism.status === 'attention', 'TRiSM headline flags attention when a task has failed');
+    assert(rep.access && typeof rep.access.available === 'boolean', 'Report includes the access (WHO) dimension, degrading gracefully without Supabase');
+
+    // Exposed as a registry tool (reachable via /api/tools and the MCP bridge)
+    assert(reg.has('get_governance_report'), 'get_governance_report is registered as a tool');
+    const viaTool = await reg.invoke('get_governance_report', {});
+    assert(viaTool.ok === true && viaTool.result.trism, 'Governance report is invocable through the tool registry');
+
+    try { fsx.unlinkSync(pth.join(auditsDir, 'a.json')); fsx.unlinkSync(pth.join(auditsDir, 'b.json')); fsx.rmdirSync(auditsDir); fsx.unlinkSync(tmFile); } catch (e) {}
+  } catch (e) {
+    assert(false, `Governance report tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
