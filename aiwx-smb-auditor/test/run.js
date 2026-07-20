@@ -467,6 +467,40 @@ async function runTests() {
     assert(false, `Orchestrator tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 12: MCP bridge (in-process registry surface + identity) ---
+  try {
+    const bridge = require('../lib/mcp_bridge');
+    const mcpHttp = require('../lib/mcp_http');
+
+    // A. MCP tools are built from the ONE registry with real JSON schemas + hints
+    const tools = bridge.listMcpTools();
+    assert(Array.isArray(tools) && tools.length >= 6, 'MCP bridge lists tools from the registry');
+    const runAudit = tools.find(t => t.name === 'run_audit');
+    assert(runAudit && runAudit.inputSchema && runAudit.inputSchema.type === 'object', 'MCP tool carries a JSON Schema derived from the Zod schema');
+    const pub = tools.find(t => t.name === 'publish_post');
+    assert(pub && pub.annotations.destructiveHint === true, 'MCP annotations reflect the registry (publish_post destructiveHint)');
+
+    // B. callMcpTool routes through the registry in-process and returns MCP content
+    const sch = await bridge.callMcpTool('search_scholar', { q: 'lobo law' }, { actor: 'agent-1' });
+    assert(sch.content && sch.content[0].type === 'text' && sch.structuredContent, 'callMcpTool returns MCP content + structuredContent');
+
+    // C. Governance gate applies to MCP callers: destructive tool needs approval
+    const blocked = await bridge.callMcpTool('publish_post', { platform: 'linkedin', text: 'hi' }, { actor: 'agent-1' });
+    assert(blocked._meta && blocked._meta.requiresApproval === true, 'MCP destructive call without approval is gated (requiresApproval)');
+    const ok = await bridge.callMcpTool('publish_post', { platform: 'linkedin', text: 'hi' }, { actor: 'agent-1', approved: true });
+    assert(ok.structuredContent && ok.structuredContent.staged === true, 'MCP destructive call proceeds once approved (identity threaded)');
+
+    // D. Unknown tool is a clean MCP error
+    const unknown = await bridge.callMcpTool('nope', {});
+    assert(unknown.isError === true, 'MCP bridge returns a clean error for an unknown tool');
+
+    // E. HTTP transport module loads cleanly even without the SDK installed
+    assert(typeof mcpHttp.createMcpHttpHandler === 'function', 'mcp_http exposes createMcpHttpHandler');
+    assert(typeof mcpHttp.isMcpTransportAvailable() === 'boolean', 'mcp_http reports SDK availability without throwing at import');
+  } catch (e) {
+    assert(false, `MCP bridge tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
