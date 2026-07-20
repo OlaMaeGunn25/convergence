@@ -414,6 +414,59 @@ async function runTests() {
     assert(false, `Route-parity guard crashed: ${e.message}`);
   }
 
+  // --- Test Set 11: Orchestrator (task model + tool registry driver) ---
+  try {
+    const os = require('os');
+    const fsx = require('fs');
+    const pth = require('path');
+    const { TaskModel } = require('../lib/task_model');
+    const { Orchestrator } = require('../lib/orchestrator');
+    const tmpFile = pth.join(os.tmpdir(), `aiwx_orch_test_${Date.now()}.json`);
+    const orch = new Orchestrator({ taskModel: new TaskModel({ file: tmpFile }) });
+
+    // A. Non-destructive work auto-approves and executes to done
+    const s1 = await orch.submit({ type: 'scholar', payload: { q: 'lobo law precedent' }, actor: 'op' });
+    assert(s1.status === 'approved', 'submit() auto-approves a non-destructive (scholar) task');
+    const done1 = await orch.drain();
+    assert(done1.length === 1 && done1[0].status === 'done', 'Orchestrator executes the ready task to done');
+    assert(done1[0].result && Array.isArray(done1[0].result.results), 'Executed task carries the tool result');
+
+    // B. Destructive work waits for human approval (HITL enforced structurally)
+    const s2 = await orch.submit({ type: 'publish', payload: { platform: 'linkedin', text: 'hi' }, actor: 'op' });
+    assert(s2.status === 'pending_approval', 'submit() holds a destructive (publish) task in pending_approval');
+    let none = await orch.drain();
+    assert(none.length === 0, 'Orchestrator will not execute an unapproved destructive task');
+    await orch.taskModel.transition(s2.id, 'approved', { actor: 'human-approver' });
+    const done2 = await orch.drain();
+    assert(done2.length === 1 && done2[0].status === 'done' && done2[0].result.staged === true, 'After human approval the destructive task executes');
+
+    // C. Dependencies: a child runs only after its parent is done
+    const parent = await orch.submit({ type: 'scholar', payload: { q: 'parent' }, actor: 'op' });
+    const child = await orch.submit({ type: 'scholar', payload: { q: 'child' }, actor: 'op', dependsOn: [parent.id] });
+    const processed = await orch.drain();
+    const pIdx = processed.findIndex(t => t.id === parent.id);
+    const cIdx = processed.findIndex(t => t.id === child.id);
+    assert(pIdx !== -1 && cIdx !== -1 && pIdx < cIdx, 'Parent task is processed before its dependent child');
+    assert(processed[cIdx].status === 'done', 'Dependent child executes once its dependency is done');
+
+    // D. Tool failure marks the task failed (audit with no Firecrawl key throws)
+    delete process.env.FIRECRAWL_API_KEY;
+    const s4 = await orch.submit({ type: 'audit', payload: { domain: 'x.com' }, actor: 'op' });
+    const done4 = await orch.drain();
+    assert(done4.length === 1 && done4[0].status === 'failed', 'A throwing tool transitions its task to failed');
+    assert(done4[0].result && /Firecrawl/i.test(done4[0].result.error || ''), 'Failed task records the error');
+
+    // E. Negotiation strategy gates approval by consensus
+    const s5 = await orch.submit({ type: 'scholar', payload: { q: 'x', vertical: 'retail', topic: 'auto-approve?' }, actor: 'op', strategy: 'negotiate' });
+    assert(['approved', 'pending_approval'].includes(s5.status), 'Negotiation-strategy submit resolves to approved or pending_approval');
+    const s6 = await orch.submit({ type: 'scholar', payload: { q: 'x', vertical: 'legal', topic: 'send settlement?' }, actor: 'op', strategy: 'negotiate' });
+    assert(s6.status === 'pending_approval', 'High-risk (legal) negotiation leaves the task pending human approval');
+
+    try { fsx.unlinkSync(tmpFile); } catch (e) {}
+  } catch (e) {
+    assert(false, `Orchestrator tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
