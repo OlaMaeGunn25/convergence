@@ -133,7 +133,8 @@ const PROTECTED_MUTATIONS = [
   '/api/export-crm',
   '/api/generate-monthly-posts',
   '/api/negotiate',
-  '/api/audit-queue'
+  '/api/audit-queue',
+  '/api/tools'
 ];
 
 const AUDITED_ACTIONS = [

@@ -345,6 +345,45 @@ async function runTests() {
     assert(false, `Task model tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 9: Internal Tool Registry ---
+  try {
+    const reg = require('../lib/tool_registry');
+
+    // A. Discovery lists tools with governance metadata
+    const tools = reg.list();
+    assert(Array.isArray(tools) && tools.length >= 6, 'Registry lists the registered tools');
+    const audit = tools.find(t => t.name === 'run_audit');
+    assert(audit && audit.provenance && audit.provenance.returnsProvenance === true, 'run_audit declares it returns provenance-tagged data');
+    const pub = tools.find(t => t.name === 'publish_post');
+    assert(pub && pub.annotations.destructive === true && pub.annotations.requiresApproval === true, 'publish_post is annotated destructive + requiresApproval');
+
+    // B. Input validation via the typed schema
+    const bad = await reg.invoke('run_audit', {});
+    assert(bad.ok === false && Array.isArray(bad.issues), 'invoke() rejects input that fails the schema (missing domain)');
+
+    // C. Read tool executes (scholar simulated fallback)
+    const sch = await reg.invoke('search_scholar', { q: 'lobo law precedent' });
+    assert(sch.ok === true && sch.result && Array.isArray(sch.result.results), 'invoke(search_scholar) returns results');
+
+    // D. Governance gate: destructive tool blocked without approval
+    const blocked = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' });
+    assert(blocked.ok === false && blocked.status === 'requires_approval', 'Destructive tool is blocked without approval');
+    const approved = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' }, { approved: true, actor: 'operator' });
+    assert(approved.ok === true && approved.result.staged === true, 'Destructive tool proceeds when approved');
+
+    // E. Task tools flow through the registry onto the spine
+    const created = await reg.invoke('create_task', { type: 'audit', payload: { domain: 'x.com' } }, { actor: 'reg-tester' });
+    assert(created.ok === true && created.result.id, 'create_task via registry creates a task');
+    const got = await reg.invoke('get_task', { id: created.result.id });
+    assert(got.ok === true && got.result.status === 'proposed', 'get_task via registry round-trips');
+
+    // F. Unknown tool is reported cleanly
+    const unknown = await reg.invoke('does_not_exist', {});
+    assert(unknown.ok === false && /Unknown tool/.test(unknown.error), 'Unknown tool returns a clean error');
+  } catch (e) {
+    assert(false, `Tool registry tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

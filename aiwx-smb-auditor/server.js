@@ -225,7 +225,9 @@ const PROTECTED_MUTATIONS = [
   '/api/negotiate',
   // Also serves GET (the HITL queue listing) — app.use() matches every method,
   // so this single entry gates both the POST and the read.
-  '/api/audit-queue'
+  '/api/audit-queue',
+  // Tool registry: discovery (GET) + governed invoke (POST) — both auth-gated.
+  '/api/tools'
 ];
 const PROTECTED_READS = [
   // Each call bills a SerpApi credit — must not be open to anonymous callers.
@@ -247,6 +249,33 @@ app.use('/api/', globalApiLimiter);
 app.use('/api/audit', auditLimiter);
 app.use('/api/scout-prospects', scoutLimiter);
 app.use('/api/scholar/search', scholarLimiter);
+
+// ── Internal Tool Registry (Phase 2) ──────────────────────────────────────────
+// One typed, governed surface over every capability — the same registry the MCP
+// server draws from. GET lists tools; POST /:name validates input against the
+// tool's Zod schema and enforces the approval policy (destructive tools need
+// approved:true) centrally.
+const toolRegistry = require('./lib/tool_registry');
+app.get('/api/tools', (req, res) => {
+  res.json({ success: true, tools: toolRegistry.list() });
+});
+app.post('/api/tools/:name', async (req, res) => {
+  const { name } = req.params;
+  if (!toolRegistry.has(name)) {
+    return res.status(404).json({ success: false, error: `Unknown tool "${name}".` });
+  }
+  try {
+    const input = (req.body && req.body.input) || {};
+    const approved = req.body && req.body.approved === true;
+    const result = await toolRegistry.invoke(name, input, { actor: req.actor, role: req.role, approved });
+    if (result.ok === false && result.status === 'requires_approval') return res.status(202).json({ success: false, ...result });
+    if (result.ok === false) return res.status(400).json({ success: false, ...result });
+    return res.json({ success: true, tool: name, result: result.result });
+  } catch (err) {
+    console.error('[Tools] invocation failed:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Tool invocation failed.' });
+  }
+});
 app.use('/api/publish-post', publishLimiter);
 app.use('/api/outreach-send', publishLimiter);
 app.use('/api/run-prospecting', publishLimiter);
