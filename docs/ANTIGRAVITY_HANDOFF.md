@@ -7,14 +7,38 @@ belongs to a different product.
 
 ---
 
-## 0. GROUND TRUTH
+## 0. GROUND TRUTH — TWO SEPARATE REPOS
 
-- **Canonical repo (SINGLE SOURCE OF TRUTH):** https://github.com/OlaMaeGunn25/convergence
-- **Local working copy:** `C:/Users/dahao/.gemini/antigravity/scratch/convergence/`
-- **Branch:** `main`. **Last COMMITTED commit:** `71423db` — "Phase 5: unified AI TRiSM governance dashboard".
-- Per `CONTRIBUTING.md`, **all work lands as commits in THIS repo.** The retired
-  `scratch/aiwx-*` sibling folders are not the product (see `_CANONICAL_REPO.md`
-  in each). Do not sync those.
+You operate two products. Keep them in their own repos; never cross-commit.
+
+**A) CONVERGENCE-Ai (this repo — the Hub, Auditor, Social Agent, MCP)**
+- **Remote (SINGLE SOURCE OF TRUTH):** https://github.com/OlaMaeGunn25/convergence
+- **Local:** `C:/Users/dahao/.gemini/antigravity/scratch/convergence/` — branch `main`.
+- **Last COMMITTED commit:** `71423db` — "Phase 5: unified AI TRiSM governance dashboard".
+
+**B) ASES (AiWorXmiths Sales Enablement System / Salesbot — a DIFFERENT repo)**
+- **Remote:** https://github.com/OlaMaeGunn25/aiworxmiths-cdqe — branch `master`.
+- **Local:** `C:/Users/dahao/.gemini/antigravity/scratch/aiwx-ases-sales-enablement/`.
+- Downstream of Convergence-Ai (lead-qualifying Salesbot + proposal engine).
+
+This handoff **complements** the existing `CLAUDE_CODE_PROMPT.md` (dual-instance
+prompt) — do not contradict it. Per `CONTRIBUTING.md`, all Convergence work lands
+as commits in repo A. The retired `scratch/aiwx-*` sibling folders are not the
+product (see `_CANONICAL_REPO.md` in each). Do not sync those.
+
+**THE ONE LEGITIMATE SHARED FILE:** `SYSTEM_HANDOVER_SPECIFICATION.md` is the
+integration contract between the two repos and lives in BOTH:
+`convergence/aiwx-smb-auditor/SYSTEM_HANDOVER_SPECIFICATION.md` and
+`aiwx-ases-sales-enablement/docs/SYSTEM_HANDOVER_SPECIFICATION.md`. If the
+Auditor's endpoints/schemas/env change, update it in Convergence and copy it to
+ASES so both stay aligned. It is the ONLY file that may be identical across the
+two repos — nothing else crosses.
+  ⚠️ This file is currently STALE (it says "Port 3000", "31 tests", and lists
+  retired `scratch/` paths; it predates the governance/MCP/orchestrator/task-model
+  work). It should be refreshed to: port **3003**, suite **128/128**, and the new
+  architecture (auth/audit_log, provenance, tool registry `/api/tools`,
+  orchestrator, MCP bridge) — then re-synced to ASES. Treat that as a follow-up,
+  not part of this sync unless asked.
 
 ---
 
@@ -27,12 +51,16 @@ You have been running **four separate local instances** side-by-side:
 3. **Convergence Deployment Hub** — `aiwx-convergence-ai/` (renamed from
    `aiwx-admin-agent/`) *(part of this repo)*
 4. **ASES Sales-Enablement Agent** — `aiwx-ases-sales-enablement/` at scratch root
-   **— this is a SEPARATE PRODUCT and is NOT part of this repo.**
+   **— this is a SEPARATE REPO** (`github.com/OlaMaeGunn25/aiworxmiths-cdqe`,
+   branch `master`) and is **NOT part of this repo.** The only file that may cross
+   is the shared `SYSTEM_HANDOVER_SPECIFICATION.md` (see Section 0).
 
 **Because these ran together, their files have co-mingled.** Confirmed evidence:
 ASES / sales-enablement content has bled into `aiwx-convergence-ai/` (e.g.
 `aiwx-convergence-ai/agent/*.md`, `app.js`, `CONVERGENCE_FULL_SCOPE_DOCUMENT.md`
-reference ASES/sales-enablement material).
+reference ASES/sales-enablement material — and `CONVERGENCE_FULL_SCOPE_DOCUMENT.md`
+still mixes retired `scratch/aiwx-*` file paths with repo paths and stale figures
+like "31 tests" / "Port 3000"). Verify before staging any of it.
 
 **Rule for this sync:** every file you stage must be attributable to ONE of the
 three in-repo modules. Before committing:
