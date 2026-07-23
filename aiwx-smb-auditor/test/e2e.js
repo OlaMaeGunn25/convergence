@@ -105,33 +105,15 @@ async function runE2eTests() {
       assert(response.vertical === tc.expectedVertical, `Vertical categorized accurately as: ${response.vertical}`);
       assert(response.businessName.includes(tc.expectedName) || response.businessName.includes('SOS'), `Dynamic brand name matches: ${response.businessName}`);
 
-      // 2. Scourer Registry Checks
-      const filings = response.scourerData.filings;
-      assert(filings !== undefined, 'Filings block parsed successfully');
-      assert(typeof filings.state.agency === 'string', `State agency resolved: ${filings.state.agency}`);
-      assert(typeof filings.state.entityId === 'string', `State Entity ID resolved: ${filings.state.entityId}`);
-      assert(typeof filings.federal.samGovStatus === 'string', `Federal SAM.gov status resolved: ${filings.federal.samGovStatus}`);
-
-      // 3. Technical SWOT Metrics Checks
+      // 2. Technical SWOT / systems-evaluation metrics checks
+      //    (Scourer public-records + sales-pitch checks removed — ASES sales
+      //    functions, not systems evaluation. See docs/AUDITOR_REFRAME.md.)
       const metrics = response.analyzerData.metrics;
       assert(metrics.overallHealth > 0 && metrics.overallHealth <= 100, `Health score resolved in range: ${metrics.overallHealth}`);
       assert(response.analyzerData.swot.strengths.length > 0, 'Strengths checklist populated');
       assert(response.analyzerData.swot.weaknesses.length > 0, 'Weaknesses checklist populated');
 
-      // 4. Sales Pitch Center Integrity Checks
-      const pitches = response.analyzerData.pitchOpportunities;
-      assert(pitches.length > 0, `Sales Proposal Center returns ${pitches.length} outreach opportunities`);
-      
-      const keyPitch = pitches.find(p => p.gapTitle.includes(tc.specificKeyword) || p.copyPastePitch.includes(tc.expectedName) || p.copyPastePitch.includes('SOS'));
-      assert(keyPitch !== undefined, `Specialized sector pitch generated successfully for keyword: "${tc.specificKeyword}"`);
-      
-      if (keyPitch) {
-        assert(keyPitch.pricingProposal.trim().length > 0, `Pricing proposal is populated: ${keyPitch.pricingProposal}`);
-        assert(keyPitch.copyPastePitch.includes('[Client Contact]'), 'Pitch template includes contact merge tag placeholder');
-        assert(!keyPitch.copyPastePitch.includes('[Client Name]') && !keyPitch.copyPastePitch.includes('[businessName]'), 'Template successfully interpolates real company names instead of raw variables');
-      }
-
-      // 5. Workforce Upskilling Checks
+      // 3. Workforce Upskilling Checks
       const workforce = response.workforceData;
       assert(workforce.summary.totalStaffAudited > 0, `Upskilling audit profiles ${workforce.summary.totalStaffAudited} employees`);
       assert(workforce.roles.length > 0, 'Upskilling roles mapping matrix successfully generated');

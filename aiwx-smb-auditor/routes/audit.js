@@ -15,8 +15,8 @@ const { loadAuditQueue, saveAuditQueue } = require('../lib/stores/audit_queue');
 const { scrapeDomain } = require('../lib/scraper');
 const { analyzeFootprint } = require('../lib/analyzer');
 const { analyzeWorkforce } = require('../lib/workforce');
-const { scourBusiness } = require('../lib/scourer');
 const { searchScholar } = require('../lib/scholar');
+const { matchIntegrations } = require('../lib/integration_matcher');
 
 const router = express.Router();
 
@@ -64,21 +64,24 @@ router.post('/api/audit', asyncHandler('[Audit]', 'Audit failed. Please try agai
 
   const scrapedData = await withTimeout(scrapeDomain(domain, activeApiKey), 30000);
 
-  // 2. Scour the web for regulatory filings and financial data
+  // 2. teamNames feeds the legal-vertical Scholar cross-reference below.
+  //    (The public pre-sales scour was removed — that is an ASES sales
+  //    function, not systems evaluation. See docs/AUDITOR_REFRAME.md.)
   const teamNames = (scrapedData.rawTeamData || []).map(m => m.name);
-  const scourerData = await scourBusiness(
-    scrapedData.domain,
-    scrapedData.businessName,
-    scrapedData.vertical,
-    activeApiKey,
-    teamNames
-  );
 
   // 3. Perform SWOT and Technical Infrastructure Analysis
   const analyzerData = analyzeFootprint(scrapedData);
 
   // 4. Formulate Workforce AI-HITL Upskilling blueprint
   const workforceData = analyzeWorkforce(scrapedData);
+
+  // 4a. Integration-readiness: detected systems -> connectors -> MCP/API roadmap.
+  const integrationReadiness = matchIntegrations({
+    technologies: scrapedData.technologies,
+    vertical: scrapedData.vertical,
+    businessName: scrapedData.businessName,
+    domain: scrapedData.domain
+  });
 
   // 4b. Legal Services vertical: cross-reference personnel against Google
   // Scholar for case-law precedents and expert-witness publication vetting.
@@ -119,9 +122,9 @@ router.post('/api/audit', asyncHandler('[Audit]', 'Audit failed. Please try agai
       scrapedPages: scrapedData.scrapedPages,
       firewallAudit: scrapedData.firewallAudit
     },
-    scourerData,
     analyzerData,
     workforceData,
+    integrationReadiness,
     // Present only for Legal Services audits
     ...(scholarData ? { scholarData } : {})
   };

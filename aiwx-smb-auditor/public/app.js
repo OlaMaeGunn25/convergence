@@ -226,25 +226,9 @@ function initializeConsumerApp() {
   /**
    * Main rendering router
    */
-  // Provenance-tagged scourer fields ({ value, provenance }) -> unwrap in place
-  // for display. Idempotent + safe on untagged/degraded data.
-  function unwrapProvenance(x) {
-    return (x && typeof x === 'object' && 'value' in x && 'provenance' in x) ? x.value : x;
-  }
-  function normalizeScourerForDisplay(sc) {
-    if (!sc) return;
-    ['revenueEstimate', 'headcountEstimate', 'growthRate', 'publicMentions', 'registryVerification'].forEach(f => {
-      if (sc[f] !== undefined) sc[f] = unwrapProvenance(sc[f]);
-    });
-    if (sc.filings) {
-      ['state', 'federal', 'regulatoryCompliance'].forEach(f => {
-        if (sc.filings[f] !== undefined) sc.filings[f] = unwrapProvenance(sc.filings[f]);
-      });
-    }
-  }
-
+  // NOTE: the public pre-sales scour (revenue/filings/mentions) was removed —
+  // ASES sales function, not systems evaluation. See docs/AUDITOR_REFRAME.md.
   function renderDashboard(data) {
-    normalizeScourerForDisplay(data.scourerData);
     // A. Populate Top Overview Banner
     document.getElementById('result-business-name').textContent = data.businessName;
     document.getElementById('result-domain-name').textContent = data.domain;
@@ -579,10 +563,8 @@ function initializeConsumerApp() {
     const hdrs = data.scrapedData.firewallAudit.securityHeaders;
     document.getElementById('meta-waf-val').textContent = waf;
     document.getElementById('meta-headers-val').textContent = `HSTS: ${hdrs.hsts ? 'Y' : 'N'} | CSP: ${hdrs.csp ? 'Y' : 'N'} | X-Frame: ${hdrs.xFrameOptions ? 'Y' : 'N'} | CORS: ${hdrs.cors ? 'Y' : 'N'}`;
-    
-    // Revenue & Filings Scour
-    document.getElementById('meta-revenue-val').textContent = `${data.scourerData.revenueEstimate} (${data.scourerData.headcountEstimate})`;
-    document.getElementById('meta-filing-val').textContent = `${data.scourerData.filings.state.status} | ${data.scourerData.filings.state.agency}`;
+
+    // (Revenue & regulatory-filings scour removed — see docs/AUDITOR_REFRAME.md.)
 
     // List of analyzed pages
     const pagesList = document.getElementById('details-pages-list');
@@ -792,56 +774,12 @@ function initializeConsumerApp() {
             <td class="highlight">${data.analyzerData.metrics.securityPosture} / 100</td>
             <td>${data.analyzerData.metrics.securityPosture >= 70 ? 'WAF & Edge Secured' : 'Exposed Attack Surface'}</td>
           </tr>
-          <tr>
-            <td><strong>Estimated Annual Revenue</strong></td>
-            <td style="color:#10b981; font-weight:bold;">${data.scourerData.revenueEstimate || 'N/A'}</td>
-            <td>Gross Corporate Earnings Estimate</td>
-          </tr>
-          <tr>
-            <td><strong>Inferred Employee Headcount</strong></td>
-            <td><strong>${data.scourerData.headcountEstimate || 'N/A'}</strong></td>
-            <td>YoY Growth Index: ${data.scourerData.growthRate || 'Stable'}</td>
-          </tr>
         </table>
 
-        <h2>2. REGULATORY FILINGS COMPLIANCE</h2>
-        <p>Corporate registry status retrieved from Secretary of State and federal agencies database registries.</p>
-        <table>
-          <tr>
-            <th style="width: 250px;">Registry Lookups</th>
-            <th>Report Details / Registry Values</th>
-          </tr>
-          <tr>
-            <td><strong>State Regulatory Agency</strong></td>
-            <td>${data.scourerData.filings.state.agency}</td>
-          </tr>
-          <tr>
-            <td><strong>Active Entity Status</strong></td>
-            <td style="font-weight:bold; color:#10b981;">${data.scourerData.filings.state.status}</td>
-          </tr>
-          <tr>
-            <td><strong>Filing Date & Incorporation</strong></td>
-            <td>${data.scourerData.filings.state.filingDate}</td>
-          </tr>
-          <tr>
-            <td><strong>Entity Structure Taxonomy</strong></td>
-            <td>${data.scourerData.filings.state.entityType}</td>
-          </tr>
-          <tr>
-            <td><strong>Registry Filing ID Number</strong></td>
-            <td>${data.scourerData.filings.state.entityId}</td>
-          </tr>
-          <tr>
-            <td><strong>Federal SAM Registration</strong></td>
-            <td>${data.scourerData.filings.federal.samGovStatus}</td>
-          </tr>
-          <tr>
-            <td><strong>SEC Central Index Key (CIK)</strong></td>
-            <td>${data.scourerData.filings.federal.secCik}</td>
-          </tr>
-        </table>
+        <!-- Revenue/headcount scour + regulatory-filings section removed —
+             ASES sales function, not systems evaluation. See docs/AUDITOR_REFRAME.md. -->
 
-        <h2>3. EDGE NETWORK PROTECTION & WAF AUDIT</h2>
+        <h2>2. EDGE NETWORK PROTECTION & WAF AUDIT</h2>
         <p>Discovered reverse-proxy shield and response compliance headers mapping.</p>
         <p><strong>Active edge firewall protection:</strong> ${data.scrapedData.firewallAudit.wafDetected} (Scour confidence: ${Math.round(data.scrapedData.firewallAudit.wafConfidence * 100)}%)</p>
         <p><strong>SSL Protocol Encryption Status:</strong> ${data.scrapedData.firewallAudit.sslStatus}</p>
@@ -893,24 +831,8 @@ function initializeConsumerApp() {
           `).join('')}
         </table>
 
-        <h2>5. AIWORXMITHS SERVICE ALIGNMENT & COMMERCIAL PROPOSAL</h2>
-        <p>Based on the scoured public technical vulnerabilities and regulatory gaps discovered during the external audit, we propose the following custom service optimizations and commercial pricing structures to harden operations and capture ROI.</p>
-        <table>
-          <tr>
-            <th style="width: 200px;">Proposed Optimization Service</th>
-            <th>Discovered Gap & Business Rationale</th>
-            <th style="width: 140px;">Pricing Proposal</th>
-            <th>Target ROI / Performance Boost</th>
-          </tr>
-          ${data.analyzerData.pitchOpportunities.map(p => `
-            <tr>
-              <td><strong>${p.aiwxService}</strong></td>
-              <td><strong>${p.gapTitle}:</strong> ${p.observedGaps} <br/><em>Business Impact: ${p.impactStatement}</em></td>
-              <td style="font-family:monospace; color:#10b981; font-weight:bold;">${p.pricingProposal}</td>
-              <td style="font-style:italic; font-size:9pt;">${p.estimatedRoi}</td>
-            </tr>
-          `).join('')}
-        </table>
+        <!-- Sales/commercial-proposal section removed — ASES sales function,
+             not systems evaluation. See docs/AUDITOR_REFRAME.md. -->
 
         <div class="footer">
           <p>CONFIDENTIAL BUSINESS HANDOUT - GENERATED AUTOMATICALLY BY AIWORXMITHS CORPORATE AUDIT ENGINE</p>
@@ -1220,21 +1142,15 @@ function initializeConsumerApp() {
           }
         }
       },
-      scourerData: {
-        revenueEstimate: estRevenue,
-        growthRate: '+12% YoY',
-        headcountEstimate: estHeadcount,
-        filings: filings,
-        publicMentions: filterRecentMentions(publicMentions)
-      },
+      // (scourerData + pitchOpportunities removed from the fallback shape —
+      //  ASES sales functions, not systems evaluation. See docs/AUDITOR_REFRAME.md.)
       analyzerData: {
         metrics: {
           overallHealth: overallHealth,
           techModernization: techModernization,
           securityPosture: securityPosture,
           marketingIntegrations: marketingIntegrations
-        },
-        pitchOpportunities: pitchOpportunities
+        }
       },
       workforceData: {
         summary: {

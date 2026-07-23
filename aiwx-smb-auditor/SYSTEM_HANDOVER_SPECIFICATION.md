@@ -15,10 +15,17 @@ Node **20** · repo `github.com/OlaMaeGunn25/convergence` @ branch `main`.
 
 ## 1. What CONVERGENCE-Ai Is (for a downstream integrator)
 
-A governed, multi-agent automation hub + SMB pre-sales auditor. It exposes ONE
-authenticated, audited HTTP surface (and an equivalent MCP surface) that a
-downstream system (ASES) can call to run audits, search legal precedent, drive
-orchestrated tasks, and read governance state.
+A governed, multi-agent automation hub + **systems-evaluation / integration-readiness
+auditor**. It exposes ONE authenticated, audited HTTP surface (and an equivalent
+MCP surface) that a downstream system (ASES) can call to run audits, search legal
+precedent, drive orchestrated tasks, and read governance state.
+
+> **Scope note (2026-07-23):** the public pre-sales **prospecting** layer
+> (public-records scouring, prospect scouting, outbound outreach, sales-pitch
+> generation) was **removed** from CONVERGENCE-Ai and belongs to **ASES**. The
+> Auditor now evaluates a company's tech stack + server environment to determine
+> which systems should connect to the governed MCP layer, and returns a
+> provenance-scored report with an integration roadmap. See `docs/AUDITOR_REFRAME.md`.
 
 Two governance dimensions are enforced on everything:
 - **WHO may act** — API-key auth + RBAC on mutating endpoints; immutable
@@ -52,19 +59,26 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
 
 | Method & path | Purpose | Notes |
 |---|---|---|
-| `POST /api/audit` | Full SMB audit (tech/WAF, SWOT, workforce, + Scholar if legal) | Returns the **audit package** (§5). Rate-limited. |
+| `POST /api/audit` | Systems-evaluation audit (tech/WAF inventory, SWOT, workforce, + Scholar if legal) | Returns the **audit package** (§5). Rate-limited. |
 | `GET  /api/tools` | Discover the governed capability registry | Lists 10 tools + annotations + JSON input schema. |
 | `POST /api/tools/:name` | Invoke a registry tool | Body `{ input, approved? }`. Destructive tools return **202 requires_approval** unless `approved:true`. |
 | `POST /api/negotiate` | Multi-agent (Proposer/Critic/Arbiter) decision | High-risk verticals escalate to HITL. |
 | `GET  /api/scholar/search` | Google Scholar case-law / expert vetting | `q`, `num`; simulated fallback if no SerpApi key. |
-| `POST /api/export-crm` | Write a prospect to Supabase (`inbound_leads`) | 503 if Supabase unconfigured. |
+| `POST /api/export-crm` | Record an **integration-readiness candidate** to Supabase (`inbound_leads`) | Body `{ candidate }` (`{ prospect }` still accepted). 503 if Supabase unconfigured. |
+| `GET  /api/connectors` | Discover the connector catalog (MCP/API systems) | Optional `?vertical=`. Never leaks secret values — only expected env keys + configured flag. |
+| `GET  /api/connections` | Live connection status board (per connector) | Feeds the floating status component. `not_connected` \| `configuring` \| `connected` \| `error` \| `disconnected`. |
+| `POST /api/connections` | **Build** a connection for a connector | Approval-gated (**202 requires_approval** unless `approved:true`). Credentials NEVER accepted here — env/Secret-Manager only. |
+| `POST /api/clio/webhook` | Clio webhook → governed task | Public; HMAC-SHA256 verified when `CLIO_WEBHOOK_SECRET` set. High-risk events land `pending_approval`. |
 | `POST /api/audit-queue` / `GET /api/audit-queue` | Enqueue/inspect automated audits | Crash-safe background loop. |
 | `GET  /api/analytics` | Local + GA4 metrics | Modelled figures kept separate from measured GA4. |
 | `GET  /health` | Liveness + config flags | Public; container HEALTHCHECK. |
 
-**Registry tools (via `/api/tools/:name` and MCP):** `run_audit`, `search_scholar`,
-`negotiate`, `create_task`, `get_task`, `list_tasks`, `transition_task`,
-`export_crm`, `publish_post` (destructive → HITL), `get_governance_report`.
+**Registry tools (via `/api/tools/:name` and MCP) — 17:** `run_audit`,
+`search_scholar`, `negotiate`, `create_task`, `get_task`, `list_tasks`,
+`transition_task`, `export_crm`, `publish_post` (destructive → HITL),
+`get_governance_report`, `list_connectors`, `match_integrations`,
+`get_connection_status`, `connect_system` (→ HITL), `clio_list_matters`,
+`clio_create_activity` (→ HITL), `clio_record_trust_transaction` (→ HITL).
 
 ## 5. Data contracts
 
@@ -72,12 +86,13 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
 ```
 {
   success, timestamp, domain, businessName, vertical, isSimulated,
-  scrapedData: { technologies[], subdomains[], metaData, scrapedPages[], firewallAudit },
-  scourerData:   { revenueEstimate:{value,provenance}, headcountEstimate:{value,provenance},
-                   growthRate, filings:{ state:{value,provenance}, federal:{value,provenance} },
-                   publicMentions:{value,provenance}, ... },   // per-field provenance-tagged
-  analyzerData:  { metrics, swot, aiReadinessScorecard, pitchOpportunities, ... },
+  scrapedData: { technologies[], subdomains[], metaData, scrapedPages[], firewallAudit },  // systems + server-env inventory
+  analyzerData:  { metrics, swot, aiReadinessScorecard, multiAgentGrid, competitorBenchmark, ... },
   workforceData: { summary, roles[], timeframeMilestones, calibration },
+  integrationReadiness: {                                     // detected systems -> MCP/API roadmap
+    detectedSystems[], recommendedIntegrations[{ connectorId, readiness:'ready'|'likely'|'exploratory',
+      priority, matchedOn[], credentialsConfigured, governance, rationale }],
+    roadmap[{ order, phase, connectorId, action, blockedBy }], summary },
   scholarData?:  { results[], verifiedCaseCitations, expertPublicationCount },  // legal only
   reportGovernance: {
      reliability: { score, grade, ... },                 // 0-100 + A–F
@@ -86,8 +101,8 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
   }
 }
 ```
-**Integrator note:** provenance-tagged fields are `{ value, provenance }` — read
-`.value` for display. A helper `normalizeScourerForDisplay()` unwraps them.
+**Integrator note:** inferred fields (e.g. AI-readiness dimension scores) are
+provenance-tagged `{ value, provenance }` — read `.value` for display.
 
 ### 5.2 Task model (orchestration spine — `tasks` table / task tools)
 States: `proposed → negotiating → pending_approval → approved → executing →
@@ -134,11 +149,10 @@ HEALTHCHECK on `/health`). **Cloud caveats:** background loops need CPU-always-o
 state won't survive); Chromium needs 2-4 GB; HIPAA vertical needs a BAA.
 
 > [!WARNING]
-> Do not deprecate the **Smart Simulator Fallback** in `lib/scraper.js` /
-> `lib/scourer.js`: with no/invalid `FIRECRAWL_API_KEY` the engine must still
-> return vertical-accurate mock data so the UI never blanks. Likewise the Scholar
-> module falls back to a labeled simulated dataset — never present simulated
-> citations as verified.
+> Do not deprecate the **Smart Simulator Fallback** in `lib/scraper.js`: with
+> no/invalid `FIRECRAWL_API_KEY` the engine must still return vertical-accurate
+> mock data so the UI never blanks. Likewise the Scholar module falls back to a
+> labeled simulated dataset — never present simulated citations as verified.
 
 ## 9. HITL Workforce Transition Model (product framing)
 

@@ -1,17 +1,23 @@
 /**
- * Audit Runner
- * ============
- * Single source of truth for running one full CONVERGENCE-Ai audit pipeline
- * (scrape -> scour -> analyze -> workforce -> Google Scholar for legal). Used by
- * both the synchronous /api/audit endpoint and the automated audit scheduler so
- * the two paths can never drift.
+ * Audit Runner — Systems Evaluation & Integration-Readiness pipeline
+ * ==================================================================
+ * Evaluates a company's technology stack and server/infrastructure environment
+ * to determine which systems can/should be connected to the CONVERGENCE-Ai
+ * governed MCP layer, and returns a provenance-scored report. Used by both the
+ * synchronous /api/audit endpoint and the automated audit scheduler so the two
+ * paths can never drift.
+ *
+ * NOTE: the public pre-sales *prospecting* layer (public-records scouring,
+ * prospect scouting, outreach/pitch generation) has been removed from
+ * CONVERGENCE-Ai — that is a sales-enablement function and lives in ASES
+ * (repo aiworxmiths-cdqe). See docs/AUDITOR_REFRAME.md.
  */
 
 const { scrapeDomain } = require('./scraper');
 const { analyzeFootprint } = require('./analyzer');
 const { analyzeWorkforce } = require('./workforce');
-const { scourBusiness } = require('./scourer');
 const { searchScholar } = require('./scholar');
+const { matchIntegrations } = require('./integration_matcher');
 
 // withTimeout / isLegalVertical are shared with the HTTP gateway — see lib/util.js.
 const { withTimeout, isLegalVertical } = require('./util');
@@ -61,40 +67,27 @@ async function runAuditPipeline(domain, { apiKey, vertical } = {}) {
     ));
   }
 
+  // teamNames feeds the legal-vertical Scholar cross-reference below.
   const teamNames = (scrapedData.rawTeamData || []).map(m => m.name);
-  // Scour degrades gracefully: a public-records search failure (e.g. an expired
-  // Firecrawl key) must not nuke an audit whose scrape already succeeded.
-  let scourerData;
-  try {
-    scourerData = await scourBusiness(
-      scrapedData.domain, scrapedData.businessName, scrapedData.vertical, activeApiKey, teamNames
-    );
-    auditLogger.log('scourer', 'Scourer completed', 'success');
-  } catch (scourErr) {
-    scourerData = { degraded: true, error: scourErr.message };
-    auditLogger.log('scourer', 'Scourer failed (degraded)', 'failure', { error: scourErr.message });
-  }
-
-  // Register any scourer fields that already carry provenance (graceful when
-  // the underlying module is not yet provenance-tagged — those fields are skipped).
-  if (scourerData) {
-    ['revenueEstimate', 'headcountEstimate', 'growthRate', 'publicMentions'].forEach(field => {
-      if (scourerData[field] && scourerData[field].provenance) auditLogger.registerDataPoint(scourerData[field]);
-    });
-    if (scourerData.filings) {
-      ['state', 'federal', 'regulatoryCompliance'].forEach(field => {
-        if (scourerData.filings[field] && scourerData.filings[field].provenance) auditLogger.registerDataPoint(scourerData.filings[field]);
-      });
-    }
-    if (scourerData.registryVerification && scourerData.registryVerification.provenance) {
-      auditLogger.registerDataPoint(scourerData.registryVerification);
-    }
-  }
 
   const analyzerData = analyzeFootprint(scrapedData);
   const workforceData = analyzeWorkforce(scrapedData);
   auditLogger.log('analyzer', 'SWOT + readiness analysis completed', 'success', {
     overallScore: analyzerData.metrics?.overallHealth
+  });
+
+  // Integration-readiness: map the detected systems to CONVERGENCE-Ai connectors
+  // and produce a prioritized MCP/API integration roadmap (the core deliverable
+  // of the reframed systems-evaluation Auditor — see docs/AUDITOR_REFRAME.md).
+  const integrationReadiness = matchIntegrations({
+    technologies: scrapedData.technologies,
+    vertical: scrapedData.vertical,
+    businessName: scrapedData.businessName,
+    domain: scrapedData.domain
+  });
+  auditLogger.log('integration_matcher', 'Integration-readiness roadmap generated', 'success', {
+    detected: integrationReadiness.summary.detectedSystems,
+    recommended: integrationReadiness.summary.recommended
   });
 
   // Tag AI-readiness dimensions (inferred) + attach SMB peer percentile context.
@@ -155,9 +148,9 @@ async function runAuditPipeline(domain, { apiKey, vertical } = {}) {
       scrapedPages: scrapedData.scrapedPages,
       firewallAudit: scrapedData.firewallAudit
     },
-    scourerData,
     analyzerData,
     workforceData,
+    integrationReadiness,
     ...(scholarData ? { scholarData } : {}),
     reportGovernance: { reliability, distribution, methodology, disclaimer }
   };

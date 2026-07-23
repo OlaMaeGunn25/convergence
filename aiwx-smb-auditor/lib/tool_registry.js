@@ -21,8 +21,13 @@ const { negotiate } = require('./negotiation');
 const { TaskModel } = require('./task_model');
 const { isSupabaseConfigured, insertRow } = require('./supabase');
 const { buildGovernanceReport } = require('./governance_report');
+const catalog = require('./connectors/catalog');
+const { matchIntegrations } = require('./integration_matcher');
+const { ConnectionRegistry } = require('./connection_registry');
+const clio = require('./connectors/clio');
 
 const taskModel = new TaskModel();
+const connectionRegistry = new ConnectionRegistry();
 
 const registry = new Map();
 
@@ -175,13 +180,18 @@ register({
 
 register({
   name: 'export_crm',
-  title: 'Export prospect to CRM',
-  description: 'Write a prospect record to Supabase (inbound_leads). Requires Supabase configured.',
-  inputSchema: z.object({ prospect: z.object({ domain: z.string() }).passthrough() }),
+  title: 'Export integration-readiness candidate to CRM',
+  description: 'Record a company the Auditor evaluated — with its systems inventory and recommended integrations — to Supabase (inbound_leads). NOT sales prospecting. Requires Supabase configured.',
+  // `candidate` is preferred; `prospect` is accepted for backward compatibility.
+  inputSchema: z.object({
+    candidate: z.object({ domain: z.string() }).passthrough().optional(),
+    prospect: z.object({ domain: z.string() }).passthrough().optional()
+  }).refine(v => v.candidate || v.prospect, { message: 'candidate (with a domain) is required.' }),
   annotations: { readOnly: false, openWorld: true },
   handler: async (input) => {
     if (!isSupabaseConfigured()) return { success: false, error: 'Supabase not configured.' };
-    return insertRow('inbound_leads', { raw_payload: input.prospect, status: 'received' });
+    const candidate = input.candidate || input.prospect;
+    return insertRow('inbound_leads', { raw_payload: candidate, status: 'evaluated' });
   }
 });
 
@@ -210,6 +220,104 @@ register({
   inputSchema: z.object({ limit: z.number().int().min(1).max(500).optional(), tenantId: z.string().optional() }),
   annotations: { readOnly: true, openWorld: true },
   handler: (input, ctx) => buildGovernanceReport({ limit: input.limit, tenantId: input.tenantId || ctx.tenantId })
+});
+
+// ── Systems-evaluation / integration capabilities ───────────────────────────
+
+register({
+  name: 'list_connectors',
+  title: 'List available MCP/API connectors',
+  description: 'Discover the connector catalog CONVERGENCE-Ai can wire into the governed MCP layer. Never leaks credential values — only which env keys are expected and whether they are populated.',
+  inputSchema: z.object({ vertical: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => {
+    const items = input.vertical ? catalog.byVertical(input.vertical) : catalog.list();
+    return { connectors: items.map(catalog.publicView) };
+  }
+});
+
+register({
+  name: 'match_integrations',
+  title: 'Match detected systems to connectors + roadmap',
+  description: 'Given a company\'s detected technologies + vertical, return the recommended MCP/API integrations and a prioritized connection roadmap (the systems-evaluation deliverable).',
+  inputSchema: z.object({
+    technologies: z.array(z.object({ name: z.string(), category: z.string().optional() })).optional(),
+    vertical: z.string().optional(),
+    businessName: z.string().optional(),
+    domain: z.string().optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => matchIntegrations({
+    technologies: input.technologies || [],
+    vertical: input.vertical || '',
+    businessName: input.businessName || '',
+    domain: input.domain || ''
+  })
+});
+
+register({
+  name: 'get_connection_status',
+  title: 'Connection status of every system',
+  description: 'The live connection state of each catalog connector (not_connected | configuring | connected | error | disconnected) plus whether its credentials are configured. Feeds the floating status component.',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => connectionRegistry.statusBoard({ tenantId: input.tenantId || ctx.tenantId || null })
+    .then(systems => ({ systems, generatedAt: new Date().toISOString() }))
+});
+
+register({
+  name: 'connect_system',
+  title: 'Connect a system to the MCP layer',
+  description: 'Establish (build) a connection for a catalog connector. Governed: establishing an external integration requires human approval. Credentials are NEVER accepted here — the builder only checks env/Secret-Manager keys and reports the auth action needed.',
+  inputSchema: z.object({
+    connectorId: z.string(),
+    tenantId: z.string().optional(),
+    config: z.record(z.any()).optional()
+  }),
+  annotations: { readOnly: false, destructive: false, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => connectionRegistry.build(input.connectorId, {
+    tenantId: input.tenantId || ctx.tenantId || null,
+    actor: ctx.actor || null,
+    config: input.config || {}
+  })
+});
+
+register({
+  name: 'clio_list_matters',
+  title: 'Clio — list matters',
+  description: 'Read open matters from Clio (Legal vertical). Degrades to a clearly-labeled simulated dataset when CLIO_ACCESS_TOKEN is not configured.',
+  inputSchema: z.object({ limit: z.number().int().min(1).max(200).optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  provenance: { returnsProvenance: true, note: 'Rows carry provenance live|simulated.' },
+  handler: (input) => clio.listMatters({ limit: input.limit || 25 })
+});
+
+register({
+  name: 'clio_create_activity',
+  title: 'Clio — log a billable activity',
+  description: 'Create a billable time/expense activity on a Clio matter. DESTRUCTIVE — writes to the practice-management system; requires human approval.',
+  inputSchema: z.object({
+    matterId: z.number().int(),
+    quantity: z.number(),
+    note: z.string().min(1),
+    type: z.enum(['TimeEntry', 'ExpenseEntry']).optional()
+  }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input) => clio.createActivity(input)
+});
+
+register({
+  name: 'clio_record_trust_transaction',
+  title: 'Clio — record a trust (IOLTA) transaction',
+  description: 'Record a client trust-account transaction in Clio. HIGHEST-RISK legal action (money held in trust) — requires human approval and passes the approval through to the connector.',
+  inputSchema: z.object({
+    matterId: z.number().int(),
+    amount: z.number(),
+    kind: z.enum(['deposit', 'withdrawal']),
+    memo: z.string().min(1)
+  }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => clio.recordTrustTransaction(Object.assign({}, input, { approved: ctx.approved === true }))
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

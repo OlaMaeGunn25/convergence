@@ -13,10 +13,15 @@ const winston = require('winston');
 const { scrapeDomain } = require('./lib/scraper');
 const { analyzeFootprint } = require('./lib/analyzer');
 const { analyzeWorkforce } = require('./lib/workforce');
-const { scourBusiness } = require('./lib/scourer');
 const { getGA4Metrics } = require('./lib/ga');
-const { scoutLocalProspects } = require('./lib/scouting');
 const { generateAgentReply } = require('./lib/conversational_agent');
+const { matchIntegrations } = require('./lib/integration_matcher');
+const connectorCatalog = require('./lib/connectors/catalog');
+const { ConnectionRegistry } = require('./lib/connection_registry');
+const clioConnector = require('./lib/connectors/clio');
+const { TaskModel: ConnTaskModel } = require('./lib/task_model');
+const connectionRegistry = new ConnectionRegistry();
+const connTaskModel = new ConnTaskModel();
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
 const { authenticate, isAuthConfigured } = require('./lib/auth');
@@ -169,14 +174,6 @@ const auditLimiter = rateLimit({
   message: { success: false, error: 'Too many requests. Please wait 60 seconds.' }
 });
 
-const scoutLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Scouting rate limit reached. Please wait.' }
-});
-
 const publishLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 6,
@@ -210,9 +207,9 @@ const scholarLimiter = rateLimit({
 const PROTECTED_MUTATIONS = [
   '/api/audit',
   '/api/publish-post',
-  '/api/outreach-send',
-  '/api/run-prospecting',
-  '/api/scout-prospects',
+  // Connection builder + status board (GET+POST both gated; establishing an
+  // external integration is a governed, audited action).
+  '/api/connections',
   '/api/schedule-campaign',
   '/api/toggle-scheduler',
   '/api/update-post',
@@ -235,19 +232,19 @@ const PROTECTED_READS = [
   // Returns live campaign performance and local visitor telemetry.
   '/api/analytics',
   // Exposes the scheduled-post queue and its contents.
-  '/api/scheduler-status'
+  '/api/scheduler-status',
+  // Exposes the connector catalog + credential-configured flags.
+  '/api/connectors'
 ];
 app.use(PROTECTED_MUTATIONS, authenticate);
 app.use(PROTECTED_READS, authenticate);
 app.use('/api/audit', auditOnFinish('audit.run'));
 app.use('/api/publish-post', auditOnFinish('post.publish'));
-app.use('/api/outreach-send', auditOnFinish('outreach.send'));
-app.use('/api/run-prospecting', auditOnFinish('prospecting.run'));
 app.use('/api/export-crm', auditOnFinish('crm.export'));
+app.use('/api/connections', auditOnFinish('connection.build'));
 
 app.use('/api/', globalApiLimiter);
 app.use('/api/audit', auditLimiter);
-app.use('/api/scout-prospects', scoutLimiter);
 app.use('/api/scholar/search', scholarLimiter);
 
 // ── Internal Tool Registry (Phase 2) ──────────────────────────────────────────
@@ -277,8 +274,71 @@ app.post('/api/tools/:name', async (req, res) => {
   }
 });
 app.use('/api/publish-post', publishLimiter);
-app.use('/api/outreach-send', publishLimiter);
-app.use('/api/run-prospecting', publishLimiter);
+
+// ── Connections: connector catalog, connection builder + status board ─────────
+// Discover the connector catalog CONVERGENCE-Ai can wire into the MCP layer.
+app.get('/api/connectors', (req, res) => {
+  const items = req.query.vertical ? connectorCatalog.byVertical(req.query.vertical) : connectorCatalog.list();
+  res.json({ success: true, connectors: items.map(connectorCatalog.publicView) });
+});
+// Live connection status board (feeds the floating status component).
+app.get('/api/connections', async (req, res) => {
+  try {
+    const systems = await connectionRegistry.statusBoard({ tenantId: req.query.tenantId || null });
+    res.json({ success: true, systems, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load connections.' });
+  }
+});
+// Build (establish) a connection — approval-gated; credentials never accepted here.
+app.post('/api/connections', async (req, res) => {
+  try {
+    const { connectorId, tenantId, config, approved } = req.body || {};
+    if (!connectorId || !connectorCatalog.has(connectorId)) {
+      return res.status(400).json({ success: false, error: 'A valid connectorId is required.' });
+    }
+    if (approved !== true) {
+      return res.status(202).json({ success: false, status: 'requires_approval', connectorId,
+        message: 'Connecting an external system requires human approval. Re-POST with approved:true.' });
+    }
+    const result = await connectionRegistry.build(connectorId, { tenantId: tenantId || null, actor: req.actor || null, config: config || {} });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to build connection.' });
+  }
+});
+app.post('/api/connections/disconnect', async (req, res) => {
+  try {
+    const { connectorId, tenantId } = req.body || {};
+    if (!connectorId || !connectorCatalog.has(connectorId)) {
+      return res.status(400).json({ success: false, error: 'A valid connectorId is required.' });
+    }
+    const connection = await connectionRegistry.disconnect(connectorId, { tenantId: tenantId || null, actor: req.actor || null });
+    res.json({ success: true, connection });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to disconnect.' });
+  }
+});
+// Clio webhook -> governed task (HMAC-verified when CLIO_WEBHOOK_SECRET is set).
+app.post('/api/clio/webhook', async (req, res) => {
+  try {
+    const secret = process.env.CLIO_WEBHOOK_SECRET;
+    if (secret) {
+      const crypto = require('crypto');
+      const sig = req.get('X-Hook-Signature') || req.get('X-Clio-Signature') || '';
+      const expected = crypto.createHmac('sha256', secret).update(JSON.stringify(req.body || {})).digest('hex');
+      const a = Buffer.from(sig), b = Buffer.from(expected);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        return res.status(401).json({ success: false, error: 'Invalid webhook signature.' });
+      }
+    }
+    const descriptor = clioConnector.mapWebhookToTask(req.body || {});
+    const task = await connTaskModel.create(descriptor);
+    res.json({ success: true, task });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Webhook processing failed.' });
+  }
+});
 
 // Configure Swagger JSDoc and Swagger UI spec
 const swaggerOptions = {
@@ -603,21 +663,24 @@ app.post('/api/audit', async (req, res) => {
     
     const scrapedData = await withTimeout(scrapeDomain(domain, activeApiKey), 30000);
     
-    // 2. Scour the web for regulatory filings and financial data
+    // 2. teamNames feeds the legal-vertical Scholar cross-reference below.
+    //    (The public pre-sales scour was removed — that is an ASES sales
+    //    function, not systems evaluation. See docs/AUDITOR_REFRAME.md.)
     const teamNames = (scrapedData.rawTeamData || []).map(m => m.name);
-    const scourerData = await scourBusiness(
-      scrapedData.domain, 
-      scrapedData.businessName, 
-      scrapedData.vertical, 
-      activeApiKey,
-      teamNames
-    );
 
     // 3. Perform SWOT and Technical Infrastructure Analysis
     const analyzerData = analyzeFootprint(scrapedData);
     
     // 4. Formulate Workforce AI-HITL Upskilling blueprint
     const workforceData = analyzeWorkforce(scrapedData);
+
+    // 4a. Integration-readiness: detected systems -> connectors -> MCP/API roadmap.
+    const integrationReadiness = matchIntegrations({
+      technologies: scrapedData.technologies,
+      vertical: scrapedData.vertical,
+      businessName: scrapedData.businessName,
+      domain: scrapedData.domain
+    });
 
     // 4b. Legal Services vertical: cross-reference personnel against Google
     // Scholar for case-law precedents and expert-witness publication vetting.
@@ -658,9 +721,9 @@ app.post('/api/audit', async (req, res) => {
         scrapedPages: scrapedData.scrapedPages,
         firewallAudit: scrapedData.firewallAudit
       },
-      scourerData,
       analyzerData,
       workforceData,
+      integrationReadiness,
       // Present only for Legal Services audits
       ...(scholarData ? { scholarData } : {})
     };
@@ -886,67 +949,9 @@ setInterval(() => {
 const ALERTS_FILE = path.join(SOCIAL_AGENT_DIR, 'config', 'activity_alerts.json');
 const alertsStore = new AlertsStore(ALERTS_FILE, path.resolve(__dirname, 'logs'));
 
-// Real daily prospecting agent scheduler (runs between 12:00 PM and 12:30 PM EST)
-let lastProspectRunDate = null;
-let prospectingSchedulerEnabled = false; // Paused per user request
-
-setInterval(() => {
-  if (!prospectingSchedulerEnabled) return;
-  const now = new Date();
-  
-  // Convert current time to Eastern Time (EST/EDT)
-  const estString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
-  const estDate = new Date(estString);
-  const estHour = estDate.getHours();
-  const estMinute = estDate.getMinutes();
-  const todayDateStr = estDate.toISOString().split('T')[0];
-
-  // Check if we are inside the 12:00 PM - 12:30 PM EST window
-  const isTimeWindow = (estHour === 12 && estMinute >= 0 && estMinute <= 30);
-
-  if (isTimeWindow && lastProspectRunDate !== todayDateStr) {
-    console.log(`[Prospecting Scheduler] Starting daily outbound prospecting run at ${estHour}:${estMinute} EST...`);
-    
-    // Rotate target verticals daily
-    const verticals = ['Healthcare', 'Law', 'SaaS', 'Retail', 'Contractors', 'Dentists'];
-    const dayOfYear = Math.floor((estDate - new Date(estDate.getFullYear(), 0, 0)) / 86400000);
-    const targetVertical = verticals[dayOfYear % verticals.length];
-    
-    console.log(`[Prospecting Scheduler] Selected Vertical: ${targetVertical}`);
-
-    execFile('node', ['prospecting_agent.js', '--platform', 'linkedin', '--vertical', targetVertical], { cwd: SOCIAL_AGENT_DIR }, (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`[-] Prospecting run failed: ${error.message}`);
-        return;
-      }
-      logger.info(`[+] Prospecting run completed successfully:\n${stdout}`);
-      lastProspectRunDate = todayDateStr; // Set lock for today
-    });
-  }
-}, 5 * 60 * 1000); // Check every 5 minutes
-
-// API Endpoint to manually trigger the prospecting agent
-app.post('/api/run-prospecting', (req, res) => {
-  const { platform, vertical, dryRun } = req.body;
-  const targetPlatform = platform || 'linkedin';
-  const targetVertical = vertical || 'Healthcare';
-  const isDryRun = dryRun !== false; // Default to dry-run safety
-  
-  console.log(`[API Prospecting] Manual trigger received. Platform: ${targetPlatform}, Vertical: ${targetVertical}, Dry-Run: ${isDryRun}`);
-
-  // execFile with an args array — request values are never interpolated into a shell string
-  const prospectArgs = ['prospecting_agent.js', '--platform', String(targetPlatform), '--vertical', String(targetVertical)];
-  if (isDryRun) prospectArgs.push('--dry-run');
-
-  execFile('node', prospectArgs, { cwd: SOCIAL_AGENT_DIR }, (error, stdout, stderr) => {
-    if (error) {
-      logger.error(`[-] Manual prospecting failed: ${error.message}`);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    logger.info(`[+] Manual prospecting completed successfully:\n${stdout}`);
-    res.json({ success: true, output: stdout });
-  });
-});
+// NOTE: The outbound prospecting scheduler and /api/run-prospecting endpoint were
+// removed — automated outbound prospecting is an ASES sales-enablement function,
+// not part of CONVERGENCE-Ai systems evaluation. See docs/AUDITOR_REFRAME.md.
 
 // API Endpoints for Activity Alerts
 app.get('/api/activity-alerts', async (req, res) => {
@@ -1550,116 +1555,12 @@ Manual workflows slow down modern ${vertical}. In this article, we explain how d
 });
 
 // =================================================================
-// PROSPECT SCOUTING & OUTREACH API ENDPOINTS
+// NOTE: Prospect scouting (/api/scout-prospects) and outreach sending
+// (/api/outreach-send + the prospects_outreach.json registry) were removed —
+// they are ASES sales-enablement functions, not CONVERGENCE-Ai systems
+// evaluation. See docs/AUDITOR_REFRAME.md. The /api/export-crm endpoint below
+// is retained but reframed to export an integration-readiness candidate.
 // =================================================================
-
-app.post('/api/scout-prospects', async (req, res) => {
-  const { niche, location, apiKey } = req.body;
-  if (!niche || !location) {
-    return res.status(400).json({ success: false, error: 'Niche and Location are required.' });
-  }
-
-  const activeApiKey = apiKey || process.env.FIRECRAWL_API_KEY;
-  if (!activeApiKey) {
-    return res.status(400).json({ success: false, error: 'Firecrawl API key is required.' });
-  }
-
-  try {
-    console.log(`[Server] Scouting prospects for Niche: "${niche}" in "${location}"`);
-    const prospects = await scoutLocalProspects(niche, location, activeApiKey);
-    res.json({ success: true, prospects });
-  } catch (err) {
-    console.error('[Server] Scouting error:', err);
-    res.status(500).json({ success: false, error: err.message || 'Scouting failed.' });
-  }
-});
-
-const OUTREACH_REGISTRY = path.join(SOCIAL_AGENT_DIR, 'config', 'prospects_outreach.json');
-
-function loadOutreachRegistry() {
-  if (!fs.existsSync(OUTREACH_REGISTRY)) {
-    return [];
-  }
-  try {
-    return JSON.parse(fs.readFileSync(OUTREACH_REGISTRY, 'utf8'));
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveOutreachRegistry(registry) {
-  fs.writeFileSync(OUTREACH_REGISTRY, JSON.stringify(registry, null, 2));
-}
-
-app.post('/api/outreach-send', (req, res) => {
-  const { domain, platform, text, image } = req.body;
-  if (!domain || !platform || !text) {
-    return res.status(400).json({ success: false, error: 'Domain, platform, and text are required.' });
-  }
-
-  console.log(`[Server] Triggering outreach for ${domain} on ${platform}...`);
-  const agentDir = SOCIAL_AGENT_DIR;
-  const args = ['publish_api.js', '--platform', platform.toLowerCase(), '--text', text];
-  if (image) {
-    args.push('--image', image);
-  }
-
-  const { execFile } = require('child_process');
-  execFile('node', args, { cwd: agentDir }, (error, stdout, stderr) => {
-    console.log(`[Server] outreach publish_api stdout:\n${stdout}`);
-    if (stderr) console.error(`[Server] outreach publish_api stderr:\n${stderr}`);
-
-    let result = { success: false, log: stdout };
-    const lines = stdout.split('\n');
-    for (let line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (parsed.hasOwnProperty('success')) {
-            result = { ...parsed, log: stdout };
-            break;
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (error && !result.success) {
-      return res.status(500).json({
-        success: false,
-        error: error.message || 'Outreach campaign execution failed.',
-        log: stdout
-      });
-    }
-
-    // Register this outreach in local database
-    const registry = loadOutreachRegistry();
-    const existingIdx = registry.findIndex(p => p.domain === domain);
-    const newOutreach = {
-      platform,
-      text,
-      timestamp: new Date().toISOString(),
-      status: 'SENT'
-    };
-
-    if (existingIdx !== -1) {
-      if (!registry[existingIdx].outreaches) registry[existingIdx].outreaches = [];
-      registry[existingIdx].outreaches.push(newOutreach);
-      registry[existingIdx].status = 'SENT';
-      registry[existingIdx].lastUpdated = new Date().toISOString();
-    } else {
-      registry.push({
-        domain,
-        status: 'SENT',
-        lastUpdated: new Date().toISOString(),
-        outreaches: [newOutreach]
-      });
-    }
-    saveOutreachRegistry(registry);
-
-    res.json(result);
-  });
-});
 
 // Supabase credentials are configured STRICTLY through environment variables
 // (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY). The previous behaviour — accepting
@@ -1682,10 +1583,15 @@ app.post('/api/supabase-credentials', (req, res) => {
   });
 });
 
+// Export an integration-readiness CANDIDATE to Supabase. This is NOT sales
+// prospecting — it records a company the Auditor has evaluated, along with its
+// systems inventory and recommended integrations, so a human can decide whether
+// to connect those systems to the governed MCP layer. See docs/AUDITOR_REFRAME.md.
 app.post('/api/export-crm', async (req, res) => {
-  const { prospect } = req.body;
-  if (!prospect || !prospect.domain) {
-    return res.status(400).json({ success: false, error: 'Prospect data is required.' });
+  // `candidate` is the preferred field; `prospect` is accepted for backward compat.
+  const candidate = req.body.candidate || req.body.prospect;
+  if (!candidate || !candidate.domain) {
+    return res.status(400).json({ success: false, error: 'Integration candidate data (with a domain) is required.' });
   }
 
   if (!isSupabaseConfigured()) {
@@ -1696,52 +1602,52 @@ app.post('/api/export-crm', async (req, res) => {
   }
 
   try {
-    console.log(`[Server] Syncing prospect ${prospect.domain} to Supabase Sales Command Center...`);
+    console.log(`[Server] Recording integration-readiness candidate ${candidate.domain} to Supabase...`);
 
     // Pooled, retry-capable Supabase REST writes (lib/supabase.js)
     const postTable = (table, payload) => insertRow(table, payload);
 
-    // 1. Insert into inbound_leads
     const leadPayload = {
-      ghl_contact_id: `outreach_${prospect.domain.replace(/\./g, '_')}_${Date.now()}`,
-      raw_payload: prospect,
+      ghl_contact_id: `candidate_${candidate.domain.replace(/\./g, '_')}_${Date.now()}`,
+      raw_payload: candidate,
       enrichment: {
-        domain: prospect.domain,
-        businessName: prospect.businessName,
-        vertical: prospect.vertical,
-        gaps: prospect.gaps,
-        personnel: prospect.personnel,
-        scoured: prospect.scoured,
-        workforce: prospect.workforce
+        domain: candidate.domain,
+        businessName: candidate.businessName,
+        vertical: candidate.vertical,
+        systemsInventory: candidate.systemsInventory || candidate.technologies,
+        integrationReadiness: candidate.integrationReadiness,
+        recommendedIntegrations: candidate.recommendedIntegrations,
+        personnel: candidate.personnel,
+        workforce: candidate.workforce
       },
-      status: 'received'
+      status: 'evaluated'
     };
 
-    console.log('[Server] Inserting inbound lead...');
+    console.log('[Server] Inserting integration-readiness candidate...');
     const leadResult = await postTable('inbound_leads', leadPayload);
-    
-    // 2. Insert corresponding discovery record
+
+    // Insert corresponding evaluation record.
     const discoveryPayload = {
       consultant_id: '00000000-0000-0000-0000-000000000000', // System default/service placeholder
-      consultant_profile_id: 'social_media_agent',
-      status: 'qualified',
+      consultant_profile_id: 'convergence_auditor',
+      status: 'evaluated',
       data: {
-        company: prospect.businessName,
-        domain: prospect.domain,
+        company: candidate.businessName,
+        domain: candidate.domain,
         business_context: {
-          lead_name: prospect.personnel?.[0]?.name || 'Owner',
-          vertical: prospect.vertical
+          lead_name: candidate.personnel?.[0]?.name || 'Owner',
+          vertical: candidate.vertical
         },
-        research: prospect
+        evaluation: candidate
       },
-      primary_bottleneck: prospect.gaps?.[0]?.title || 'Manual Administrative Process Drag',
-      recommended_service: prospect.gaps?.[0]?.service || 'AiWorXmiths Custom Integrations'
+      primary_bottleneck: candidate.recommendedIntegrations?.[0]?.system || 'Unassessed systems environment',
+      recommended_service: candidate.recommendedIntegrations?.[0]?.integration || 'AiWorXmiths MCP Integration'
     };
 
-    console.log('[Server] Inserting discovery report...');
+    console.log('[Server] Inserting integration evaluation record...');
     await postTable('discoveries', discoveryPayload);
 
-    res.json({ success: true, lead: leadResult });
+    res.json({ success: true, candidate: leadResult });
   } catch (err) {
     console.error('[Server] Export to Supabase failed:', err);
     res.status(500).json({ success: false, error: err.message || 'Supabase write failed.' });

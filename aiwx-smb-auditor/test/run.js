@@ -6,7 +6,6 @@ process.env.NODE_ENV = 'test';
 const { cleanDomain, scrapeDomain, extractNamesFromText } = require('../lib/scraper');
 const { analyzeFootprint } = require('../lib/analyzer');
 const { analyzeWorkforce } = require('../lib/workforce');
-const { scourBusiness, isOlderThanOneYear, filterRecentMentions } = require('../lib/scourer');
 const { searchScholar, isScholarConfigured, getSimulatedResults } = require('../lib/scholar');
 
 let passedTests = 0;
@@ -110,18 +109,13 @@ async function runTests() {
     assert(false, `Workforce analyzer crashed: ${e.message}`);
   }
 
-  // --- Test Set 4: WAF / Firewall & Deep Scouring Engines ---
+  // --- Test Set 4: WAF / Firewall, Scraper Taxonomy & Name Extraction ---
+  // NOTE: The public pre-sales scourer (public-records revenue/filings/mentions)
+  // and sales-pitch generation were removed — ASES sales functions, not systems
+  // evaluation. See docs/AUDITOR_REFRAME.md. The systems-inventory (scraper/WAF),
+  // vertical taxonomy, and personnel cross-reference tests remain.
   try {
-    // A. Validate Scourer simulated outputs
-    const scoured = await scourBusiness('test-vintage.com', 'Test Vintage', 'E-Commerce & Retail', null);
-    assert(scoured.revenueEstimate.value === '$1,850,000', 'Scourer infers vertical-correct estimated revenue');
-    assert(scoured.headcountEstimate.value === '12 employees', 'Scourer infers vertical-correct headcount');
-    assert(scoured.filings.state.value.agency === 'California Secretary of State', 'Scourer maps correct state filing agency');
-    assert(scoured.filings.state.value.status === 'Active / Good Standing', 'Scourer maps good filing standing');
-    assert(scoured.filings.federal.value.samGovStatus === 'Not Registered (B2C direct retail)', 'Scourer maps correct federal SAM status');
-    assert(scoured.publicMentions.value.length === 2, 'Scourer maps correct number of news mentions');
-
-    // B. Validate live scraper wrapper additions
+    // B. Validate live scraper wrapper additions (systems + WAF inventory)
     const crawled = await scrapeDomain('apex-tech.com', null);
     assert(crawled.firewallAudit !== undefined, 'Crawler return object includes firewallAudit block');
     assert(crawled.firewallAudit.wafDetected === 'AWS WAF Shield', 'Crawler correctly detects mock vertical WAF');
@@ -130,34 +124,6 @@ async function runTests() {
     const greentechData = await scrapeDomain('smartoptimalsolutions.com', null);
     assert(greentechData.vertical === 'Sustainable Infrastructure & Green Tech', 'Smart Optimal Solutions domain maps to Sustainable Infrastructure & Green Tech vertical');
     assert(greentechData.businessName === 'Smart Optimal Solutions', 'Business name derived as Smart Optimal Solutions');
-
-    const greentechScoured = await scourBusiness(greentechData.domain, greentechData.businessName, greentechData.vertical, null);
-    assert(greentechScoured.filings.state.value.agency.includes('Washington') && greentechScoured.filings.state.value.status.includes('MBE Certified'), 'Scourer dynamically infers MBE certified Washington state filings');
-    assert(greentechScoured.filings.federal.value.samGovStatus === 'Active Registration (CAGE Code: 9ZG28)', 'Scourer resolves active federal CAGE registration');
-
-    const greentechAnalysis = analyzeFootprint(greentechData);
-    const iotPitch = greentechAnalysis.pitchOpportunities.find(p => p.gapTitle.includes('Lack of Interactive Clean Energy ROI'));
-    assert(iotPitch !== undefined, 'SWOT analyzer produces custom Interactive ROI payback configurator sales pitches');
-    assert(iotPitch.pricingProposal.includes('$4,500'), 'Interactive payback configurator pricing proposal is correctly structured');
-
-    // D. Validate Date-filtering helpers
-    assert(isOlderThanOneYear('August 2024') === true, 'isOlderThanOneYear flags date from August 2024 as old');
-    assert(isOlderThanOneYear('February 2026') === false, 'isOlderThanOneYear flags date from February 2026 as recent');
-    assert(isOlderThanOneYear('Recent Scrape') === false, 'isOlderThanOneYear flags Recent Scrape as recent');
-
-    const testMentions = [
-      { title: 'Recent news', date: 'February 2026' },
-      { title: 'Old news', date: 'August 2024' }
-    ];
-    const filtered = filterRecentMentions(testMentions);
-    assert(filtered.length === 1 && filtered[0].title === 'Recent news', 'filterRecentMentions filters out outdated mentions when recent ones are present');
-
-    const onlyOldMentions = [
-      { title: 'Old news 1', date: 'August 2024' },
-      { title: 'Old news 2', date: 'December 2024' }
-    ];
-    const kept = filterRecentMentions(onlyOldMentions);
-    assert(kept.length === 0, 'filterRecentMentions strictly filters out all outdated mentions and returns an empty list');
 
     // E. Validate Name Extraction and Cross-Referencing
     const sampleWebsiteHtml = `
@@ -176,12 +142,8 @@ async function runTests() {
     assert(extracted.includes('John Doe'), 'extractNamesFromText should detect John Doe from CEO role pattern');
     assert(extracted.includes('Jane Smith'), 'extractNamesFromText should detect Jane Smith from Founder role pattern');
 
-    // Test that scourBusiness builds correct query using team names
-    const scouredWithNames = await scourBusiness('lobolaw.com', 'Lobo Law', 'Professional Services', null, ['Adrian Lobo', 'Sarah Jenkins']);
-    assert(scouredWithNames.publicMentions !== undefined, 'scourBusiness returns public mentions with team names');
-
   } catch (e) {
-    assert(false, `Scouring, Green Tech, WAF & Name cross-reference tests crashed: ${e.message}`);
+    assert(false, `Green Tech, WAF & Name cross-reference tests crashed: ${e.message}`);
   }
 
   // --- Test Set 5: Google Scholar Integration (Legal vertical) ---
@@ -406,7 +368,8 @@ async function runTests() {
     assert(paths.size >= 25, `routes/ exposes the full API surface (found ${paths.size})`);
     const mustHave = [
       'POST /api/audit', 'GET /api/tools', 'POST /api/tools/:name', 'POST /api/negotiate',
-      'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health'
+      'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health',
+      'GET /api/connectors', 'GET /api/connections', 'POST /api/connections'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -538,6 +501,73 @@ async function runTests() {
     try { fsx.unlinkSync(pth.join(auditsDir, 'a.json')); fsx.unlinkSync(pth.join(auditsDir, 'b.json')); fsx.rmdirSync(auditsDir); fsx.unlinkSync(tmFile); } catch (e) {}
   } catch (e) {
     assert(false, `Governance report tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 14: Systems evaluation — connectors, matcher, connections, Clio ---
+  try {
+    const os = require('os');
+    const fsx = require('fs');
+    const pth = require('path');
+    const catalog = require('../lib/connectors/catalog');
+    const { matchIntegrations } = require('../lib/integration_matcher');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const clio = require('../lib/connectors/clio');
+    const reg = require('../lib/tool_registry');
+
+    // A. Catalog integrity + no-secret-leak contract
+    assert(catalog.get('clio') && /Legal/.test(catalog.get('clio').category), 'Catalog contains the Clio connector');
+    const pv = catalog.publicView(catalog.get('stripe'));
+    assert(!('STRIPE_SECRET_KEY' in pv) && Array.isArray(pv.requiredEnvKeys) && pv.requiredEnvKeys.includes('STRIPE_SECRET_KEY'),
+      'publicView never leaks secret values — only the expected env keys');
+    assert(catalog.byVertical('Legal Services').some(c => c.id === 'clio'), 'byVertical surfaces Clio for Legal Services');
+
+    // B. Matcher: detected tech => ready; vertical => likely; universal => exploratory
+    const match = matchIntegrations({ technologies: [{ name: 'Shopify', category: 'E-Commerce' }, { name: 'Stripe', category: 'Payments' }], vertical: 'E-Commerce & Retail', domain: 'shop.com', businessName: 'Shop' });
+    assert(match.recommendedIntegrations.find(r => r.connectorId === 'shopify')?.readiness === 'ready', 'Matcher marks a detected system (Shopify) as ready');
+    assert(match.recommendedIntegrations.some(r => r.connectorId === 'stripe' && r.readiness === 'ready'), 'Matcher marks detected Stripe as ready');
+    assert(match.roadmap[0].phase === 1, 'Roadmap orders ready integrations into phase 1');
+    assert(match.summary.ready >= 2, 'Matcher summary counts the readiness tiers');
+    const legalMatch = matchIntegrations({ technologies: [], vertical: 'Legal Services', businessName: 'Lobo Law', domain: 'lobolaw.com' });
+    assert(legalMatch.recommendedIntegrations.some(r => r.connectorId === 'clio' && r.readiness === 'likely'), 'Matcher surfaces Clio as likely for a legal firm with no detected tech');
+    assert(legalMatch.recommendedIntegrations.some(r => r.readiness === 'exploratory'), 'Matcher includes universal baseline (exploratory) integrations');
+
+    // C. Connection registry (JSON fallback, temp file) — builder + status board
+    const connFile = pth.join(os.tmpdir(), `aiwx_conn_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: connFile });
+    const built = await conns.build('clio', { tenantId: 't1', actor: 'op' });
+    assert(built.connection.status === 'configuring' && built.connection.health === 'pending_credentials', 'Builder puts a credential-less connector into configuring/pending');
+    assert(built.authAction && built.authAction.type === 'oauth2', 'Builder returns the oauth2 auth action needed');
+    const board = await conns.statusBoard({ tenantId: 't1' });
+    assert(board.length === catalog.list().length, 'Status board covers every catalog connector');
+    assert(board.find(b => b.connectorId === 'clio').status === 'configuring', 'Status board reflects the built connection state');
+    assert(board.find(b => b.connectorId === 'hubspot').status === 'not_connected', 'Unbuilt connectors report not_connected');
+    assert((await conns.disconnect('clio', { tenantId: 't1' })).status === 'disconnected', 'Disconnect transitions to disconnected');
+    let refused = false;
+    try { await conns.build('stripe', { tenantId: 't1', config: { STRIPE_SECRET_KEY: 'sk_live_x' } }); } catch (e) { refused = /Refusing credential/.test(e.message); }
+    assert(refused, 'Builder refuses secret-looking config over the API');
+    try { fsx.unlinkSync(connFile); } catch (e) {}
+
+    // D. Clio connector: graceful degradation + trust-account HITL
+    const matters = await clio.listMatters({ limit: 5 });
+    assert(matters.simulated === true && Array.isArray(matters.data), 'Clio listMatters degrades to a labeled simulated dataset without a token');
+    const trustBlocked = await clio.recordTrustTransaction({ matterId: 101, amount: 500, kind: 'deposit', memo: 'retainer' });
+    assert(trustBlocked.requiresApproval === true && trustBlocked.success === false, 'Clio trust transaction refuses without explicit approval (IOLTA)');
+    assert((await clio.recordTrustTransaction({ matterId: 101, amount: 500, kind: 'deposit', memo: 'retainer', approved: true })).success === true, 'Clio trust transaction proceeds once approved');
+    assert(clio.mapWebhookToTask({ event: 'trust.transaction.created', data: {} }).status === 'pending_approval', 'Clio webhook maps a trust event to a pending_approval task');
+    assert(clio.mapWebhookToTask({ event: 'contact.created', data: {} }).status === 'proposed', 'Clio webhook maps a low-risk event to a proposed task');
+
+    // E. Registry tools — discovery, gating, status
+    assert(reg.has('list_connectors') && reg.has('match_integrations') && reg.has('connect_system') && reg.has('get_connection_status'), 'Integration tools are registered');
+    const lc = await reg.invoke('list_connectors', { vertical: 'Legal Services' });
+    assert(lc.ok === true && lc.result.connectors.some(c => c.id === 'clio'), 'list_connectors tool returns the catalog filtered by vertical');
+    const gatedConnect = await reg.invoke('connect_system', { connectorId: 'clio' }, { actor: 'op' });
+    assert(gatedConnect.ok === false && gatedConnect.status === 'requires_approval', 'connect_system is approval-gated by the registry');
+    const approvedConnect = await reg.invoke('connect_system', { connectorId: 'clio' }, { actor: 'op', approved: true });
+    assert(approvedConnect.ok === true && approvedConnect.result.connection, 'connect_system proceeds once approved');
+    const trustGated = await reg.invoke('clio_record_trust_transaction', { matterId: 101, amount: 100, kind: 'deposit', memo: 'x' }, { actor: 'op' });
+    assert(trustGated.ok === false && trustGated.status === 'requires_approval', 'clio_record_trust_transaction is approval-gated');
+  } catch (e) {
+    assert(false, `Systems-evaluation / connections tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

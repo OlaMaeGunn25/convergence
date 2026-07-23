@@ -230,7 +230,8 @@
             <button class="tab-btn active" data-consultant-tab="overview" style="background: transparent; border: none; color: var(--text-primary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid var(--accent-indigo); transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Dossier Overview</button>
             <button class="tab-btn" data-consultant-tab="security" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Tech & Compliance</button>
             <button class="tab-btn" data-consultant-tab="workforce" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Workforce Blueprint</button>
-            <button class="tab-btn" data-consultant-tab="sales" style="background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 700; cursor: pointer; padding: 0.6rem 1.2rem; border-bottom: 3px solid transparent; transition: var(--transition-smooth); font-size: 0.9rem; outline: none;">Sales Proposals</button>
+            <!-- "Sales Proposals" tab removed — ASES sales function, not systems
+                 evaluation. See docs/AUDITOR_REFRAME.md. -->
           </div>
 
           <!-- TAB PANE: DOSSIER OVERVIEW -->
@@ -397,20 +398,10 @@
           </div>
 
           <!-- TAB PANE: SALES PROPOSALS -->
-          <div id="pane-consultant-sales" class="consultant-tab-pane" style="display: none;">
-            <!-- 🎯 Sales Command & Pitch Copy-Paste Center -->
-            <div class="dashboard-card" style="border: 1px solid var(--accent-indigo); background: linear-gradient(180deg, rgba(99, 102, 241, 0.03), transparent);">
-              <h3 style="font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-indigo);">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 17 22 12"></polyline></svg>
-                CONVERGENCE-Ai Sales Command & Proposal Center
-              </h3>
-              <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem;">The engine detected key technical gaps and converted them into high-value sales pitches. Click any pitch card to copy the tailored consultant outreach message to your clipboard.</p>
-              
-              <div id="sales-pitch-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
-                <!-- JS populates copy-paste pitch cards -->
-              </div>
-            </div>
-          </div>
+          <!-- "Sales Proposals" pane (sales command & pitch copy-paste center)
+               removed — ASES sales function, not systems evaluation.
+               See docs/AUDITOR_REFRAME.md. The #sales-pitch-container render loop
+               is now a guarded no-op (pitchOpportunities is always empty). -->
 
         </div>
 
@@ -833,6 +824,13 @@ function initializeAdminConsole() {
       badgeSim.style.border = '1px solid rgba(16, 185, 129, 0.3)';
     }
 
+    // Prospecting scour + sales pitches were removed (ASES functions, not systems
+    // evaluation — see docs/AUDITOR_REFRAME.md). Provide empty defaults so the
+    // legacy render/compliance blocks below no-op safely instead of crashing on
+    // audit responses that no longer carry scourerData / pitchOpportunities.
+    data.scourerData = data.scourerData || { filings: { state: {}, federal: {} }, publicMentions: [] };
+    if (data.analyzerData) data.analyzerData.pitchOpportunities = data.analyzerData.pitchOpportunities || [];
+
     // Top Cards
     const overall = data.analyzerData.metrics.overallHealth;
     document.getElementById('adm-score-sec').textContent = `${overall}/100`;
@@ -849,10 +847,11 @@ function initializeAdminConsole() {
       secLbl.style.color = 'var(--accent-coral)';
     }
 
-    // Scourer details
-    document.getElementById('adm-metric-rev').textContent = data.scourerData.revenueEstimate || 'Under $1M';
-    document.getElementById('adm-metric-growth').textContent = `Growth Rate: ${data.scourerData.growthRate || 'Stable'}`;
-    document.getElementById('adm-metric-team').textContent = data.scourerData.headcountEstimate || 'Under 10 staff';
+    // (Corporate-intelligence scour removed — ASES sales function, not systems
+    //  evaluation. Fields blanked; see docs/AUDITOR_REFRAME.md.)
+    document.getElementById('adm-metric-rev').textContent = '—';
+    document.getElementById('adm-metric-growth').textContent = '';
+    document.getElementById('adm-metric-team').textContent = '—';
 
     // Firewall status
     const wafBadge = document.getElementById('adm-waf-status-badge');
@@ -989,12 +988,12 @@ function initializeAdminConsole() {
       }
     }
 
-    // Render Sales pitch opportunities
+    // Sales-pitch render removed (container deleted; pitchOpportunities is always
+    // empty now). Guarded so the absent container can't crash the render.
     const pitchContainer = document.getElementById('sales-pitch-container');
-    pitchContainer.innerHTML = '';
-    
     const pitches = data.analyzerData.pitchOpportunities || [];
-    pitches.forEach((pitch, index) => {
+    if (pitchContainer) pitchContainer.innerHTML = '';
+    if (pitchContainer) pitches.forEach((pitch, index) => {
       const div = document.createElement('div');
       div.style.background = 'rgba(255, 255, 255, 0.02)';
       div.style.border = '1px solid var(--card-border)';
@@ -1093,6 +1092,11 @@ function initializeAdminConsole() {
    * Styled Client-Side Open XML Microsoft Word (.docx) report exporter
    */
   function exportReportToDocx(data) {
+    // Prospecting scour + sales pitches were removed (ASES functions — see
+    // docs/AUDITOR_REFRAME.md). Empty defaults keep the legacy report template
+    // below from crashing on audit data that no longer carries these fields.
+    data.scourerData = data.scourerData || { filings: { state: {}, federal: {} }, publicMentions: [] };
+    if (data.analyzerData) data.analyzerData.pitchOpportunities = data.analyzerData.pitchOpportunities || [];
     const docHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -1648,21 +1652,15 @@ ${proposedServicesText || '- No gaps identified.'}`;
           }
         }
       },
-      scourerData: {
-        revenueEstimate: estRevenue,
-        growthRate: '+12% YoY',
-        headcountEstimate: estHeadcount,
-        filings: filings,
-        publicMentions: publicMentions
-      },
+      // (scourerData + pitchOpportunities removed from the fallback shape —
+      //  ASES sales functions, not systems evaluation. See docs/AUDITOR_REFRAME.md.)
       analyzerData: {
         metrics: {
           overallHealth: overallHealth,
           techModernization: techModernization,
           securityPosture: securityPosture,
           marketingIntegrations: marketingIntegrations
-        },
-        pitchOpportunities: pitchOpportunities
+        }
       },
       workforceData: {
         summary: {
@@ -1683,5 +1681,7 @@ if (document.readyState === 'loading') {
 }
 
 </script>
+<!-- Floating MCP connection-status component (polls GET /api/connections). -->
+<script src="/connection-status.js" defer></script>
 </body>
 </html>

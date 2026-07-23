@@ -17,7 +17,8 @@ const routers = [
   require('./analytics'),
   require('./alerts'),
   require('./social'),
-  require('./prospecting'),
+  require('./crm'),
+  require('./connections'),
   require('./tools')
 ];
 
