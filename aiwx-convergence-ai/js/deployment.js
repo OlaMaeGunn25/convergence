@@ -14,7 +14,8 @@ const VERTICALS = {
     tech: { name: "SaaS & Tech Startups" },
     professional: { name: "Professional Services" },
     nonprofit: { name: "Non-Profit Organizations" },
-    events: { name: "Event Planning & Management" }
+    events: { name: "Event Planning & Management" },
+    event_rental: { name: "Event Rental & Equipment" }
 };
 
 export function switchTab(tabId, element) {
@@ -129,19 +130,43 @@ export async function deployClient() {
     }
 }
 
-export function testLlmConnection() {
+export async function testLlmConnection() {
     const btn = document.querySelector('button[onclick="testLlmConnection()"]');
     if (!btn) return;
-    
+
+    const provider = document.getElementById('deployLlmProvider')?.value || 'gemini';
+    const model = document.getElementById('deployLlmModel')?.value || '';
+    const apiEndpoint = document.getElementById('deployEndpoint')?.value || 'http://localhost:8080';
+
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Testing Connection...`;
-    
-    setTimeout(() => {
+
+    // REAL round-trip measurement against the gateway's LLM probe (replaces the
+    // former Math.random() placeholder). Reports the server-measured latency when
+    // provided, otherwise the client-observed elapsed time, and fails honestly.
+    const start = performance.now();
+    try {
+        const response = await fetch(`${apiEndpoint}/api/llm/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider, model })
+        });
+        const elapsed = Math.round(performance.now() - start);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Provider probe returned HTTP ${response.status}`);
+        }
+        const data = await response.json().catch(() => ({}));
+        const measured = (data && typeof data.latencyMs === 'number') ? data.latencyMs : elapsed;
+        alert(`Connection Successful!\n\nProvider verified: ${provider}\nModel selected: ${model}\nRoundtrip latency: ${measured}ms (measured)`);
+    } catch (err) {
+        const elapsed = Math.round(performance.now() - start);
+        alert(`Connection Test Failed\n\nProvider: ${provider}\nModel: ${model}\nElapsed: ${elapsed}ms\nError: ${err.message}\n\n(Verify the LLM gateway endpoint and API key.)`);
+    } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
-        alert(`Connection Successful!\n\nProvider verified: ${document.getElementById('deployLlmProvider').value}\nModel selected: ${document.getElementById('deployLlmModel').value}\nRoundtrip latency: ${Math.floor(25 + Math.random() * 30)}ms`);
-    }, 1200);
+    }
 }
 
 export function copyToken() {

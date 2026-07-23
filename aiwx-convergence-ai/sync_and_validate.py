@@ -27,8 +27,7 @@ files_to_check = [
     "app.js",
     "styles.css",
     "setup.sh",
-    "supabase_schema.sql",
-    "hub_chrome.js"
+    "supabase_schema.sql"
 ]
 
 # 1. Inject syncDemoDataState() into lovable_ingest_operations_hub.html if needed
