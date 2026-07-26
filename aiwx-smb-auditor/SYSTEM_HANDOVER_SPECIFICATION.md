@@ -8,8 +8,10 @@
 > If the Auditor's endpoints, schemas, auth, or env change, update this file here
 > and copy it to ASES. Downstream ASES agents integrate against **this** contract.
 
-**Status:** Phase 5 complete · Suite **128/128** · Gateway on **port 3003** ·
-Node **20** · repo `github.com/OlaMaeGunn25/convergence` @ branch `main`.
+**Status:** Agentic Operations Layer complete (roster + governance + on-prem) ·
+Suite **307/307** · **69** governed tools · Gateway on **port 3003** · Node **20** ·
+repo `github.com/OlaMaeGunn25/convergence` @ branch `main`. See
+`docs/AGENTIC_OPERATIONS.md`.
 
 ---
 
@@ -60,7 +62,7 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
 | Method & path | Purpose | Notes |
 |---|---|---|
 | `POST /api/audit` | Systems-evaluation audit (tech/WAF inventory, SWOT, workforce, + Scholar if legal) | Returns the **audit package** (§5). Rate-limited. |
-| `GET  /api/tools` | Discover the governed capability registry | Lists 10 tools + annotations + JSON input schema. |
+| `GET  /api/tools` | Discover the governed capability registry | Lists **69** tools + annotations + JSON input schema. |
 | `POST /api/tools/:name` | Invoke a registry tool | Body `{ input, approved? }`. Destructive tools return **202 requires_approval** unless `approved:true`. |
 | `POST /api/negotiate` | Multi-agent (Proposer/Critic/Arbiter) decision | High-risk verticals escalate to HITL. |
 | `GET  /api/scholar/search` | Google Scholar case-law / expert vetting | `q`, `num`; simulated fallback if no SerpApi key. |
@@ -69,16 +71,44 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
 | `GET  /api/connections` | Live connection status board (per connector) | Feeds the floating status component. `not_connected` \| `configuring` \| `connected` \| `error` \| `disconnected`. |
 | `POST /api/connections` | **Build** a connection for a connector | Approval-gated (**202 requires_approval** unless `approved:true`). Credentials NEVER accepted here — env/Secret-Manager only. |
 | `POST /api/clio/webhook` | Clio webhook → governed task | Public; HMAC-SHA256 verified when `CLIO_WEBHOOK_SECRET` set. High-risk events land `pending_approval`. |
+| `POST /api/install` · `GET /api/install/status` | Install the 13-agent roster for a tenant/vertical; readiness gate | Provision-on-install (INS); complete when every selected system is `agent_ready`. |
+| `GET /api/agents` · `GET /api/agents/telemetry` | Roster states + live event stream | Feed the floating agent monitor (polling). |
+| `GET /api/orchestrator/capabilities` · `GET /api/onboarding/status` | Unified capability model + onboarding readiness | COMP-02 / ONB-02. |
+| `POST /api/chat` · `POST /api/chat/confirm` | HITL primary chat: tree-of-thought + preview → **confirm-before-act** | CHT. Pre-commit checks-and-balances run at confirm. |
+| `POST /api/task-request` | Interpret a typed/voice request → closest executable task | Capability-populated; low confidence → disambiguation. |
+| `GET /api/tasks/:id/trace` · `POST /api/tasks/:id/{correct,cancel}` | Chain-of-custody + HITL course-correct/cancel | TRC-03 / CTL. |
 | `POST /api/audit-queue` / `GET /api/audit-queue` | Enqueue/inspect automated audits | Crash-safe background loop. |
 | `GET  /api/analytics` | Local + GA4 metrics | Modelled figures kept separate from measured GA4. |
 | `GET  /health` | Liveness + config flags | Public; container HEALTHCHECK. |
 
-**Registry tools (via `/api/tools/:name` and MCP) — 17:** `run_audit`,
-`search_scholar`, `negotiate`, `create_task`, `get_task`, `list_tasks`,
-`transition_task`, `export_crm`, `publish_post` (destructive → HITL),
-`get_governance_report`, `list_connectors`, `match_integrations`,
-`get_connection_status`, `connect_system` (→ HITL), `clio_list_matters`,
-`clio_create_activity` (→ HITL), `clio_record_trust_transaction` (→ HITL).
+**Registry tools (via `/api/tools/:name` and MCP) — 69**, in families: audit +
+scholar + tasks; connectors (`list_connectors`, `match_integrations`,
+`connect_system`→HITL, `get_connection_status`); Clio (`clio_*`, trust→HITL);
+**agent roster** (`list_agent_roles`, `provision_roster`, `deploy_agent`→HITL,
+`control_agent`); **HITL identity/attribution** (`onboard_hitl`, `set_hitl_status`,
+`record_attribution`, `get_attribution_trace`); **comprehension** (`evaluate_system`,
+`get_orchestrator_capabilities`, `get_onboarding_status`); **knowledge/practice**
+(`ingest_source`, `search_knowledge_base`, `correlate_task`); **install + Delivery/QA**
+(`install_convergence`, `attest_delivery`, `complete_task`); **telemetry/trace**
+(`emit_telemetry`, `get_task_trace`); **control + autonomy** (`course_correct_task`,
+`cancel_task`, `grant_autonomy`→HITL, `revoke_autonomy`); **task request** (`suggest_tasks`,
+`interpret_task_request`); **chat** (`chat_interpret`, `chat_confirm`); **pre-commit**
+(`precommit_review`); **compliance/reporting** (`regulatory_search`, `validate_compliance`,
+`export_compliance_evidence`); **human companion** (`hr_*`); **platform**
+(`get_deployment_info`, `list_verticals`). See `docs/AGENTIC_OPERATIONS.md`.
+
+### 4.1 Agentic Operations Layer (summary)
+
+A governed team of **13 agents** is provisioned **per tenant, per vertical** (the 14
+verticals): Orchestrator (lead) · Convergence-Ai Configurator · Onboarding · Systems
+Configurator · Knowledge Compilation · Compliance · Operations · Admin-Support ·
+Delivery · Q/A · Monitoring · Reporting · Human Companion (human-care plane).
+Three invariants hold everywhere: **I1** operationally-ready ≠ connected · **I2**
+HITL absolute authority (no agent self-approval; scoped, revocable autonomy grants
+above a trust/PHI/financial compliance floor) · **I3** no untraceable action (every
+prompt + output attributed to an authorized, domain-email HITL). Every action passes
+a **pre-commit checks-and-balances** review (capability + practice/SOP + compliance)
+before the commit boundary. Runs identically **cloud or on-prem** (see §8).
 
 ## 5. Data contracts
 

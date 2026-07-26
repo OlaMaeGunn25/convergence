@@ -1203,6 +1203,36 @@ async function runTests() {
     assert(false, `Deployment mode (DEP) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 28: Per-vertical instantiation matrix (Phase 6, VRT) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const verticals = require('../lib/verticals');
+    const { AgentRegistry } = require('../lib/agent_model');
+    const reg = require('../lib/tool_registry');
+
+    // A. The canonical 14 verticals + compliance overlays
+    assert(verticals.list().length === 14 && verticals.has('event_rental'), 'The 14 business verticals are defined (incl. Event Rental)');
+    assert(verticals.complianceOverlay('legal').includes('IOLTA') && verticals.complianceOverlay('medical').includes('HIPAA'), 'Verticals carry compliance overlays (VRT-02)');
+
+    // B. The full roster instantiates per vertical for ALL 14 (VRT-01)
+    const af = pth.join(os.tmpdir(), `aiwx_vrt_${Date.now()}.json`);
+    const agents = new AgentRegistry({ file: af });
+    let allProvisioned = true;
+    for (const v of verticals.list()) {
+      const team = await agents.provisionRoster({ tenantId: `vrt-${v.id}`, vertical: v.id });
+      if (team.length !== 13 || !team.every(a => a.vertical === v.id)) allProvisioned = false;
+    }
+    assert(allProvisioned, 'The 13-agent roster instantiates, scoped to the vertical, for all 14 verticals');
+    try { fsx.unlinkSync(af); } catch (e) {}
+
+    // C. Registry tool
+    assert(reg.has('list_verticals'), 'list_verticals tool is registered');
+    const lv = await reg.invoke('list_verticals', {});
+    assert(lv.ok && lv.result.verticals.length === 14, 'list_verticals returns the 14 verticals');
+  } catch (e) {
+    assert(false, `Per-vertical matrix (Phase 6) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

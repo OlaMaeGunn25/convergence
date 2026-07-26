@@ -43,6 +43,7 @@ const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
 const { deploymentInfo } = require('./deployment');
+const verticals = require('./verticals');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -957,6 +958,15 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: () => deploymentInfo()
+});
+
+register({
+  name: 'list_verticals',
+  title: 'List the 14 business verticals + compliance overlays',
+  description: 'The 14 verticals the agentic layer instantiates per tenant (VRT-01), each with its compliance overlay constraining destructive actions (VRT-02).',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => ({ verticals: verticals.list() })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };
