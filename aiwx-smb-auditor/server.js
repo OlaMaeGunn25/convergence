@@ -24,6 +24,7 @@ const { Installation } = require('./lib/installation');
 const { AgentRegistry } = require('./lib/agent_model');
 const { AttributionLog } = require('./lib/attribution');
 const { TelemetryStream } = require('./lib/agent_telemetry');
+const { ChatSession } = require('./lib/hitl_chat');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
@@ -32,6 +33,7 @@ const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
 const telemetrySvc = new TelemetryStream();
 const connTaskModel = new ConnTaskModel();
+const chatSessionSvc = new ChatSession({ connectionRegistry, taskModel: connTaskModel, attributionLog: attributionLogSvc });
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
 const { authenticate, isAuthConfigured } = require('./lib/auth');
@@ -224,6 +226,8 @@ const PROTECTED_MUTATIONS = [
   '/api/install',
   // Task-request interpretation surface.
   '/api/task-request',
+  // HITL primary chat (interpret + confirm).
+  '/api/chat',
   '/api/schedule-campaign',
   '/api/toggle-scheduler',
   '/api/update-post',
@@ -384,6 +388,29 @@ app.get('/api/tasks/:id/trace', async (req, res) => {
     res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load task trace.' });
+  }
+});
+
+// HITL primary chat: re-engineer prompt -> ToT + understanding + projected outcomes.
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { query, tenantId, hitlId, vertical } = req.body || {};
+    if (!query) return res.status(400).json({ success: false, error: 'A chat "query" is required.' });
+    const plan = await chatSessionSvc.interpret({ query, tenantId: tenantId || null, hitlId: hitlId || req.actor || null, vertical: vertical || null });
+    res.json({ success: true, ...plan });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Chat interpretation failed.' });
+  }
+});
+// HITL primary chat: confirm-before-act — confirm a pending plan (CHT-05).
+app.post('/api/chat/confirm', async (req, res) => {
+  try {
+    const { planId, hitlId } = req.body || {};
+    if (!planId) return res.status(400).json({ success: false, error: 'planId is required.' });
+    const result = await chatSessionSvc.confirm({ planId, hitlId: hitlId || req.actor || null, actor: req.actor || null });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Confirm failed.' });
   }
 });
 

@@ -373,7 +373,8 @@ async function runTests() {
       'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status',
       'POST /api/install', 'GET /api/install/status',
       'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace',
-      'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel', 'POST /api/task-request'
+      'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel', 'POST /api/task-request',
+      'POST /api/chat', 'POST /api/chat/confirm'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -971,6 +972,55 @@ async function runTests() {
     assert(it.ok && typeof it.result.needsDisambiguation === 'boolean', 'interpret_task_request tool returns an interpretation');
   } catch (e) {
     assert(false, `Task request interface (Phase 7) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 23: HITL primary chat — ToT + preview + confirm (Phase 8) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { ChatSession } = require('../lib/hitl_chat');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const { TaskModel } = require('../lib/task_model');
+    const { AttributionLog } = require('../lib/attribution');
+    const reg = require('../lib/tool_registry');
+
+    const cf = pth.join(os.tmpdir(), `aiwx_chatconn_${Date.now()}.json`);
+    const pf = pth.join(os.tmpdir(), `aiwx_chatplan_${Date.now()}.json`);
+    const tmf = pth.join(os.tmpdir(), `aiwx_chattask_${Date.now()}.json`);
+    const af = pth.join(os.tmpdir(), `aiwx_chatattr_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cf });
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'ch' });
+    const chat = new ChatSession({ file: pf, connectionRegistry: conns, taskModel: new TaskModel({ file: tmf }), attributionLog: new AttributionLog({ file: af }) });
+
+    // A. Interpret: ToT + understanding + projected outcomes, awaiting confirmation
+    const plan = await chat.interpret({ query: 'create a time activity on the matter', tenantId: 'ch', hitlId: 'h1', vertical: 'legal' });
+    assert(plan.plan.treeOfThought.branches.length === 5, 'Every prompt is re-engineered into a 5-branch tree-of-thought (CHT-02)');
+    assert(plan.plan.understanding.interpretedIntent && plan.plan.understanding.capability.connectorId === 'clio', 'The system echoes what it understood — the interpreted action (CHT-03)');
+    assert(plan.plan.projectedOutcomes.length === 1 && plan.status === 'awaiting_confirmation', 'Projected outcomes are shown and the plan awaits confirmation (CHT-04)');
+
+    // B. Confirm-before-act: nothing runs until confirm; confirm creates a task + attribution
+    const before = await chat.getPlan(plan.planId);
+    assert(before.status === 'awaiting_confirmation', 'Before confirmation the plan has not executed');
+    const confirmed = await chat.confirm({ planId: plan.planId, hitlId: 'h1' });
+    assert(confirmed.confirmed === true && confirmed.task && confirmed.task.status === 'proposed', 'Confirm creates a governed task (proposed) — confirm-before-act (CHT-05)');
+    let already = false; try { await chat.confirm({ planId: plan.planId, hitlId: 'h1' }); } catch (e) { already = /already confirmed/.test(e.message); }
+    assert(already, 'A plan cannot be confirmed twice');
+
+    // C. A disambiguation-needed request cannot be confirmed
+    const vague = await chat.interpret({ query: 'zxqv flibbertigibbet', tenantId: 'ch', hitlId: 'h1' });
+    assert(vague.status === 'needs_disambiguation', 'An unclear prompt is held for disambiguation');
+    let noConfirm = false; try { await chat.confirm({ planId: vague.planId }); } catch (e) { noConfirm = /disambiguation/.test(e.message); }
+    assert(noConfirm, 'A disambiguation-needed plan cannot be confirmed');
+
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { [cf, pf, tmf, af].forEach(f => fsx.unlinkSync(f)); } catch (e) {}
+
+    // D. Registry tools
+    assert(reg.has('chat_interpret') && reg.has('chat_confirm') && reg.has('get_chat_plan'), 'Phase 8 chat tools are registered');
+    const ci = await reg.invoke('chat_interpret', { query: 'hello', tenantId: 'none' });
+    assert(ci.ok && ci.result.plan.treeOfThought, 'chat_interpret tool returns a tree-of-thought plan');
+  } catch (e) {
+    assert(false, `HITL chat (Phase 8) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

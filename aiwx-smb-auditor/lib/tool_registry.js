@@ -37,6 +37,7 @@ const { AttestationLog } = require('./attestation');
 const { TelemetryStream } = require('./agent_telemetry');
 const { AutonomyGrants } = require('./autonomy');
 const taskRequest = require('./task_request');
+const { ChatSession } = require('./hitl_chat');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -48,6 +49,7 @@ const installation = new Installation({ agentRegistry, connectionRegistry });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
+const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog });
 
 const registry = new Map();
 
@@ -784,6 +786,35 @@ register({
   inputSchema: z.object({ query: z.string(), tenantId: z.string().optional(), threshold: z.number().optional() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => taskRequest.interpretRequest({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry, threshold: input.threshold })
+});
+
+// ── HITL primary chat: ToT re-engineer → preview → confirm (Phase 8, CHT) ────
+
+register({
+  name: 'chat_interpret',
+  title: 'HITL chat: interpret + tree-of-thought preview',
+  description: 'Re-engineer a HITL prompt into a tree-of-thought, echo what the system understood, and project the outcome(s) — a pending plan AWAITING confirmation (CHT-02/03/04). Nothing executes.',
+  inputSchema: z.object({ query: z.string(), tenantId: z.string().optional(), hitlId: z.string().optional(), vertical: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => chatSession.interpret({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, hitlId: input.hitlId || ctx.hitlId || null, vertical: input.vertical || null })
+});
+
+register({
+  name: 'chat_confirm',
+  title: 'HITL chat: confirm a plan (confirm-before-act)',
+  description: 'Confirm a pending chat plan (CHT-05): create the governed task (proposed) and record the re-engineered prompt in the attribution log. Execution then flows through the normal approval/autonomy/attestation gates.',
+  inputSchema: z.object({ planId: z.string(), hitlId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => chatSession.confirm({ planId: input.planId, hitlId: input.hitlId || ctx.hitlId || null, actor: ctx.actor || null })
+});
+
+register({
+  name: 'get_chat_plan',
+  title: 'Get a HITL chat plan',
+  description: 'Fetch a pending/confirmed chat plan (its tree-of-thought, understanding, projected outcomes, status).',
+  inputSchema: z.object({ planId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => chatSession.getPlan(input.planId).then(plan => ({ plan }))
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

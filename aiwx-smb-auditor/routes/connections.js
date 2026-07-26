@@ -25,6 +25,7 @@ const { Installation } = require('../lib/installation');
 const { AgentRegistry } = require('../lib/agent_model');
 const { AttributionLog } = require('../lib/attribution');
 const { TelemetryStream } = require('../lib/agent_telemetry');
+const { ChatSession } = require('../lib/hitl_chat');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
@@ -35,6 +36,7 @@ const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
 const telemetrySvc = new TelemetryStream();
 const taskModel = new TaskModel();
+const chatSessionSvc = new ChatSession({ connectionRegistry: connections, taskModel, attributionLog: attributionLogSvc });
 
 router.get('/api/connectors', (req, res) => {
   const items = req.query.vertical ? catalog.byVertical(req.query.vertical) : catalog.list();
@@ -108,6 +110,22 @@ router.get('/api/tasks/:id/trace', asyncHandler('[Trace]', 'Failed to load task 
   const attribution = await attributionLogSvc.trace(req.params.id);
   const events = await telemetrySvc.list({ taskId: req.params.id, limit: 500 });
   res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
+}));
+
+// HITL primary chat: re-engineer prompt -> ToT + understanding + projected outcomes.
+router.post('/api/chat', asyncHandler('[Chat]', 'Chat interpretation failed.', async (req, res) => {
+  const { query, tenantId, hitlId, vertical } = req.body || {};
+  if (!query) return sendError(res, 400, 'A chat "query" is required.', { context: '[Chat]' });
+  const plan = await chatSessionSvc.interpret({ query, tenantId: tenantId || null, hitlId: hitlId || req.actor || null, vertical: vertical || null });
+  res.json({ success: true, ...plan });
+}));
+
+// HITL primary chat: confirm-before-act (CHT-05).
+router.post('/api/chat/confirm', asyncHandler('[Chat]', 'Confirm failed.', async (req, res) => {
+  const { planId, hitlId } = req.body || {};
+  if (!planId) return sendError(res, 400, 'planId is required.', { context: '[Chat]' });
+  const result = await chatSessionSvc.confirm({ planId, hitlId: hitlId || req.actor || null, actor: req.actor || null });
+  res.json({ success: true, ...result });
 }));
 
 // Task request: interpret a typed/voice request into the closest executable task.
