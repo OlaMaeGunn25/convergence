@@ -27,12 +27,14 @@ const { AttributionLog } = require('../lib/attribution');
 const { TelemetryStream } = require('../lib/agent_telemetry');
 const { ChatSession } = require('../lib/hitl_chat');
 const { KnowledgeBase } = require('../lib/knowledge_ingest');
+const { createEmbedder } = require('../lib/embeddings');
+const ingestionAdapters = require('../lib/ingestion_adapters');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
 const connections = new ConnectionRegistry();
-const knowledgeBaseSvc = new KnowledgeBase();
+const knowledgeBaseSvc = new KnowledgeBase({ embedder: createEmbedder() });
 const installationSvc = new Installation({ connectionRegistry: connections, knowledgeBase: knowledgeBaseSvc });
 const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
@@ -112,6 +114,14 @@ router.get('/api/tasks/:id/trace', asyncHandler('[Trace]', 'Failed to load task 
   const attribution = await attributionLogSvc.trace(req.params.id);
   const events = await telemetrySvc.list({ taskId: req.params.id, limit: 500 });
   res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
+}));
+
+// Unified knowledge ingestion — upload | connector_read (scour) | audit_scour.
+router.post('/api/knowledge/ingest', asyncHandler('[Knowledge]', 'Ingestion failed.', async (req, res) => {
+  const { tenantId, source, files, connectorId, auditPackage, approvedScope } = req.body || {};
+  if (!source) return sendError(res, 400, 'source is required.', { context: '[Knowledge]' });
+  const result = await ingestionAdapters.ingestAll({ tenantId: tenantId || null, source, files: files || [], connectorId: connectorId || null, auditPackage: auditPackage || null, knowledgeBase: knowledgeBaseSvc, approvedScope: approvedScope === true, actor: req.actor || null });
+  res.json({ success: true, ...result });
 }));
 
 // HITL primary chat: re-engineer prompt -> ToT + understanding + projected outcomes.

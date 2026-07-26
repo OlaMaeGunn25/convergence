@@ -34,7 +34,7 @@ class Installation {
    * and AUTO-CREATE the company knowledge base from the onboarding business
    * intelligence (ONB-KB-01/02).
    */
-  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], actor = null }) {
+  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], auditPackage = null, actor = null }) {
     if (!tenantId) throw new Error('tenantId is required to install.');
     if (!vertical) throw new Error('vertical is required (the locked vertical).');
     const roster = await this.agents.provisionRoster({ tenantId, vertical, scopeConnectors: selectedConnectors });
@@ -57,7 +57,7 @@ class Installation {
       knowledge = await businessOnboarding.onboard({
         tenantId, vertical, businessName: businessName || tenantId,
         profile: businessProfile || {}, seedDocs: seedDocs || [], systems: selectedConnectors,
-        knowledgeBase: this.knowledgeBase, actor
+        auditPackage: auditPackage || null, knowledgeBase: this.knowledgeBase, actor
       });
     } catch (kbErr) {
       knowledge = { error: kbErr.message };

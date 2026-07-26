@@ -10,6 +10,8 @@
  * (ONB-KB-02). The onboarding operator initiating install IS the scope approval.
  */
 
+const ingestionAdapters = require('./ingestion_adapters');
+
 /** Synthesize a business-intelligence profile document from what onboarding knows. */
 function buildProfileDoc({ businessName, vertical, purpose = null, customers = null, databases = null, systems = [] } = {}) {
   const lines = [];
@@ -25,25 +27,32 @@ function buildProfileDoc({ businessName, vertical, purpose = null, customers = n
  * Create the company KB on onboarding.
  * @returns { tenantId, ingested, compiled }
  */
-async function onboard({ tenantId, vertical = null, businessName = null, profile = {}, seedDocs = [], systems = [], knowledgeBase, actor = null }) {
+async function onboard({ tenantId, vertical = null, businessName = null, profile = {}, seedDocs = [], systems = [], auditPackage = null, knowledgeBase, actor = null }) {
   if (!knowledgeBase) throw new Error('A knowledgeBase is required to onboard business knowledge.');
   if (!tenantId) throw new Error('tenantId is required.');
 
   const profileDoc = buildProfileDoc(Object.assign({ businessName, vertical, systems }, profile));
+  const sources = {};
   let ingested = 0;
 
-  // The system-gathered business intelligence (connector_read source).
+  // The system-gathered business intelligence profile (connector_read source).
   const profileRes = await knowledgeBase.ingest({ tenantId, source: 'connector_read', docs: [profileDoc], approvedScope: true, actor });
-  ingested += profileRes.ingested;
+  ingested += profileRes.ingested; sources.profile = profileRes.ingested;
 
   // Operator-provided SOPs/manuals/FAQs (upload source).
   if (Array.isArray(seedDocs) && seedDocs.length) {
     const seedRes = await knowledgeBase.ingest({ tenantId, source: 'upload', docs: seedDocs, approvedScope: true, actor });
-    ingested += seedRes.ingested;
+    ingested += seedRes.ingested; sources.upload = seedRes.ingested;
+  }
+
+  // Systems-evaluation audit/scour intelligence (audit_scour source).
+  if (auditPackage) {
+    const auditRes = await ingestionAdapters.ingestAll({ tenantId, source: 'audit_scour', auditPackage, knowledgeBase, approvedScope: true, actor });
+    ingested += auditRes.ingested; sources.audit_scour = auditRes.ingested;
   }
 
   const compiled = await knowledgeBase.compile({ tenantId });
-  return { tenantId, ingested, compiled };
+  return { tenantId, ingested, sources, compiled };
 }
 
 module.exports = { onboard, buildProfileDoc };

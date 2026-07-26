@@ -31,6 +31,8 @@ const { HitlRegistry } = require('./hitl_identity');
 const { AttributionLog } = require('./attribution');
 const systemEvaluator = require('./system_evaluator');
 const { KnowledgeBase } = require('./knowledge_ingest');
+const { createEmbedder } = require('./embeddings');
+const ingestionAdapters = require('./ingestion_adapters');
 const industry = require('./industry_practices');
 const { Installation } = require('./installation');
 const { AttestationLog } = require('./attestation');
@@ -50,7 +52,7 @@ const connectionRegistry = new ConnectionRegistry();
 const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
-const knowledgeBase = new KnowledgeBase();
+const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder() });
 const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
@@ -579,6 +581,26 @@ register({
   handler: (input, ctx) => knowledgeBase.ingest({
     tenantId: input.tenantId || ctx.tenantId || null, source: input.source,
     docs: input.docs, approvedScope: input.approvedScope, actor: ctx.actor || null
+  })
+});
+
+register({
+  name: 'ingest_documents',
+  title: 'Ingest documents from any source into the KB',
+  description: 'Unified ingestion — upload (files), connector_read (scour a connected doc system), or audit_scour (systems-evaluation intelligence). All sources build out the same per-tenant company KB. READ-ONLY + HITL-scope-approved (approvedScope:true) + provenance.',
+  inputSchema: z.object({
+    tenantId: z.string().optional(),
+    source: z.enum(['upload', 'connector_read', 'audit_scour']),
+    approvedScope: z.boolean(),
+    files: z.array(z.object({ name: z.string().optional(), content: z.string(), contentType: z.string().optional(), encoding: z.enum(['utf8', 'base64']).optional() })).optional(),
+    connectorId: z.string().optional(),
+    auditPackage: z.any().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: true },
+  handler: (input, ctx) => ingestionAdapters.ingestAll({
+    tenantId: input.tenantId || ctx.tenantId || null, source: input.source,
+    files: input.files || [], connectorId: input.connectorId || null, auditPackage: input.auditPackage || null,
+    knowledgeBase, approvedScope: input.approvedScope, actor: ctx.actor || null
   })
 });
 

@@ -374,7 +374,7 @@ async function runTests() {
       'POST /api/install', 'GET /api/install/status',
       'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace',
       'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel', 'POST /api/task-request',
-      'POST /api/chat', 'POST /api/chat/confirm'
+      'POST /api/chat', 'POST /api/chat/confirm', 'POST /api/knowledge/ingest'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -1290,6 +1290,59 @@ async function runTests() {
     try { fsx.unlinkSync(kbf); fsx.unlinkSync(cnf); fsx.unlinkSync(pf); } catch (e) {}
   } catch (e) {
     assert(false, `Auto-KB onboarding / cross-reference (ONB-KB/XREF) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 30: Unified ingestion adapters + embedder hook (RAG/scour/upload) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const adapters = require('../lib/ingestion_adapters');
+    const { KnowledgeBase } = require('../lib/knowledge_ingest');
+    const reg = require('../lib/tool_registry');
+
+    const kbf = pth.join(os.tmpdir(), `aiwx_ing_${Date.now()}.json`);
+    const kb = new KnowledgeBase({ file: kbf });
+
+    // A. Upload adapter — parses text + base64 files into the KB
+    const up = await adapters.ingestAll({ tenantId: 'ig', source: 'upload', approvedScope: true, knowledgeBase: kb, files: [
+      { name: 'policy.txt', content: 'Data handling policy: encrypt customer records at rest.' },
+      { name: 'b64.txt', content: Buffer.from('Escalation SOP: notify the on-call manager within 15 minutes.').toString('base64'), encoding: 'base64' }
+    ] });
+    assert(up.ingested >= 2, 'Upload adapter parses text + base64 documents into the KB');
+
+    // B. Connector-read adapter — live fetcher, and simulated fallback (scour)
+    const fetched = await adapters.ingestAll({ tenantId: 'ig', source: 'connector_read', connectorId: 'google_workspace', approvedScope: true, knowledgeBase: kb, fetcher: async () => ([{ ref: 'Drive/Onboarding.gdoc', text: 'Client onboarding steps: verify identity, collect documents, assign owner.' }]) });
+    assert(fetched.simulated === false && fetched.ingested >= 1, 'Connector-read adapter pulls docs via a live fetcher');
+    const scoured = await adapters.ingestAll({ tenantId: 'ig', source: 'connector_read', connectorId: 'zendesk', approvedScope: true, knowledgeBase: kb });
+    assert(scoured.simulated === true && scoured.ingested >= 1, 'Connector-read adapter falls back to a labeled simulated scour');
+
+    // C. Audit-scour adapter — systems-evaluation intelligence -> KB
+    const auditPkg = { businessName: 'Acme', vertical: 'retail', scrapedData: { technologies: [{ name: 'Shopify' }, { name: 'Stripe' }] }, integrationReadiness: { recommendedIntegrations: [{ name: 'Shopify' }] } };
+    const au = await adapters.ingestAll({ tenantId: 'ig', source: 'audit_scour', auditPackage: auditPkg, approvedScope: true, knowledgeBase: kb });
+    assert(au.ingested >= 1, 'Audit-scour adapter ingests systems-evaluation intelligence into the KB');
+
+    // D. All sources built out ONE KB; it is searchable across them
+    const hit = await kb.search({ tenantId: 'ig', query: 'escalation manager on-call' });
+    assert(hit.results.length > 0, 'All ingested sources build out one searchable company KB');
+    const compiled = await kb.compile({ tenantId: 'ig' });
+    assert(compiled.bySource.upload && compiled.bySource.connector_read && compiled.bySource.audit_scour, 'The KB records ingestion from upload + connector_read + audit_scour');
+    try { fsx.unlinkSync(kbf); } catch (e) {}
+
+    // E. Embedder hook — a vector backend, when present, is used for upsert + query
+    const ef = pth.join(os.tmpdir(), `aiwx_emb_${Date.now()}.json`);
+    let upserted = 0; let queried = 0;
+    const stubEmbedder = { async upsert(chunks) { upserted += chunks.length; }, async query() { queried++; return { query: 'x', results: [{ text: 'from-vector-index', sourceRef: 'vec', source: 'vector', provenance: {}, score: 1 }] }; } };
+    const ekb = new KnowledgeBase({ file: ef, embedder: stubEmbedder });
+    await ekb.ingest({ tenantId: 'ig', source: 'upload', docs: [{ ref: 'd', text: 'hello world' }], approvedScope: true });
+    const vres = await ekb.search({ tenantId: 'ig', query: 'anything' });
+    assert(upserted >= 1 && queried >= 1 && vres.results[0].source === 'vector', 'The embedder hook routes ingest upsert + search through the vector backend when configured');
+    try { fsx.unlinkSync(ef); } catch (e) {}
+
+    // F. Registry tool + KB source enum
+    assert(reg.has('ingest_documents'), 'ingest_documents tool is registered');
+    const it = await reg.invoke('ingest_documents', { tenantId: 'igt-' + Date.now(), source: 'upload', approvedScope: true, files: [{ name: 'x.txt', content: 'onboarding checklist step one' }] });
+    assert(it.ok && it.result.ingested >= 1, 'ingest_documents tool ingests via the unified pipeline');
+  } catch (e) {
+    assert(false, `Unified ingestion adapters (RAG/scour/upload) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

@@ -26,10 +26,12 @@ const { AttributionLog } = require('./lib/attribution');
 const { TelemetryStream } = require('./lib/agent_telemetry');
 const { ChatSession } = require('./lib/hitl_chat');
 const { KnowledgeBase } = require('./lib/knowledge_ingest');
+const { createEmbedder } = require('./lib/embeddings');
+const ingestionAdapters = require('./lib/ingestion_adapters');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
-const knowledgeBaseSvc = new KnowledgeBase();
+const knowledgeBaseSvc = new KnowledgeBase({ embedder: createEmbedder() });
 const installationSvc = new Installation({ connectionRegistry, knowledgeBase: knowledgeBaseSvc });
 const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
@@ -230,6 +232,8 @@ const PROTECTED_MUTATIONS = [
   '/api/task-request',
   // HITL primary chat (interpret + confirm).
   '/api/chat',
+  // Unified knowledge ingestion surface.
+  '/api/knowledge',
   '/api/schedule-campaign',
   '/api/toggle-scheduler',
   '/api/update-post',
@@ -390,6 +394,18 @@ app.get('/api/tasks/:id/trace', async (req, res) => {
     res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load task trace.' });
+  }
+});
+
+// Unified knowledge ingestion — upload | connector_read (scour) | audit_scour.
+app.post('/api/knowledge/ingest', async (req, res) => {
+  try {
+    const { tenantId, source, files, connectorId, auditPackage, approvedScope } = req.body || {};
+    if (!source) return res.status(400).json({ success: false, error: 'source is required.' });
+    const result = await ingestionAdapters.ingestAll({ tenantId: tenantId || null, source, files: files || [], connectorId: connectorId || null, auditPackage: auditPackage || null, knowledgeBase: knowledgeBaseSvc, approvedScope: approvedScope === true, actor: req.actor || null });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Ingestion failed.' });
   }
 });
 

@@ -21,7 +21,7 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 
-const SOURCES = ['connector_read', 'upload', 'on_prem_crawl'];
+const SOURCES = ['connector_read', 'upload', 'on_prem_crawl', 'audit_scour'];
 const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'for', 'on', 'is', 'are', 'with', 'by', 'at', 'as', 'be', 'this', 'that', 'it', 'from', 'must', 'shall', 'any', 'all']);
 
 function tokenize(text) { return (String(text || '').toLowerCase().match(/[a-z0-9]+/g) || []); }
@@ -45,6 +45,10 @@ class KnowledgeBase {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
     this.file = options.file || path.join(__dirname, '..', 'config', 'knowledge_base.json');
+    // Optional vector-embedding backend (Dify.ai / pgvector). When present, chunks
+    // are upserted to it on ingest and semantic queries route through it; otherwise
+    // the local hybrid search is used. See lib/embeddings.js.
+    this.embedder = options.embedder || null;
   }
 
   /**
@@ -69,6 +73,12 @@ class KnowledgeBase {
           createdAt: now
         });
       });
+    }
+
+    // Push to the vector backend (Dify/pgvector) when configured — best-effort;
+    // the local store below remains the source of truth + fallback.
+    if (this.embedder && typeof this.embedder.upsert === 'function') {
+      try { await this.embedder.upsert(chunks); } catch (e) { /* non-fatal: local store still holds it */ }
     }
 
     if (this.usingSupabase) {
@@ -96,8 +106,13 @@ class KnowledgeBase {
     return (store.chunks || []).filter(c => tenantId === undefined || c.tenantId === tenantId);
   }
 
-  /** Hybrid search: lexical (substring hits) + semantic (keyword-set overlap). */
+  /** Hybrid search: semantic vectors when a backend is configured, else lexical
+   *  (substring hits) + keyword-set overlap over the local store. */
   async search({ tenantId = null, query, k = 5 }) {
+    if (this.embedder && typeof this.embedder.query === 'function') {
+      try { return await this.embedder.query({ tenantId, query, k }); }
+      catch (e) { /* fall through to local hybrid search */ }
+    }
     const qk = keywordsOf(query || '');
     const qset = new Set(qk);
     const chunks = await this.all(tenantId);
