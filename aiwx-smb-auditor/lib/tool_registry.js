@@ -35,6 +35,7 @@ const industry = require('./industry_practices');
 const { Installation } = require('./installation');
 const { AttestationLog } = require('./attestation');
 const { TelemetryStream } = require('./agent_telemetry');
+const { AutonomyGrants } = require('./autonomy');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -45,6 +46,7 @@ const knowledgeBase = new KnowledgeBase();
 const installation = new Installation({ agentRegistry, connectionRegistry });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
+const autonomy = new AutonomyGrants();
 
 const registry = new Map();
 
@@ -107,6 +109,13 @@ async function invoke(name, input = {}, ctx = {}) {
     return { ok: false, error: 'Input validation failed.', issues: parsed.error.issues.map(i => ({ path: i.path.join('.'), message: i.message })) };
   }
 
+  // CTL-01 (absolute authority): an agent may never self-approve past a human
+  // stop. Checked FIRST — an agent-invoked call carrying approved:true must be
+  // backed by an authorized HITL identity; an agent cannot conjure approval.
+  if (ctx.agentId && ctx.approved === true && !ctx.hitlId) {
+    return { ok: false, status: 'self_approval_forbidden', error: 'An agent cannot self-approve; approval must come from an authorized HITL (CTL-01).' };
+  }
+
   // HITL identity gate (IDN-03): when a HITL identity is attached, it must be an
   // authorized, active HITL. Callers without ctx.hitlId are unaffected.
   if (ctx.hitlId) {
@@ -123,15 +132,22 @@ async function invoke(name, input = {}, ctx = {}) {
   }
 
   // Central governance gate: destructive/approval-required tools cannot execute
-  // without an explicit approval in the calling context.
+  // without an explicit approval — UNLESS an active autonomy grant delegates the
+  // approval step for this tool (AUT-01). Compliance-floor actions (trust/PHI/
+  // financial) still require explicit approval / an elevated grant (AUT-04).
   if (tool.annotations.requiresApproval && ctx.approved !== true) {
-    return {
-      ok: false,
-      status: 'requires_approval',
-      tool: name,
-      message: `Tool "${name}" is destructive and requires human approval. Stage it as a pending_approval task or invoke with an approved context.`,
-      input: parsed.data
-    };
+    const auto = await autonomy.covers({ tenantId: ctx.tenantId || null, toolName: name, taskType: ctx.taskType || null });
+    if (!auto.ok) {
+      return {
+        ok: false,
+        status: 'requires_approval',
+        tool: name,
+        message: `Tool "${name}" is destructive and requires human approval. Stage it as a pending_approval task, invoke with an approved context, or grant scoped autonomy.`,
+        ...(auto.floor ? { complianceFloor: true } : {}),
+        input: parsed.data
+      };
+    }
+    // Autonomy grant delegates the approval — proceed under the grant.
   }
 
   const result = await tool.handler(parsed.data, ctx);
@@ -691,6 +707,62 @@ register({
     const events = await telemetry.list({ taskId: input.taskId, limit: 500 });
     return { taskId: input.taskId, attribution: attribution.records, telemetry: events, count: attribution.count + events.length };
   }
+});
+
+// ── HITL control + autonomy grants (Phase 5/5b, CTL/AUT) ─────────────────────
+
+register({
+  name: 'course_correct_task',
+  title: 'HITL: course-correct a running task',
+  description: 'Revise a running task\'s instructions/payload without cancelling it (CTL-03). Only allowed while the task is non-terminal; every revision is recorded.',
+  inputSchema: z.object({ taskId: z.string(), instructions: z.string().optional(), payload: z.record(z.any()).optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => taskModel.revise(input.taskId, { instructions: input.instructions || null, payload: input.payload || {}, actor: ctx.actor || null }).then(task => ({ task }))
+});
+
+register({
+  name: 'cancel_task',
+  title: 'HITL: cancel a task',
+  description: 'Cancel a task (kill-switch, CTL-04). Allowed from any non-terminal state; in-flight work is halted and recorded.',
+  inputSchema: z.object({ taskId: z.string() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => taskModel.transition(input.taskId, 'cancelled', { actor: ctx.actor || null }).then(task => ({ task }))
+});
+
+register({
+  name: 'grant_autonomy',
+  title: 'HITL: grant scoped autonomy (full automation)',
+  description: 'The HITL lead delegates the per-action approval step for a scoped tool/task-type (AUT-01). Must be authorized by an active HITL. `elevated:true` is required to cover compliance-floor actions (trust/PHI/financial).',
+  inputSchema: z.object({
+    hitlId: z.string(), tenantId: z.string().optional(),
+    scope: z.object({ toolName: z.string().optional(), taskType: z.string().optional() }),
+    elevated: z.boolean().optional(), expiresAt: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: async (input, ctx) => {
+    const auth = await hitlRegistry.isAuthorized(input.hitlId);
+    if (!auth.ok) return { ok: false, status: 'hitl_unauthorized', error: auth.reason };
+    const grant = await autonomy.grant({ tenantId: input.tenantId || ctx.tenantId || null, hitlId: input.hitlId, scope: input.scope, elevated: input.elevated === true, expiresAt: input.expiresAt || null });
+    return { ok: true, grant };
+  }
+});
+
+register({
+  name: 'revoke_autonomy',
+  title: 'HITL: revoke an autonomy grant',
+  description: 'Revoke a grant — immediately reinstates per-action approval (AUT-02).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => autonomy.revoke(input.id).then(grant => ({ grant }))
+});
+
+register({
+  name: 'list_autonomy_grants',
+  title: 'List autonomy grants',
+  description: 'List autonomy grants for a tenant (active + revoked), for HITL oversight.',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => autonomy.list({ tenantId: input.tenantId || ctx.tenantId || undefined }).then(grants => ({ grants }))
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

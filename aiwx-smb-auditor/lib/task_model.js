@@ -152,6 +152,38 @@ class TaskModel {
     });
   }
 
+  /**
+   * Course-correct a running task (CTL-03): merge revised instructions/payload
+   * without cancelling. Only allowed while the task is non-terminal; every
+   * revision is appended to the task's `revisions` history for traceability.
+   */
+  async revise(id, { instructions = null, payload = {}, actor = null } = {}) {
+    const applyRevision = (t) => {
+      if (TERMINAL.has(t.status)) throw new Error(`Cannot course-correct a ${t.status} task (${id}).`);
+      const revision = { at: new Date().toISOString(), actor, instructions, payload };
+      t.payload = Object.assign({}, t.payload || {}, payload);
+      t.revisions = Array.isArray(t.revisions) ? t.revisions : [];
+      t.revisions.push(revision);
+      t.updatedAt = revision.at;
+      return t;
+    };
+    if (this.usingSupabase) {
+      const current = await this.get(id);
+      if (!current) throw new Error(`Task ${id} not found.`);
+      const revised = applyRevision(current);
+      const rows = await updateRows('tasks', `id=eq.${encodeURIComponent(id)}`,
+        { payload: revised.payload, provenance: { revisions: revised.revisions }, updated_at: revised.updatedAt });
+      return rowToTask(Array.isArray(rows) ? rows[0] : rows);
+    }
+    return jsonFile.mutate(this.file, EMPTY, (store) => {
+      const tasks = Array.isArray(store.tasks) ? store.tasks : [];
+      const t = tasks.find(x => x.id === id);
+      if (!t) throw new Error(`Task ${id} not found.`);
+      applyRevision(t);
+      return { value: { tasks }, result: { ...t } };
+    });
+  }
+
   /** True when every dependency of `task` is in the `done` state. */
   async dependenciesMet(task) {
     if (!task.dependsOn || task.dependsOn.length === 0) return true;

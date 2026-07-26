@@ -384,6 +384,26 @@ app.get('/api/tasks/:id/trace', async (req, res) => {
   }
 });
 
+// HITL control: course-correct a running task (CTL-03).
+app.post('/api/tasks/:id/correct', async (req, res) => {
+  try {
+    const { instructions, payload } = req.body || {};
+    const task = await connTaskModel.revise(req.params.id, { instructions: instructions || null, payload: payload || {}, actor: req.actor || null });
+    res.json({ success: true, task });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Course-correct failed.' });
+  }
+});
+// HITL control: cancel a task (kill-switch, CTL-04).
+app.post('/api/tasks/:id/cancel', async (req, res) => {
+  try {
+    const task = await connTaskModel.transition(req.params.id, 'cancelled', { actor: req.actor || null });
+    res.json({ success: true, task });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Cancel failed.' });
+  }
+});
+
 // Install CONVERGENCE-Ai for a tenant/vertical (provision roster + record selection).
 app.post('/api/install', async (req, res) => {
   try {

@@ -109,6 +109,19 @@ router.get('/api/tasks/:id/trace', asyncHandler('[Trace]', 'Failed to load task 
   res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
 }));
 
+// HITL control: course-correct a running task (CTL-03).
+router.post('/api/tasks/:id/correct', asyncHandler('[Control]', 'Course-correct failed.', async (req, res) => {
+  const { instructions, payload } = req.body || {};
+  const task = await taskModel.revise(req.params.id, { instructions: instructions || null, payload: payload || {}, actor: req.actor || null });
+  res.json({ success: true, task });
+}));
+
+// HITL control: cancel a task (kill-switch, CTL-04).
+router.post('/api/tasks/:id/cancel', asyncHandler('[Control]', 'Cancel failed.', async (req, res) => {
+  const task = await taskModel.transition(req.params.id, 'cancelled', { actor: req.actor || null });
+  res.json({ success: true, task });
+}));
+
 router.post('/api/connections/disconnect', asyncHandler('[Connections]', 'Failed to disconnect.', async (req, res) => {
   const { connectorId, tenantId } = req.body || {};
   if (!connectorId || !catalog.has(connectorId)) {

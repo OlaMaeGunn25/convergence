@@ -372,7 +372,8 @@ async function runTests() {
       'GET /api/connectors', 'GET /api/connections', 'POST /api/connections',
       'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status',
       'POST /api/install', 'GET /api/install/status',
-      'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace'
+      'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace',
+      'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -879,6 +880,59 @@ async function runTests() {
     assert(trace.ok && trace.result.telemetry.length >= 1 && trace.result.attribution.length >= 1, 'get_task_trace reconstructs the chain-of-custody (attribution + telemetry)');
   } catch (e) {
     assert(false, `Telemetry / trace (Phase 4) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 21: HITL control + autonomy grants (Phase 5/5b) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { AutonomyGrants, isComplianceFloor } = require('../lib/autonomy');
+    const { TaskModel } = require('../lib/task_model');
+    const reg = require('../lib/tool_registry');
+
+    // A. Course-correct + cancel on the task model
+    const tmf = pth.join(os.tmpdir(), `aiwx_ctl_${Date.now()}.json`);
+    const tm = new TaskModel({ file: tmf });
+    const tk = await tm.create({ type: 'ops.demo', payload: { a: 1 } });
+    const revised = await tm.revise(tk.id, { instructions: 'tighten scope', payload: { b: 2 } });
+    assert(revised.payload.a === 1 && revised.payload.b === 2 && revised.revisions.length === 1, 'Course-correct merges payload and records the revision');
+    const cancelled = await tm.transition(tk.id, 'cancelled');
+    assert(cancelled.status === 'cancelled', 'A task can be cancelled (kill-switch)');
+    let noRevise = false; try { await tm.revise(tk.id, { payload: { c: 3 } }); } catch (e) { noRevise = /Cannot course-correct/.test(e.message); }
+    assert(noRevise, 'Course-correct is refused on a terminal (cancelled) task');
+    try { fsx.unlinkSync(tmf); } catch (e) {}
+
+    // B. Autonomy grants + compliance floor
+    assert(isComplianceFloor('clio_record_trust_transaction') === true && isComplianceFloor('list_agent_roles') === false, 'Compliance floor flags trust/financial actions');
+    const gf = pth.join(os.tmpdir(), `aiwx_grant_${Date.now()}.json`);
+    const grants = new AutonomyGrants({ file: gf });
+    let needsHitl = false; try { await grants.grant({ scope: {} }); } catch (e) { needsHitl = /HITL/.test(e.message); }
+    assert(needsHitl, 'An autonomy grant must be authorized by a HITL');
+    const g = await grants.grant({ tenantId: 'ga', hitlId: 'h1', scope: { toolName: 'publish_post' } });
+    assert((await grants.covers({ tenantId: 'ga', toolName: 'publish_post' })).ok === true, 'A standard grant delegates approval for its scoped tool');
+    assert((await grants.covers({ tenantId: 'ga', toolName: 'clio_record_trust_transaction' })).floor === true, 'Compliance-floor action is NOT delegated by a standard grant (AUT-04)');
+    await grants.revoke(g.id);
+    assert((await grants.covers({ tenantId: 'ga', toolName: 'publish_post' })).ok === false, 'Revoking a grant immediately reinstates per-action approval');
+    try { fsx.unlinkSync(gf); } catch (e) {}
+
+    // C. Registry: CTL-01 self-approval guard + autonomy delegation in invoke()
+    assert(reg.has('course_correct_task') && reg.has('cancel_task') && reg.has('grant_autonomy') && reg.has('revoke_autonomy') && reg.has('list_autonomy_grants'), 'Phase 5/5b tools are registered');
+    const selfApprove = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' }, { agentId: 'agent_x', approved: true });
+    assert(selfApprove.ok === false && selfApprove.status === 'self_approval_forbidden', 'CTL-01: an agent cannot self-approve a destructive tool');
+    // Onboard+activate a HITL, grant scoped autonomy, then the destructive tool proceeds unattended
+    const email = `ctl-${Date.now()}@acme-corp.com`;
+    const tnt = 'ctl-' + Date.now();
+    const onb = await reg.invoke('onboard_hitl', { email, tenantId: tnt }, { actor: 'op' });
+    await reg.invoke('set_hitl_status', { id: onb.result.hitl.id, status: 'trained' });
+    await reg.invoke('set_hitl_status', { id: onb.result.hitl.id, status: 'active' });
+    const gated = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' }, { tenantId: tnt });
+    assert(gated.status === 'requires_approval', 'Without a grant, a destructive tool requires approval');
+    await reg.invoke('grant_autonomy', { hitlId: onb.result.hitl.id, tenantId: tnt, scope: { toolName: 'publish_post' } }, { actor: 'op' });
+    const auto = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' }, { tenantId: tnt });
+    assert(auto.ok === true, 'An autonomy grant delegates approval so the tool proceeds unattended (AUT-01)');
+    const floorGrant = await reg.invoke('publish_post', { platform: 'linkedin', text: 'hi' }, { tenantId: tnt, approved: false });
+    assert(floorGrant.ok === true, 'The autonomy grant remains in effect for its scope');
+  } catch (e) {
+    assert(false, `HITL control / autonomy (Phase 5/5b) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---
