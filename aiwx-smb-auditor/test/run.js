@@ -370,7 +370,8 @@ async function runTests() {
       'POST /api/audit', 'GET /api/tools', 'POST /api/tools/:name', 'POST /api/negotiate',
       'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health',
       'GET /api/connectors', 'GET /api/connections', 'POST /api/connections',
-      'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status'
+      'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status',
+      'POST /api/install', 'GET /api/install/status'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -784,6 +785,60 @@ async function runTests() {
     assert(corrTool.ok && corrTool.result.plan, 'correlate_task tool returns a grounded plan');
   } catch (e) {
     assert(false, `Knowledge ingestion (Phase 2) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 19: Installation orchestration + Delivery/Q-A gate (Phase 3) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { Installation } = require('../lib/installation');
+    const { AttestationLog } = require('../lib/attestation');
+    const { AgentRegistry } = require('../lib/agent_model');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const reg = require('../lib/tool_registry');
+
+    // A. Install provisions the roster + records selection; INS-03 gate
+    const inf = pth.join(os.tmpdir(), `aiwx_inst_${Date.now()}.json`);
+    const agf = pth.join(os.tmpdir(), `aiwx_iagents_${Date.now()}.json`);
+    const cnf = pth.join(os.tmpdir(), `aiwx_iconn_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cnf });
+    const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns });
+    const res = await inst.install({ tenantId: 'i1', vertical: 'legal', selectedConnectors: ['clio'] });
+    assert(res.roster === 13, 'Install provisions the full 13-agent roster');
+    let st = await inst.status({ tenantId: 'i1' });
+    assert(st.installed === true && st.complete === false, 'Install is not complete while a selected system is not agent_ready');
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'i1' });
+    st = await inst.status({ tenantId: 'i1' });
+    assert(st.systemsReady === true && st.complete === true, 'Install completes when every selected system is agent_ready + roster deployed');
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { fsx.unlinkSync(inf); fsx.unlinkSync(agf); fsx.unlinkSync(cnf); } catch (e) {}
+
+    // B. Delivery + Q/A completion gate (AGT-05/06)
+    const atf = pth.join(os.tmpdir(), `aiwx_att_${Date.now()}.json`);
+    const att = new AttestationLog({ file: atf });
+    assert((await att.canComplete('tk')).ok === false, 'A task cannot complete without a Delivery attestation');
+    await att.attestDelivery({ taskId: 'tk', actor: 'delivery-agent' });
+    assert((await att.canComplete('tk')).ok === true, 'A Delivery attestation permits completion');
+    await att.recordQa({ taskId: 'tk', verdict: 'flag', actor: 'qa-agent' });
+    assert((await att.canComplete('tk')).ok === false, 'A Q/A flag blocks completion (routes to HITL)');
+    let qaBad = false; try { await att.recordQa({ taskId: 'tk2', verdict: 'nope' }); } catch (e) { qaBad = /verdict/.test(e.message); }
+    assert(qaBad, 'Q/A attestation requires a pass|flag verdict');
+    try { fsx.unlinkSync(atf); } catch (e) {}
+
+    // C. Registry tools + end-to-end completion gate via the task model
+    assert(reg.has('install_convergence') && reg.has('get_install_status') && reg.has('attest_delivery') && reg.has('record_qa_verdict') && reg.has('complete_task'), 'Phase 3 tools are registered');
+    const created = await reg.invoke('create_task', { type: 'ops.demo', payload: {} }, { actor: 'op' });
+    const tid = created.result.id;
+    await reg.invoke('transition_task', { id: tid, toStatus: 'pending_approval' }, { actor: 'op' });
+    await reg.invoke('transition_task', { id: tid, toStatus: 'approved' }, { actor: 'op' });
+    await reg.invoke('transition_task', { id: tid, toStatus: 'executing' }, { actor: 'op' });
+    const blocked = await reg.invoke('complete_task', { taskId: tid }, { actor: 'op' });
+    assert(blocked.result.ok === false && blocked.result.status === 'completion_blocked', 'complete_task is blocked without a Delivery attestation');
+    await reg.invoke('attest_delivery', { taskId: tid, note: 'delivered' }, { actor: 'op' });
+    const done = await reg.invoke('complete_task', { taskId: tid }, { actor: 'op' });
+    assert(done.result.ok === true && done.result.task.status === 'done', 'complete_task transitions the task to done once attested');
+  } catch (e) {
+    assert(false, `Installation / attestation (Phase 3) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

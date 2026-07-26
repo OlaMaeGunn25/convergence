@@ -19,9 +19,11 @@ const { matchIntegrations } = require('./lib/integration_matcher');
 const connectorCatalog = require('./lib/connectors/catalog');
 const systemEvaluator = require('./lib/system_evaluator');
 const { ConnectionRegistry } = require('./lib/connection_registry');
+const { Installation } = require('./lib/installation');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
+const installationSvc = new Installation({ connectionRegistry });
 const connTaskModel = new ConnTaskModel();
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
@@ -211,6 +213,8 @@ const PROTECTED_MUTATIONS = [
   // Connection builder + status board (GET+POST both gated; establishing an
   // external integration is a governed, audited action).
   '/api/connections',
+  // Install provisions the agent roster — a governed, audited action.
+  '/api/install',
   '/api/schedule-campaign',
   '/api/toggle-scheduler',
   '/api/update-post',
@@ -339,6 +343,28 @@ app.get('/api/onboarding/status', async (req, res) => {
     res.json({ success: true, ...status });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load onboarding status.' });
+  }
+});
+
+// Install CONVERGENCE-Ai for a tenant/vertical (provision roster + record selection).
+app.post('/api/install', async (req, res) => {
+  try {
+    const { tenantId, vertical, selectedConnectors } = req.body || {};
+    if (!tenantId || !vertical) return res.status(400).json({ success: false, error: 'tenantId and vertical are required.' });
+    const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], actor: req.actor || null });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Install failed.' });
+  }
+});
+// Installation completeness (roster deployed + every selected system agent_ready).
+app.get('/api/install/status', async (req, res) => {
+  try {
+    if (!req.query.tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
+    const status = await installationSvc.status({ tenantId: req.query.tenantId });
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load install status.' });
   }
 });
 

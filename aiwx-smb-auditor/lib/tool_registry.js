@@ -32,6 +32,8 @@ const { AttributionLog } = require('./attribution');
 const systemEvaluator = require('./system_evaluator');
 const { KnowledgeBase } = require('./knowledge_ingest');
 const industry = require('./industry_practices');
+const { Installation } = require('./installation');
+const { AttestationLog } = require('./attestation');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -39,6 +41,8 @@ const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
 const knowledgeBase = new KnowledgeBase();
+const installation = new Installation({ agentRegistry, connectionRegistry });
+const attestationLog = new AttestationLog();
 
 const registry = new Map();
 
@@ -587,6 +591,65 @@ register({
     vertical: input.vertical, capability: input.capability, connectorId: input.connectorId || null,
     knowledgeBase, tenantId: input.tenantId || ctx.tenantId || null
   })
+});
+
+// ── Installation orchestration + Delivery/Q-A completion gate (Phase 3) ───────
+
+register({
+  name: 'install_convergence',
+  title: 'Install CONVERGENCE-Ai for a tenant/vertical',
+  description: 'Provision the full 13-agent roster scoped to the locked vertical and record the selected systems (INS-01/02, ORC-01). Agents start provisioned; go-live to active is a separate HITL-gated step.',
+  inputSchema: z.object({
+    tenantId: z.string(),
+    vertical: z.string(),
+    selectedConnectors: z.array(z.string()).optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => installation.install({
+    tenantId: input.tenantId, vertical: input.vertical,
+    selectedConnectors: input.selectedConnectors || [], actor: ctx.actor || null
+  })
+});
+
+register({
+  name: 'get_install_status',
+  title: 'Installation completeness',
+  description: 'Report install completeness (INS-03): roster deployed AND every selected system agent_ready.',
+  inputSchema: z.object({ tenantId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => installation.status({ tenantId: input.tenantId })
+});
+
+register({
+  name: 'attest_delivery',
+  title: 'Delivery attestation',
+  description: 'The Delivery agent attests a task\'s output was produced/delivered (AGT-05) — required before a task can complete.',
+  inputSchema: z.object({ taskId: z.string(), note: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => attestationLog.attestDelivery({ taskId: input.taskId, actor: ctx.actor || null, agentId: ctx.agentId || null, note: input.note || null })
+});
+
+register({
+  name: 'record_qa_verdict',
+  title: 'Q/A verdict',
+  description: 'The Q/A agent independently records a quality/compliance verdict (pass|flag). A flag blocks completion and routes to HITL (AGT-06).',
+  inputSchema: z.object({ taskId: z.string(), verdict: z.enum(['pass', 'flag']), note: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => attestationLog.recordQa({ taskId: input.taskId, verdict: input.verdict, actor: ctx.actor || null, agentId: ctx.agentId || null, note: input.note || null })
+});
+
+register({
+  name: 'complete_task',
+  title: 'Complete a task (Delivery + Q/A gated)',
+  description: 'Transition a task executing → done, enforced by the completion gate: a Delivery attestation is required and no Q/A flag may be outstanding (AGT-05/06).',
+  inputSchema: z.object({ taskId: z.string() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: async (input, ctx) => {
+    const gate = await attestationLog.canComplete(input.taskId);
+    if (!gate.ok) return { ok: false, status: 'completion_blocked', reason: gate.reason };
+    const task = await taskModel.transition(input.taskId, 'done', { actor: ctx.actor });
+    return { ok: true, task };
+  }
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

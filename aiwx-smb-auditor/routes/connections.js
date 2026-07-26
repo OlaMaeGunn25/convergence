@@ -20,11 +20,13 @@ const { sendError, asyncHandler } = require('../lib/http');
 const catalog = require('../lib/connectors/catalog');
 const systemEvaluator = require('../lib/system_evaluator');
 const { ConnectionRegistry } = require('../lib/connection_registry');
+const { Installation } = require('../lib/installation');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
 const connections = new ConnectionRegistry();
+const installationSvc = new Installation({ connectionRegistry: connections });
 const taskModel = new TaskModel();
 
 router.get('/api/connectors', (req, res) => {
@@ -64,6 +66,21 @@ router.get('/api/orchestrator/capabilities', asyncHandler('[Orchestrator]', 'Fai
 // Agent-company onboarding readiness board (ONB-02).
 router.get('/api/onboarding/status', asyncHandler('[Onboarding]', 'Failed to load onboarding status.', async (req, res) => {
   const status = await systemEvaluator.onboardingStatus({ tenantId: req.query.tenantId || null, connectionRegistry: connections });
+  res.json({ success: true, ...status });
+}));
+
+// Install CONVERGENCE-Ai for a tenant/vertical (INS-01/02).
+router.post('/api/install', asyncHandler('[Install]', 'Install failed.', async (req, res) => {
+  const { tenantId, vertical, selectedConnectors } = req.body || {};
+  if (!tenantId || !vertical) return sendError(res, 400, 'tenantId and vertical are required.', { context: '[Install]' });
+  const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], actor: req.actor || null });
+  res.json({ success: true, ...result });
+}));
+
+// Installation completeness (INS-03).
+router.get('/api/install/status', asyncHandler('[Install]', 'Failed to load install status.', async (req, res) => {
+  if (!req.query.tenantId) return sendError(res, 400, 'tenantId is required.', { context: '[Install]' });
+  const status = await installationSvc.status({ tenantId: req.query.tenantId });
   res.json({ success: true, ...status });
 }));
 
