@@ -19,6 +19,7 @@ const logger = require('../lib/logger');
 const { sendError, asyncHandler } = require('../lib/http');
 const catalog = require('../lib/connectors/catalog');
 const systemEvaluator = require('../lib/system_evaluator');
+const taskRequest = require('../lib/task_request');
 const { ConnectionRegistry } = require('../lib/connection_registry');
 const { Installation } = require('../lib/installation');
 const { AgentRegistry } = require('../lib/agent_model');
@@ -107,6 +108,14 @@ router.get('/api/tasks/:id/trace', asyncHandler('[Trace]', 'Failed to load task 
   const attribution = await attributionLogSvc.trace(req.params.id);
   const events = await telemetrySvc.list({ taskId: req.params.id, limit: 500 });
   res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
+}));
+
+// Task request: interpret a typed/voice request into the closest executable task.
+router.post('/api/task-request', asyncHandler('[TaskRequest]', 'Task interpretation failed.', async (req, res) => {
+  const { query, tenantId } = req.body || {};
+  if (!query) return sendError(res, 400, 'A request "query" is required.', { context: '[TaskRequest]' });
+  const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry: connections });
+  res.json({ success: true, ...result });
 }));
 
 // HITL control: course-correct a running task (CTL-03).

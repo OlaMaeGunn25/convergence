@@ -36,6 +36,7 @@ const { Installation } = require('./installation');
 const { AttestationLog } = require('./attestation');
 const { TelemetryStream } = require('./agent_telemetry');
 const { AutonomyGrants } = require('./autonomy');
+const taskRequest = require('./task_request');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -763,6 +764,26 @@ register({
   inputSchema: z.object({ tenantId: z.string().optional() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => autonomy.list({ tenantId: input.tenantId || ctx.tenantId || undefined }).then(grants => ({ grants }))
+});
+
+// ── Task request interface: capability-populated + intent match (Phase 7, TRQ) ─
+
+register({
+  name: 'suggest_tasks',
+  title: 'Capability-populated task catalog',
+  description: 'The tasks the tenant can actually request, populated ONLY from connected systems\' capabilities (TRQ-02).',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => taskRequest.suggestTasks({ tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry })
+});
+
+register({
+  name: 'interpret_task_request',
+  title: 'Interpret a NL/voice task request',
+  description: 'Interpret a typed or voice-transcribed request into the closest executable task(s) with a confidence score; a low-confidence/ambiguous request is flagged for human disambiguation, never guessed (TRQ-03/04).',
+  inputSchema: z.object({ query: z.string(), tenantId: z.string().optional(), threshold: z.number().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => taskRequest.interpretRequest({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry, threshold: input.threshold })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

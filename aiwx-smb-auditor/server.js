@@ -18,6 +18,7 @@ const { generateAgentReply } = require('./lib/conversational_agent');
 const { matchIntegrations } = require('./lib/integration_matcher');
 const connectorCatalog = require('./lib/connectors/catalog');
 const systemEvaluator = require('./lib/system_evaluator');
+const taskRequest = require('./lib/task_request');
 const { ConnectionRegistry } = require('./lib/connection_registry');
 const { Installation } = require('./lib/installation');
 const { AgentRegistry } = require('./lib/agent_model');
@@ -221,6 +222,8 @@ const PROTECTED_MUTATIONS = [
   '/api/connections',
   // Install provisions the agent roster — a governed, audited action.
   '/api/install',
+  // Task-request interpretation surface.
+  '/api/task-request',
   '/api/schedule-campaign',
   '/api/toggle-scheduler',
   '/api/update-post',
@@ -381,6 +384,18 @@ app.get('/api/tasks/:id/trace', async (req, res) => {
     res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load task trace.' });
+  }
+});
+
+// Task request: interpret a typed/voice request into the closest executable task.
+app.post('/api/task-request', async (req, res) => {
+  try {
+    const { query, tenantId } = req.body || {};
+    if (!query) return res.status(400).json({ success: false, error: 'A request "query" is required.' });
+    const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Task interpretation failed.' });
   }
 });
 

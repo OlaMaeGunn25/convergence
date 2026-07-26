@@ -373,7 +373,7 @@ async function runTests() {
       'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status',
       'POST /api/install', 'GET /api/install/status',
       'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace',
-      'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel'
+      'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel', 'POST /api/task-request'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -933,6 +933,44 @@ async function runTests() {
     assert(floorGrant.ok === true, 'The autonomy grant remains in effect for its scope');
   } catch (e) {
     assert(false, `HITL control / autonomy (Phase 5/5b) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 22: Task request interface — capability-populated + intent (Phase 7) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const taskReq = require('../lib/task_request');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const reg = require('../lib/tool_registry');
+
+    // Connect Clio (creds set) so its capabilities populate the catalog
+    const cf = pth.join(os.tmpdir(), `aiwx_trq_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cf });
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'trq' });
+
+    // A. Capability-populated catalog (TRQ-02: only connected systems)
+    const sug = await taskReq.suggestTasks({ tenantId: 'trq', connectionRegistry: conns });
+    assert(sug.count > 0 && sug.tasks.every(t => t.connectorId === 'clio'), 'Task catalog is populated only from connected systems');
+    assert(sug.tasks.some(t => t.capability === 'record_trust_transaction'), 'Catalog offers a connected capability');
+
+    // B. Intent → capability match with confidence (TRQ-03)
+    const trust = await taskReq.interpretRequest({ query: 'record a client trust deposit', tenantId: 'trq', connectionRegistry: conns });
+    assert(trust.candidates.length > 0 && trust.top.connectorId === 'clio', 'A request maps to a connected-system candidate');
+    assert(trust.candidates.some(c => c.capability === 'record_trust_transaction'), 'The trust request surfaces the trust capability');
+
+    // C. Low-confidence request is flagged for disambiguation, not guessed (TRQ-04)
+    const vague = await taskReq.interpretRequest({ query: 'zxqwv flibbertigibbet', tenantId: 'trq', connectionRegistry: conns });
+    assert(vague.needsDisambiguation === true, 'An unmatched request is flagged for human disambiguation, not guessed');
+
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { fsx.unlinkSync(cf); } catch (e) {}
+
+    // D. Registry tools
+    assert(reg.has('suggest_tasks') && reg.has('interpret_task_request'), 'Phase 7 task-request tools are registered');
+    const it = await reg.invoke('interpret_task_request', { query: 'anything', tenantId: 'none' });
+    assert(it.ok && typeof it.result.needsDisambiguation === 'boolean', 'interpret_task_request tool returns an interpretation');
+  } catch (e) {
+    assert(false, `Task request interface (Phase 7) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

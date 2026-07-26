@@ -95,7 +95,9 @@ class AutonomyGrants {
    */
   async covers({ tenantId = null, toolName, taskType = null }) {
     const floor = isComplianceFloor(toolName);
-    const grants = this._active(await this.list({ tenantId: tenantId || undefined }));
+    // A grant applies only to calls with the SAME tenant scope — a tenant-scoped
+    // grant never delegates approval for a different tenant (or a null-tenant call).
+    const grants = this._active(await this.list({})).filter(g => (g.tenantId || null) === (tenantId || null));
     const match = grants.find(g => {
       const s = g.scope || {};
       const toolOk = !s.toolName || s.toolName === toolName || s.toolName === '*';
