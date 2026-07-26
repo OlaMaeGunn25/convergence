@@ -18,6 +18,7 @@ const express = require('express');
 const logger = require('../lib/logger');
 const { sendError, asyncHandler } = require('../lib/http');
 const catalog = require('../lib/connectors/catalog');
+const systemEvaluator = require('../lib/system_evaluator');
 const { ConnectionRegistry } = require('../lib/connection_registry');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
@@ -52,6 +53,18 @@ router.post('/api/connections', asyncHandler('[Connections]', 'Failed to build c
     tenantId: tenantId || null, actor: req.actor || null, config: config || {}
   });
   res.json({ success: true, ...result });
+}));
+
+// Orchestrator unified capability model (COMP-02).
+router.get('/api/orchestrator/capabilities', asyncHandler('[Orchestrator]', 'Failed to build capability model.', async (req, res) => {
+  const model = await systemEvaluator.buildTenantCapabilityModel({ tenantId: req.query.tenantId || null, connectionRegistry: connections });
+  res.json({ success: true, ...model });
+}));
+
+// Agent-company onboarding readiness board (ONB-02).
+router.get('/api/onboarding/status', asyncHandler('[Onboarding]', 'Failed to load onboarding status.', async (req, res) => {
+  const status = await systemEvaluator.onboardingStatus({ tenantId: req.query.tenantId || null, connectionRegistry: connections });
+  res.json({ success: true, ...status });
 }));
 
 router.post('/api/connections/disconnect', asyncHandler('[Connections]', 'Failed to disconnect.', async (req, res) => {

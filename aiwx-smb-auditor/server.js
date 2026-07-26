@@ -17,6 +17,7 @@ const { getGA4Metrics } = require('./lib/ga');
 const { generateAgentReply } = require('./lib/conversational_agent');
 const { matchIntegrations } = require('./lib/integration_matcher');
 const connectorCatalog = require('./lib/connectors/catalog');
+const systemEvaluator = require('./lib/system_evaluator');
 const { ConnectionRegistry } = require('./lib/connection_registry');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
@@ -234,7 +235,10 @@ const PROTECTED_READS = [
   // Exposes the scheduled-post queue and its contents.
   '/api/scheduler-status',
   // Exposes the connector catalog + credential-configured flags.
-  '/api/connectors'
+  '/api/connectors',
+  // Orchestrator capability model + onboarding readiness (internal tenant data).
+  '/api/orchestrator/capabilities',
+  '/api/onboarding/status'
 ];
 app.use(PROTECTED_MUTATIONS, authenticate);
 app.use(PROTECTED_READS, authenticate);
@@ -319,6 +323,25 @@ app.post('/api/connections/disconnect', async (req, res) => {
     res.status(500).json({ success: false, error: err.message || 'Failed to disconnect.' });
   }
 });
+// Orchestrator unified capability model (all connected systems' capabilities + processes).
+app.get('/api/orchestrator/capabilities', async (req, res) => {
+  try {
+    const model = await systemEvaluator.buildTenantCapabilityModel({ tenantId: req.query.tenantId || null, connectionRegistry });
+    res.json({ success: true, ...model });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to build capability model.' });
+  }
+});
+// Agent-company onboarding readiness board.
+app.get('/api/onboarding/status', async (req, res) => {
+  try {
+    const status = await systemEvaluator.onboardingStatus({ tenantId: req.query.tenantId || null, connectionRegistry });
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load onboarding status.' });
+  }
+});
+
 // Clio webhook -> governed task (HMAC-verified when CLIO_WEBHOOK_SECRET is set).
 app.post('/api/clio/webhook', async (req, res) => {
   try {

@@ -29,6 +29,7 @@ const roster = require('./agent_roster');
 const { AgentRegistry } = require('./agent_model');
 const { HitlRegistry } = require('./hitl_identity');
 const { AttributionLog } = require('./attribution');
+const systemEvaluator = require('./system_evaluator');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -494,6 +495,36 @@ register({
   handler: (input) => input.taskId
     ? attributionLog.trace(input.taskId)
     : attributionLog.list({ hitlId: input.hitlId }).then(records => ({ hitlId: input.hitlId, records, count: records.length }))
+});
+
+// ── System comprehension: capabilities + processes (Phase 1, COMP/ONB) ───────
+
+register({
+  name: 'evaluate_system',
+  title: 'Evaluate a connected system (capabilities + processes)',
+  description: 'The Systems Configurator builds a capability manifest (actions classified read vs. write) AND an operational-process map for a connector (COMP-01).',
+  inputSchema: z.object({ connectorId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  provenance: { returnsProvenance: true, note: 'Manifest carries source + confidence.' },
+  handler: (input) => systemEvaluator.evaluateSystem(input.connectorId)
+});
+
+register({
+  name: 'get_orchestrator_capabilities',
+  title: 'Orchestrator unified capability model',
+  description: 'The complete, queryable model of ALL connected systems\' capabilities + processes for a tenant (COMP-02) — what the Orchestrator uses to route and populate the task interface.',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => systemEvaluator.buildTenantCapabilityModel({ tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry })
+});
+
+register({
+  name: 'get_onboarding_status',
+  title: 'Agent-company onboarding readiness',
+  description: 'Per-system onboarding readiness (not_ready | evaluating | ready | blocked) plus an aggregate agentReady flag (ONB-02).',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => systemEvaluator.onboardingStatus({ tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

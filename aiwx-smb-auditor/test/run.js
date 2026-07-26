@@ -369,7 +369,8 @@ async function runTests() {
     const mustHave = [
       'POST /api/audit', 'GET /api/tools', 'POST /api/tools/:name', 'POST /api/negotiate',
       'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health',
-      'GET /api/connectors', 'GET /api/connections', 'POST /api/connections'
+      'GET /api/connectors', 'GET /api/connections', 'POST /api/connections',
+      'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -688,6 +689,51 @@ async function runTests() {
     await reg.invoke('set_hitl_status', { id: hid, status: 'offboarded' });
   } catch (e) {
     assert(false, `HITL identity/attribution (Phase 0.5) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 17: System comprehension — capabilities + processes (Phase 1) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const evalr = require('../lib/system_evaluator');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const reg = require('../lib/tool_registry');
+
+    // A. Manifest: capabilities (read/write) + operational processes
+    const m = evalr.buildManifest('clio');
+    assert(m && m.capabilities.length > 0, 'buildManifest returns a capability manifest for a connector');
+    assert(m.capabilities.some(c => c.type === 'read') && m.capabilities.some(c => c.type === 'write'), 'Manifest classifies actions as read vs write');
+    assert(m.processes.length >= 1 && m.processes.some(p => p.destructive === true), 'Manifest includes operational processes with destructive-step detection');
+    const ev = evalr.evaluateSystem('clio');
+    assert(ev.reads > 0 && ev.writes > 0 && ev.processes > 0, 'evaluateSystem reports read/write/process counts');
+
+    // B. Unified capability model + canDo (temp connection registry, creds set)
+    const cf = pth.join(os.tmpdir(), `aiwx_conn_e_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cf });
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'tc' });
+    const model = await evalr.buildTenantCapabilityModel({ tenantId: 'tc', connectionRegistry: conns });
+    assert(model.systems.some(s => s.connectorId === 'clio'), 'Unified capability model includes the connected system');
+    assert(evalr.canDo(model, 'clio', 'list_matters').ok === true, 'canDo confirms a connected system exposes a capability');
+    assert(evalr.canDo(model, 'clio', 'nope').ok === false, 'canDo denies an unsupported capability');
+    assert(evalr.canDo(model, 'hubspot', 'x').ok === false, 'canDo denies an unconnected system');
+
+    // C. Onboarding readiness
+    const status = await evalr.onboardingStatus({ tenantId: 'tc', connectionRegistry: conns });
+    assert(status.systems.find(s => s.connectorId === 'clio').readiness === 'ready', 'A connected + credentialed system is ready');
+    assert(status.overall.agentReady === true, 'agentReady is true when every attempted system is ready');
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { fsx.unlinkSync(cf); } catch (e) {}
+
+    // D. Registry tools
+    assert(reg.has('evaluate_system') && reg.has('get_orchestrator_capabilities') && reg.has('get_onboarding_status'), 'Phase 1 comprehension tools are registered');
+    const evTool = await reg.invoke('evaluate_system', { connectorId: 'clio' });
+    assert(evTool.ok && evTool.result.manifest.processes.length >= 1, 'evaluate_system tool returns a manifest with processes');
+    const capTool = await reg.invoke('get_orchestrator_capabilities', { tenantId: 'none' });
+    assert(capTool.ok && Array.isArray(capTool.result.systems), 'get_orchestrator_capabilities tool returns the unified model');
+    const onbTool = await reg.invoke('get_onboarding_status', { tenantId: 'none' });
+    assert(onbTool.ok && onbTool.result.overall, 'get_onboarding_status tool returns the readiness board');
+  } catch (e) {
+    assert(false, `System comprehension (Phase 1) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---
