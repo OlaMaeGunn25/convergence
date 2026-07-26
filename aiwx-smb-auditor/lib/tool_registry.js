@@ -32,6 +32,8 @@ const { AttributionLog } = require('./attribution');
 const systemEvaluator = require('./system_evaluator');
 const { KnowledgeBase } = require('./knowledge_ingest');
 const { createEmbedder } = require('./embeddings');
+const { createReranker } = require('./reranker');
+const modelRouter = require('./model_router');
 const ingestionAdapters = require('./ingestion_adapters');
 const industry = require('./industry_practices');
 const { Installation } = require('./installation');
@@ -52,7 +54,7 @@ const connectionRegistry = new ConnectionRegistry();
 const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
-const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder() });
+const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
 const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
@@ -985,6 +987,21 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: () => deploymentInfo()
+});
+
+register({
+  name: 'route_model',
+  title: 'Model-cascade router (LLM cost lever)',
+  description: 'Recommend the cheapest CAPABLE model tier (local|cheap|standard|premium) for an LLM call by confidence + risk; escalates to premium for low-confidence or high-risk/destructive actions (MCR). Advisory — the gateway performs the call.',
+  inputSchema: z.object({
+    confidence: z.number().min(0).max(1).optional(),
+    risk: z.enum(['low', 'medium', 'high']).optional(),
+    destructive: z.boolean().optional(),
+    provider: z.enum(['gemini', 'openai', 'claude', 'ollama']).optional(),
+    localPreferred: z.boolean().optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => modelRouter.route(input)
 });
 
 register({

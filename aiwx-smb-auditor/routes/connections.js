@@ -28,13 +28,14 @@ const { TelemetryStream } = require('../lib/agent_telemetry');
 const { ChatSession } = require('../lib/hitl_chat');
 const { KnowledgeBase } = require('../lib/knowledge_ingest');
 const { createEmbedder } = require('../lib/embeddings');
+const { createReranker } = require('../lib/reranker');
 const ingestionAdapters = require('../lib/ingestion_adapters');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
 const connections = new ConnectionRegistry();
-const knowledgeBaseSvc = new KnowledgeBase({ embedder: createEmbedder() });
+const knowledgeBaseSvc = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
 const installationSvc = new Installation({ connectionRegistry: connections, knowledgeBase: knowledgeBaseSvc });
 const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();

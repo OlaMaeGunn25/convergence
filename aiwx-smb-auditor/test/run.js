@@ -1345,6 +1345,63 @@ async function runTests() {
     assert(false, `Unified ingestion adapters (RAG/scour/upload) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 31: Reranker (RRK) + model-cascade router (MCR) — cost levers ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { localReranker, createReranker } = require('../lib/reranker');
+    const modelRouter = require('../lib/model_router');
+    const { KnowledgeBase } = require('../lib/knowledge_ingest');
+    const reg = require('../lib/tool_registry');
+
+    // A. Local reranker reorders candidates toward exact-phrase / high-coverage
+    const rr = localReranker();
+    const reranked = await rr.rerank({
+      query: 'refund policy window',
+      candidates: [
+        { text: 'General company overview and history.', score: 0.4 },
+        { text: 'The refund policy window is 30 days for all products.', score: 0.35 },
+        { text: 'Shipping and delivery timelines.', score: 0.3 }
+      ], k: 2
+    });
+    assert(reranked.length === 2 && /refund policy window/.test(reranked[0].text) && reranked[0].rerankScore != null, 'Reranker promotes the exact-match candidate and trims to top-k (RRK-01/02)');
+
+    // B. Two-stage KB search: recall wide, rerank to a small top-k (context reduction)
+    const kf = pth.join(os.tmpdir(), `aiwx_rrk_${Date.now()}.json`);
+    const kb = new KnowledgeBase({ file: kf, reranker: createReranker() });
+    await kb.ingest({ tenantId: 'rk', source: 'upload', approvedScope: true, docs: [
+      { ref: 'a', text: 'Our refund policy allows returns within 30 days of purchase.' },
+      { ref: 'b', text: 'Employee vacation policy and accrual rules.' },
+      { ref: 'c', text: 'Refunds require the original receipt and manager approval.' },
+      { ref: 'd', text: 'Office opening hours and holiday schedule.' }
+    ] });
+    const hits = await kb.search({ tenantId: 'rk', query: 'refund returns receipt', k: 2 });
+    assert(hits.results.length === 2 && hits.results.every(r => /refund/i.test(r.text)) && hits.results[0].rerankScore != null, 'Two-stage KB search returns a small, reranked, relevant top-k');
+    try { fsx.unlinkSync(kf); } catch (e) {}
+
+    // C. Backward compatible: a KB with no reranker behaves as before
+    const kf2 = pth.join(os.tmpdir(), `aiwx_rrk2_${Date.now()}.json`);
+    const kb2 = new KnowledgeBase({ file: kf2 });
+    await kb2.ingest({ tenantId: 'rk2', source: 'upload', approvedScope: true, docs: [{ ref: 'x', text: 'refund policy returns 30 days' }] });
+    const h2 = await kb2.search({ tenantId: 'rk2', query: 'refund policy', k: 3 });
+    assert(h2.results.length > 0 && h2.results[0].rerankScore === undefined, 'KB with no reranker keeps the original behavior (RRK-03)');
+    try { fsx.unlinkSync(kf2); } catch (e) {}
+
+    // D. Model-cascade router: cheap for easy, premium for risky/low-confidence
+    assert(modelRouter.route({ confidence: 0.95, risk: 'low', provider: 'gemini' }).tier === 'cheap', 'High-confidence low-risk routes to the cheap tier (cost saving, MCR-02)');
+    assert(modelRouter.route({ confidence: 0.95, risk: 'low', localPreferred: true, provider: 'ollama' }).tier === 'local', 'High-confidence low-risk with localPreferred routes to a local model');
+    assert(modelRouter.route({ destructive: true, provider: 'claude' }).tier === 'premium', 'A destructive/high-risk action escalates to the premium tier');
+    const low = modelRouter.route({ confidence: 0.3, provider: 'openai' });
+    assert(low.tier === 'premium' && low.routeToHitl === true, 'Low confidence escalates to premium AND flags for human review');
+    assert(modelRouter.route({ confidence: 0.95, risk: 'low', provider: 'openai' }).model === 'gpt-4o-mini', 'Router honors the provider (OpenAI cheap tier = gpt-4o-mini)');
+
+    // E. Registry tool
+    assert(reg.has('route_model'), 'route_model tool is registered');
+    const rt = await reg.invoke('route_model', { confidence: 0.9, risk: 'low', provider: 'gemini' });
+    assert(rt.ok && rt.result.tier === 'cheap', 'route_model tool recommends the cost-saving tier');
+  } catch (e) {
+    assert(false, `Reranker / model router (RRK/MCR) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

@@ -49,6 +49,9 @@ class KnowledgeBase {
     // are upserted to it on ingest and semantic queries route through it; otherwise
     // the local hybrid search is used. See lib/embeddings.js.
     this.embedder = options.embedder || null;
+    // Optional second-stage reranker (RRK). When present, search retrieves a
+    // wider recall set then reranks down to top-k for precision. See lib/reranker.js.
+    this.reranker = options.reranker || null;
   }
 
   /**
@@ -108,29 +111,39 @@ class KnowledgeBase {
 
   /** Hybrid search: semantic vectors when a backend is configured, else lexical
    *  (substring hits) + keyword-set overlap over the local store. */
-  async search({ tenantId = null, query, k = 5 }) {
+  async search({ tenantId = null, query, k = 5, recall = null }) {
+    // Two-stage retrieval (RRK): recall broadly, then rerank to top-k for precision.
+    const recallK = recall || Math.max(k * 4, k);
+
+    // Stage 1 — recall (vector backend when present, else local hybrid).
+    let candidates = null;
     if (this.embedder && typeof this.embedder.query === 'function') {
-      try { return await this.embedder.query({ tenantId, query, k }); }
-      catch (e) { /* fall through to local hybrid search */ }
+      try { const r = await this.embedder.query({ tenantId, query, k: recallK }); candidates = (r && r.results) || []; }
+      catch (e) { candidates = null; }
     }
-    const qk = keywordsOf(query || '');
-    const qset = new Set(qk);
-    const chunks = await this.all(tenantId);
-    const scored = chunks.map(c => {
-      const ck = new Set(c.keywords || []);
-      let lex = 0; for (const t of qk) if (String(c.text || '').toLowerCase().includes(t)) lex++;
-      let inter = 0; for (const t of qset) if (ck.has(t)) inter++;
-      const sem = qset.size ? inter / qset.size : 0;
-      const score = 0.5 * (qk.length ? lex / qk.length : 0) + 0.5 * sem;
-      return { chunk: c, score };
-    }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, k);
-    return {
-      query,
-      results: scored.map(s => ({
-        text: s.chunk.text, sourceRef: s.chunk.sourceRef, source: s.chunk.source,
-        provenance: s.chunk.provenance, score: Number(s.score.toFixed(3))
-      }))
-    };
+    if (!candidates) {
+      const qk = keywordsOf(query || '');
+      const qset = new Set(qk);
+      const chunks = await this.all(tenantId);
+      candidates = chunks.map(c => {
+        const ck = new Set(c.keywords || []);
+        let lex = 0; for (const t of qk) if (String(c.text || '').toLowerCase().includes(t)) lex++;
+        let inter = 0; for (const t of qset) if (ck.has(t)) inter++;
+        const sem = qset.size ? inter / qset.size : 0;
+        const score = 0.5 * (qk.length ? lex / qk.length : 0) + 0.5 * sem;
+        return { text: c.text, sourceRef: c.sourceRef, source: c.source, provenance: c.provenance, score: Number(score.toFixed(3)) };
+      }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, recallK);
+    }
+
+    // Stage 2 — rerank to top-k (precision), else keep the top-k by recall score.
+    let results;
+    if (this.reranker && typeof this.reranker.rerank === 'function') {
+      try { results = await this.reranker.rerank({ query, candidates, k }); }
+      catch (e) { results = candidates.slice(0, k); }
+    } else {
+      results = candidates.slice(0, k);
+    }
+    return { query, results };
   }
 
   /** Knowledge Compilation agent aggregate (KNW-04): the compiled company KB. */
