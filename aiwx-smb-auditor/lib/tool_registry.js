@@ -38,6 +38,7 @@ const { TelemetryStream } = require('./agent_telemetry');
 const { AutonomyGrants } = require('./autonomy');
 const taskRequest = require('./task_request');
 const { ChatSession } = require('./hitl_chat');
+const precommit = require('./precommit');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -815,6 +816,26 @@ register({
   inputSchema: z.object({ planId: z.string() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input) => chatSession.getPlan(input.planId).then(plan => ({ plan }))
+});
+
+// ── Pre-commit checks-and-balances (NEG-02/03) ───────────────────────────────
+
+register({
+  name: 'precommit_review',
+  title: 'Pre-commit checks-and-balances review',
+  description: 'The Orchestrator-mediated independent review run BEFORE an action crosses the commit boundary: capability + practice/SOP + compliance-floor checks. A failure blocks the commit and routes to HITL (NEG-02/03).',
+  inputSchema: z.object({
+    tenantId: z.string().optional(), vertical: z.string().optional(),
+    connectorId: z.string().optional(), capability: z.string().optional(),
+    toolName: z.string().optional(), approved: z.boolean().optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => precommit.review({
+    tenantId: input.tenantId || ctx.tenantId || null, vertical: input.vertical || null,
+    connectorId: input.connectorId || null, capability: input.capability || null,
+    toolName: input.toolName || input.capability || null,
+    connectionRegistry, knowledgeBase, approved: input.approved === true
+  })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

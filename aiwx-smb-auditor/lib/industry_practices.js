@@ -55,7 +55,7 @@ async function correlate({ vertical, capability, connectorId = null, knowledgeBa
   // Heuristic conflict seam: an SOP that says "do not"/"never"/"prohibited" about
   // the capability while a practice requires it is flagged (SOP governs either way).
   let conflictFlaggedToHitl = false;
-  if (governingSop && practices.length) {
+  if (governingSop) {
     const t = String(governingSop.text || '').toLowerCase();
     if (/\b(do not|don't|never|prohibited|must not)\b/.test(t) && t.includes(String(capability).toLowerCase())) {
       conflictFlaggedToHitl = true;

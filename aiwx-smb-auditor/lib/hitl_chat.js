@@ -22,6 +22,7 @@ const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./s
 const jsonFile = require('./stores/json_file');
 const taskRequest = require('./task_request');
 const industry = require('./industry_practices');
+const precommit = require('./precommit');
 
 const EMPTY = { plans: [] };
 
@@ -134,6 +135,19 @@ class ChatSession {
       throw new Error('This request needs disambiguation before it can be confirmed.');
     }
     const top = plan.plan.top;
+
+    // Pre-commit checks-and-balances at the commit boundary (NEG-02/03): an
+    // independent review must pass before the action is committed to a task.
+    const review = await precommit.review({
+      tenantId: plan.tenantId, vertical: plan.vertical,
+      connectorId: top.connectorId, capability: top.capability, toolName: top.capability,
+      connectionRegistry: this.connectionRegistry, approved: false
+    });
+    if (!review.ok) {
+      await this._setStatus(planId, 'blocked_precommit');
+      return { confirmed: false, routeToHitl: true, planId, review };
+    }
+
     let task = null;
     if (this.taskModel) {
       task = await this.taskModel.create({
@@ -151,7 +165,7 @@ class ChatSession {
       });
     }
     await this._setStatus(planId, 'confirmed');
-    return { confirmed: true, planId, task };
+    return { confirmed: true, planId, task, review };
   }
 }
 

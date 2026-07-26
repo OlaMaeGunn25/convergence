@@ -1023,6 +1023,60 @@ async function runTests() {
     assert(false, `HITL chat (Phase 8) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 24: Pre-commit checks-and-balances (NEG-02/03) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const precommit = require('../lib/precommit');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const { KnowledgeBase } = require('../lib/knowledge_ingest');
+    const { ChatSession } = require('../lib/hitl_chat');
+    const { TaskModel } = require('../lib/task_model');
+    const reg = require('../lib/tool_registry');
+
+    const cf = pth.join(os.tmpdir(), `aiwx_pc_conn_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cf });
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'pc' });
+
+    // A. A valid, connected, non-floor action passes
+    const okReview = await precommit.review({ tenantId: 'pc', vertical: 'legal', connectorId: 'clio', capability: 'create_activity', connectionRegistry: conns });
+    assert(okReview.ok === true && okReview.checks.some(c => c.name === 'capability' && c.pass), 'Pre-commit passes a valid, connected, non-floor action');
+
+    // B. A compliance-floor action without approval is blocked -> HITL
+    const floorReview = await precommit.review({ tenantId: 'pc', vertical: 'legal', connectorId: 'clio', capability: 'record_trust_transaction', connectionRegistry: conns });
+    assert(floorReview.ok === false && floorReview.blockers.includes('compliance_floor') && floorReview.routeToHitl === true, 'Pre-commit blocks a compliance-floor action and routes to HITL (NEG-03/AUT-04)');
+    const floorApproved = await precommit.review({ tenantId: 'pc', vertical: 'legal', connectorId: 'clio', capability: 'record_trust_transaction', connectionRegistry: conns, approved: true });
+    assert(floorApproved.ok === true, 'An explicitly approved compliance-floor action passes');
+
+    // C. An unconnected capability is blocked
+    const unconn = await precommit.review({ tenantId: 'pc', connectorId: 'hubspot', capability: 'list_deals', connectionRegistry: conns });
+    assert(unconn.ok === false && unconn.blockers.includes('capability'), 'Pre-commit blocks an action on an unconnected system');
+
+    // D. A company SOP that forbids the action wins (SOP governs -> HITL)
+    const kbf = pth.join(os.tmpdir(), `aiwx_pc_kb_${Date.now()}.json`);
+    const kb = new KnowledgeBase({ file: kbf });
+    await kb.ingest({ tenantId: 'pc', source: 'upload', approvedScope: true, docs: [{ ref: 'sop.pdf', text: 'Never create_activity on a closed matter without partner approval.' }] });
+    const sopReview = await precommit.review({ tenantId: 'pc', vertical: 'legal', connectorId: 'clio', capability: 'create_activity', connectionRegistry: conns, knowledgeBase: kb });
+    assert(sopReview.blockers.includes('sop_conflict'), 'A company SOP forbidding the action blocks the commit (SOP governs, KNW-03)');
+    try { fsx.unlinkSync(kbf); } catch (e) {}
+
+    // E. The chat commit boundary is gated by pre-commit (floor -> routeToHitl, no task)
+    const pf = pth.join(os.tmpdir(), `aiwx_pc_plan_${Date.now()}.json`);
+    const chat = new ChatSession({ file: pf, connectionRegistry: conns, taskModel: new TaskModel({ file: pth.join(os.tmpdir(), `aiwx_pc_tm_${Date.now()}.json`) }) });
+    const plan = await chat.interpret({ query: 'record a client trust deposit', tenantId: 'pc', hitlId: 'h1', vertical: 'legal' });
+    const confirm = await chat.confirm({ planId: plan.planId, hitlId: 'h1' });
+    assert(confirm.confirmed === false && confirm.routeToHitl === true && !confirm.task, 'chat confirm is blocked at the commit boundary for a compliance-floor action (NEG-02)');
+    try { fsx.unlinkSync(pf); fsx.unlinkSync(cf); } catch (e) {}
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+
+    // F. Registry tool
+    assert(reg.has('precommit_review'), 'precommit_review tool is registered');
+    const pr = await reg.invoke('precommit_review', { capability: 'wire_transfer', toolName: 'wire_transfer' });
+    assert(pr.ok === true && pr.result.blockers.includes('compliance_floor'), 'precommit_review tool flags a compliance-floor action');
+  } catch (e) {
+    assert(false, `Pre-commit checks-and-balances (NEG) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
