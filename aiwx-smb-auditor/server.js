@@ -1811,7 +1811,8 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     env: process.env.NODE_ENV || 'development',
     firecrawl: !!process.env.FIRECRAWL_API_KEY,
-    ga4: !!process.env.GA4_PROPERTY_ID
+    ga4: !!process.env.GA4_PROPERTY_ID,
+    deployment: require('./lib/deployment').deploymentInfo()
   });
 });
 

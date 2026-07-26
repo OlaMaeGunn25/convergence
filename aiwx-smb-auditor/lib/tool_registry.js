@@ -42,6 +42,7 @@ const precommit = require('./precommit');
 const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
+const { deploymentInfo } = require('./deployment');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -945,6 +946,17 @@ register({
   inputSchema: z.object({ employeeId: z.string() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input) => humanCompanion.wellbeing({ employeeId: input.employeeId })
+});
+
+// ── Deployment mode (DEP) ────────────────────────────────────────────────────
+
+register({
+  name: 'get_deployment_info',
+  title: 'Deployment mode (cloud | on-prem)',
+  description: 'Report the active deployment mode and state backend. The orchestrator + 13-agent roster run identically in both modes — mode is config, not a code fork (DEP-03).',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => deploymentInfo()
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

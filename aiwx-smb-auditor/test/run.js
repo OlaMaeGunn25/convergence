@@ -1175,6 +1175,34 @@ async function runTests() {
     assert(false, `Human Companion (Phase 10) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 27: Deployment mode — cloud | on-prem (DEP) ---
+  try {
+    const fsx = require('fs'); const pth = require('path');
+    const { deploymentInfo } = require('../lib/deployment');
+    const reg = require('../lib/tool_registry');
+
+    // A. Default (no Supabase, no override) is on-prem with a local state backend
+    const prev = process.env.DEPLOYMENT_MODE; delete process.env.DEPLOYMENT_MODE;
+    const info = deploymentInfo();
+    assert(info.mode === 'onprem' && info.stateBackend === 'json-file' && info.cloudDependencies.length === 0, 'Default deployment is on-prem with a local state backend and no cloud dependency');
+    process.env.DEPLOYMENT_MODE = 'cloud';
+    assert(deploymentInfo().mode === 'cloud' && deploymentInfo().selfHosted === false, 'DEPLOYMENT_MODE=cloud reports cloud-native');
+    if (prev === undefined) delete process.env.DEPLOYMENT_MODE; else process.env.DEPLOYMENT_MODE = prev;
+
+    // B. Registry tool
+    assert(reg.has('get_deployment_info'), 'get_deployment_info tool is registered');
+    const t = await reg.invoke('get_deployment_info', {});
+    assert(t.ok && typeof t.result.mode === 'string', 'get_deployment_info tool returns the active mode');
+
+    // C. On-prem Compose stack + env template + docs are present
+    const root = pth.join(__dirname, '..', '..');
+    assert(fsx.existsSync(pth.join(root, 'docker-compose.onprem.yml')), 'On-prem Docker Compose file exists');
+    assert(fsx.existsSync(pth.join(root, '.env.onprem.example')), 'On-prem env template exists');
+    assert(fsx.existsSync(pth.join(root, 'docs', 'DEPLOYMENT_ONPREM.md')), 'On-prem deployment doc exists');
+  } catch (e) {
+    assert(false, `Deployment mode (DEP) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

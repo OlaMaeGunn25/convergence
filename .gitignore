@@ -6,6 +6,7 @@
 **/.env.production
 **/.env.local
 **/.env.development
+**/.env.onprem
 
 # Log files
 **/*.log
