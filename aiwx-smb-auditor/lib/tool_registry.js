@@ -41,6 +41,7 @@ const { ChatSession } = require('./hitl_chat');
 const precommit = require('./precommit');
 const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
+const { HumanCompanion } = require('./human_companion');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -54,6 +55,7 @@ const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
 const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog });
 const complianceReporting = new ComplianceReporting();
+const humanCompanion = new HumanCompanion();
 
 const registry = new Map();
 
@@ -883,6 +885,66 @@ register({
   inputSchema: z.object({ tenantId: z.string().optional(), format: z.enum(['json', 'csv', 'html']).optional() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => complianceReporting.export({ tenantId: input.tenantId || ctx.tenantId || null, format: input.format || 'json' })
+});
+
+// ── Human Companion / HR generalist (Phase 10, HRC) — human-care plane ────────
+
+register({
+  name: 'hr_submit_request',
+  title: 'Submit an HR request (Human Companion)',
+  description: 'Submit a personal HR request — PTO, assignment status, manager approval, complaint, or wellbeing. Complaints are confidential by default (HRC-01/03).',
+  inputSchema: z.object({
+    employeeId: z.string(),
+    type: z.enum(['pto', 'assignment_status', 'manager_approval', 'complaint', 'wellbeing']),
+    detail: z.string().optional(), tenantId: z.string().optional(), confidential: z.boolean().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => humanCompanion.submit({ employeeId: input.employeeId, type: input.type, detail: input.detail || null, tenantId: input.tenantId || ctx.tenantId || null, confidential: input.confidential }).then(request => ({ request }))
+});
+
+register({
+  name: 'hr_list_requests',
+  title: 'List HR requests (employee view)',
+  description: 'The employee-owned view of their HR requests (full detail — the employee owns their data).',
+  inputSchema: z.object({ employeeId: z.string(), tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => humanCompanion.list({ employeeId: input.employeeId, tenantId: input.tenantId || ctx.tenantId || undefined }).then(requests => ({ requests }))
+});
+
+register({
+  name: 'hr_manager_view',
+  title: 'Manager view of an HR request (redacted)',
+  description: 'A manager-facing view of an HR request — confidential matters (complaints) are REDACTED to type + status, never the private detail (HRC-03/04).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => humanCompanion.managerView(input.id).then(request => ({ request }))
+});
+
+register({
+  name: 'hr_route_approval',
+  title: 'Route an HR approval to a manager',
+  description: 'Route a PTO/assignment approval to a manager with least-necessary disclosure. A confidential complaint is refused here — it routes to the confidential HR channel (HRC-04).',
+  inputSchema: z.object({ id: z.string(), managerHitlId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => humanCompanion.routeApproval({ id: input.id, managerHitlId: input.managerHitlId || null }).then(request => ({ request }))
+});
+
+register({
+  name: 'hr_set_status',
+  title: 'Update an HR request status',
+  description: 'Update an HR request status (e.g. approved | denied | acknowledged | resolved).',
+  inputSchema: z.object({ id: z.string(), status: z.string() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => humanCompanion.setStatus(input.id, input.status).then(request => ({ request }))
+});
+
+register({
+  name: 'hr_wellbeing_check',
+  title: 'Work-life-balance check (Human Companion)',
+  description: 'A supportive work-life-balance signal — the Companion advocates for the employee (HRC-02).',
+  inputSchema: z.object({ employeeId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => humanCompanion.wellbeing({ employeeId: input.employeeId })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

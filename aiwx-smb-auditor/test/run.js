@@ -1127,6 +1127,54 @@ async function runTests() {
     assert(false, `Compliance / reporting (Phase 9) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 26: Human Companion / HR agent (Phase 10, HRC) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { HumanCompanion } = require('../lib/human_companion');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    const hf = pth.join(os.tmpdir(), `aiwx_hr_${Date.now()}.json`);
+    const hc = new HumanCompanion({ file: hf });
+
+    // A. Submit — complaints are confidential by default
+    const pto = await hc.submit({ employeeId: 'e1', type: 'pto', detail: 'Aug 4-8 vacation' });
+    assert(pto.confidential === false && pto.status === 'submitted', 'A PTO request is non-confidential');
+    const complaint = await hc.submit({ employeeId: 'e1', type: 'complaint', detail: 'Concern about manager conduct' });
+    assert(complaint.confidential === true, 'A complaint is confidential by default (HRC-03)');
+
+    // B. Confidentiality partition — manager view redacts confidential detail
+    const mgrComplaint = await hc.managerView(complaint.id);
+    assert(mgrComplaint.detail === '[redacted — confidential HR matter]' && !/(conduct)/.test(JSON.stringify(mgrComplaint)), 'Manager view REDACTS a confidential complaint (never the private detail)');
+    const mgrPto = await hc.managerView(pto.id);
+    assert(mgrPto.detail === 'Aug 4-8 vacation', 'Manager view shows non-confidential requests in full');
+
+    // C. Routing — approvals go to a manager; complaints do NOT
+    const routed = await hc.routeApproval({ id: pto.id, managerHitlId: 'mgr1' });
+    assert(routed.assignedManager === 'mgr1' && routed.status === 'in_review', 'A PTO approval routes to a manager');
+    let refused = false; try { await hc.routeApproval({ id: complaint.id, managerHitlId: 'mgr1' }); } catch (e) { refused = /confidential HR channel/.test(e.message); }
+    assert(refused, 'A confidential complaint is NOT routed to a manager (HRC-04)');
+
+    // D. Wellbeing — the Companion advocates for the employee
+    const wb = await hc.wellbeing({ employeeId: 'e1' });
+    assert(wb.mandate === 'protect the employee' && typeof wb.message === 'string', 'The Companion returns a wellbeing signal mandated to protect the employee');
+    try { fsx.unlinkSync(hf); } catch (e) {}
+
+    // E. Plane isolation — business roles cannot touch HR tools; Companion can
+    assert(roster.ROLES.human_companion.plane === 'human', 'Human Companion is on the human-care plane');
+    assert(roster.roleAllowsTool('human_companion', 'hr_submit_request') === true, 'The Companion is bound to the HR tools');
+    assert(roster.roleAllowsTool('operations', 'hr_submit_request') === false, 'Business-plane roles cannot invoke HR tools (confidentiality partition)');
+
+    // F. Registry tools
+    assert(reg.has('hr_submit_request') && reg.has('hr_manager_view') && reg.has('hr_wellbeing_check'), 'Phase 10 HR tools are registered');
+    const sub = await reg.invoke('hr_submit_request', { employeeId: 'e9', type: 'complaint', detail: 'secret' }, { actor: 'companion' });
+    assert(sub.ok && sub.result.request.confidential === true, 'hr_submit_request tool submits a confidential complaint');
+    const mv = await reg.invoke('hr_manager_view', { id: sub.result.request.id });
+    assert(mv.ok && mv.result.request.detail === '[redacted — confidential HR matter]', 'hr_manager_view tool redacts confidential detail');
+  } catch (e) {
+    assert(false, `Human Companion (Phase 10) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

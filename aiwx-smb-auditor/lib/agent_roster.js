@@ -92,8 +92,7 @@ const ROLES = {
     title: 'Human Companion (HR Generalist) Agent',
     plane: PLANES.HUMAN,
     duty: 'HR generalist assigned to protect the human: PTO, assignment status, manager approvals, complaints/grievances, work-life balance. Operates under a confidentiality partition isolated from the business/ops plane.',
-    tools: [], // HR tools bind in Phase 10; strictly separated from business tools
-    pending: ['hr_request', 'hr_approval', 'hr_confidential_channel']
+    tools: ['hr_submit_request', 'hr_list_requests', 'hr_manager_view', 'hr_route_approval', 'hr_set_status', 'hr_wellbeing_check']
   }
 };
 
