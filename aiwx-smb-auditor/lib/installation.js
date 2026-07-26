@@ -14,6 +14,8 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 const { AgentRegistry } = require('./agent_model');
+const { KnowledgeBase } = require('./knowledge_ingest');
+const businessOnboarding = require('./business_onboarding');
 const systemEvaluator = require('./system_evaluator');
 
 const EMPTY = { installations: [] };
@@ -24,10 +26,15 @@ class Installation {
     this.file = options.file || path.join(__dirname, '..', 'config', 'installations.json');
     this.agents = options.agentRegistry || new AgentRegistry(options.agentOptions || {});
     this.connections = options.connectionRegistry || null;
+    this.knowledgeBase = options.knowledgeBase || new KnowledgeBase(options.knowledgeOptions || {});
   }
 
-  /** Install: provision the roster scoped to the vertical + record the selection. */
-  async install({ tenantId, vertical, selectedConnectors = [], actor = null }) {
+  /**
+   * Install: provision the roster scoped to the vertical, record the selection,
+   * and AUTO-CREATE the company knowledge base from the onboarding business
+   * intelligence (ONB-KB-01/02).
+   */
+  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], actor = null }) {
     if (!tenantId) throw new Error('tenantId is required to install.');
     if (!vertical) throw new Error('vertical is required (the locked vertical).');
     const roster = await this.agents.provisionRoster({ tenantId, vertical, scopeConnectors: selectedConnectors });
@@ -43,7 +50,20 @@ class Installation {
         return { value: { installations: arr }, result: record };
       });
     }
-    return { install: record, roster: roster.length };
+
+    // Auto-create the company KB from the onboarding business intelligence.
+    let knowledge = null;
+    try {
+      knowledge = await businessOnboarding.onboard({
+        tenantId, vertical, businessName: businessName || tenantId,
+        profile: businessProfile || {}, seedDocs: seedDocs || [], systems: selectedConnectors,
+        knowledgeBase: this.knowledgeBase, actor
+      });
+    } catch (kbErr) {
+      knowledge = { error: kbErr.message };
+    }
+
+    return { install: record, roster: roster.length, knowledge };
   }
 
   async getInstall(tenantId) {
@@ -74,12 +94,15 @@ class Installation {
     const readyCount = perSelected.filter(s => s.readiness === 'ready').length;
     const systemsReady = selected.length > 0 && readyCount === selected.length;
     const activeAgents = roster.filter(a => a.status === 'active').length;
+    const kb = await this.knowledgeBase.compile({ tenantId });
+    const knowledgeReady = kb.ready === true;
     return {
       tenantId, installed: true, vertical: install.vertical,
       selectedConnectors: selected, perSelected,
       rosterSize: roster.length, activeAgents, systemsReady,
+      knowledgeReady, knowledgeChunks: kb.totalChunks,
       readyPct: selected.length ? Math.round((100 * readyCount) / selected.length) : 0,
-      complete: roster.length >= 13 && systemsReady,
+      complete: roster.length >= 13 && systemsReady && knowledgeReady,
       generatedAt: new Date().toISOString()
     };
   }

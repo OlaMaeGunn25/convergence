@@ -44,8 +44,9 @@ async function suggestTasks({ tenantId, connectionRegistry }) {
   };
 }
 
-/** Interpret a NL/voice request → ranked executable candidates + confidence. */
-async function interpretRequest({ query, tenantId, connectionRegistry, threshold = 0.34, k = 5 }) {
+/** Interpret a NL/voice request → ranked executable candidates + confidence.
+ *  Every request is cross-referenced against the company knowledge base (XREF-01). */
+async function interpretRequest({ query, tenantId, connectionRegistry, knowledgeBase = null, threshold = 0.34, k = 5 }) {
   const { items } = await buildCatalog({ tenantId, connectionRegistry });
   const qk = keywordsOf(query || '');
   const qset = new Set(qk);
@@ -64,9 +65,18 @@ async function interpretRequest({ query, tenantId, connectionRegistry, threshold
   }));
   const top = candidates[0] || null;
   const confidence = top ? top.score : 0;
+
+  // Cross-reference the company knowledge base for grounding SOPs/intelligence.
+  let knowledgeRefs = [];
+  if (knowledgeBase) {
+    const kb = await knowledgeBase.search({ tenantId, query, k: 3 });
+    knowledgeRefs = kb.results || [];
+  }
+
   return {
     query, candidates, top, confidence,
     needsDisambiguation: !top || confidence < threshold,
+    knowledgeRefs,
     offeredFrom: items.length
   };
 }

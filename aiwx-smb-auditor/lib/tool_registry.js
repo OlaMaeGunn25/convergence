@@ -51,11 +51,11 @@ const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
 const knowledgeBase = new KnowledgeBase();
-const installation = new Installation({ agentRegistry, connectionRegistry });
+const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
-const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog });
+const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog, knowledgeBase });
 const complianceReporting = new ComplianceReporting();
 const humanCompanion = new HumanCompanion();
 
@@ -627,16 +627,21 @@ register({
 register({
   name: 'install_convergence',
   title: 'Install CONVERGENCE-Ai for a tenant/vertical',
-  description: 'Provision the full 13-agent roster scoped to the locked vertical and record the selected systems (INS-01/02, ORC-01). Agents start provisioned; go-live to active is a separate HITL-gated step.',
+  description: 'Provision the full 13-agent roster scoped to the locked vertical, record the selected systems, and AUTO-CREATE the company knowledge base from the onboarding business intelligence (INS-01/02, ORC-01, ONB-KB-01/02). Agents start provisioned; go-live is a separate HITL-gated step.',
   inputSchema: z.object({
     tenantId: z.string(),
     vertical: z.string(),
-    selectedConnectors: z.array(z.string()).optional()
+    selectedConnectors: z.array(z.string()).optional(),
+    businessName: z.string().optional(),
+    businessProfile: z.object({ purpose: z.string().optional(), customers: z.string().optional(), databases: z.string().optional() }).passthrough().optional(),
+    seedDocs: z.array(z.object({ ref: z.string().optional(), text: z.string() })).optional()
   }),
   annotations: { readOnly: false, destructive: false, openWorld: false },
   handler: (input, ctx) => installation.install({
     tenantId: input.tenantId, vertical: input.vertical,
-    selectedConnectors: input.selectedConnectors || [], actor: ctx.actor || null
+    selectedConnectors: input.selectedConnectors || [],
+    businessName: input.businessName || null, businessProfile: input.businessProfile || {},
+    seedDocs: input.seedDocs || [], actor: ctx.actor || null
   })
 });
 
@@ -793,7 +798,7 @@ register({
   description: 'Interpret a typed or voice-transcribed request into the closest executable task(s) with a confidence score; a low-confidence/ambiguous request is flagged for human disambiguation, never guessed (TRQ-03/04).',
   inputSchema: z.object({ query: z.string(), tenantId: z.string().optional(), threshold: z.number().optional() }),
   annotations: { readOnly: true, openWorld: false },
-  handler: (input, ctx) => taskRequest.interpretRequest({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry, threshold: input.threshold })
+  handler: (input, ctx) => taskRequest.interpretRequest({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry, knowledgeBase, threshold: input.threshold })
 });
 
 // ── HITL primary chat: ToT re-engineer → preview → confirm (Phase 8, CHT) ────

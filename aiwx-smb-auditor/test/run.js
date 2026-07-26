@@ -804,9 +804,12 @@ async function runTests() {
     const agf = pth.join(os.tmpdir(), `aiwx_iagents_${Date.now()}.json`);
     const cnf = pth.join(os.tmpdir(), `aiwx_iconn_${Date.now()}.json`);
     const conns = new ConnectionRegistry({ file: cnf });
-    const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns });
-    const res = await inst.install({ tenantId: 'i1', vertical: 'legal', selectedConnectors: ['clio'] });
+    const { KnowledgeBase: KB3 } = require('../lib/knowledge_ingest');
+    const kbf3 = pth.join(os.tmpdir(), `aiwx_ikb_${Date.now()}.json`);
+    const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns, knowledgeBase: new KB3({ file: kbf3 }) });
+    const res = await inst.install({ tenantId: 'i1', vertical: 'legal', selectedConnectors: ['clio'], businessName: 'Lobo Law', businessProfile: { purpose: 'trial defense' } });
     assert(res.roster === 13, 'Install provisions the full 13-agent roster');
+    assert(res.knowledge && res.knowledge.ingested >= 1, 'Install AUTO-CREATES the company knowledge base on onboarding (ONB-KB-01)');
     let st = await inst.status({ tenantId: 'i1' });
     assert(st.installed === true && st.complete === false, 'Install is not complete while a selected system is not agent_ready');
     process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
@@ -814,7 +817,7 @@ async function runTests() {
     st = await inst.status({ tenantId: 'i1' });
     assert(st.systemsReady === true && st.complete === true, 'Install completes when every selected system is agent_ready + roster deployed');
     delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
-    try { fsx.unlinkSync(inf); fsx.unlinkSync(agf); fsx.unlinkSync(cnf); } catch (e) {}
+    try { fsx.unlinkSync(inf); fsx.unlinkSync(agf); fsx.unlinkSync(cnf); fsx.unlinkSync(kbf3); } catch (e) {}
 
     // B. Delivery + Q/A completion gate (AGT-05/06)
     const atf = pth.join(os.tmpdir(), `aiwx_att_${Date.now()}.json`);
@@ -994,7 +997,7 @@ async function runTests() {
 
     // A. Interpret: ToT + understanding + projected outcomes, awaiting confirmation
     const plan = await chat.interpret({ query: 'create a time activity on the matter', tenantId: 'ch', hitlId: 'h1', vertical: 'legal' });
-    assert(plan.plan.treeOfThought.branches.length === 5, 'Every prompt is re-engineered into a 5-branch tree-of-thought (CHT-02)');
+    assert(plan.plan.treeOfThought.branches.length === 6 && plan.plan.treeOfThought.branches.some(b => /knowledge base/i.test(b.thought)), 'Every prompt is re-engineered into a tree-of-thought incl. a company-KB cross-reference branch (CHT-02/XREF-02)');
     assert(plan.plan.understanding.interpretedIntent && plan.plan.understanding.capability.connectorId === 'clio', 'The system echoes what it understood — the interpreted action (CHT-03)');
     assert(plan.plan.projectedOutcomes.length === 1 && plan.status === 'awaiting_confirmation', 'Projected outcomes are shown and the plan awaits confirmation (CHT-04)');
 
@@ -1231,6 +1234,62 @@ async function runTests() {
     assert(lv.ok && lv.result.verticals.length === 14, 'list_verticals returns the 14 verticals');
   } catch (e) {
     assert(false, `Per-vertical matrix (Phase 6) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 29: Auto-KB on onboarding + cross-reference every command (ONB-KB/XREF) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const businessOnboarding = require('../lib/business_onboarding');
+    const { KnowledgeBase } = require('../lib/knowledge_ingest');
+    const { Installation } = require('../lib/installation');
+    const { AgentRegistry } = require('../lib/agent_model');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const { ChatSession } = require('../lib/hitl_chat');
+    const taskReq = require('../lib/task_request');
+
+    // A. Onboarding auto-creates the company KB from business intelligence
+    const kbf = pth.join(os.tmpdir(), `aiwx_onb_kb_${Date.now()}.json`);
+    const kb = new KnowledgeBase({ file: kbf });
+    const onb = await businessOnboarding.onboard({
+      tenantId: 'biz1', vertical: 'legal', businessName: 'Lobo Law',
+      profile: { purpose: 'trial defense', customers: 'accident victims', databases: 'Clio' },
+      seedDocs: [{ ref: 'intake-sop.pdf', text: 'Always run a conflict of interest check before opening a matter.' }],
+      systems: ['clio'], knowledgeBase: kb
+    });
+    assert(onb.ingested >= 2 && onb.compiled.ready === true, 'Onboarding auto-ingests business intelligence + seed docs into the company KB (ONB-KB-01/02)');
+    const profileHit = await kb.search({ tenantId: 'biz1', query: 'company purpose trial defense' });
+    assert(profileHit.results.length > 0, 'The synthesized business-intelligence profile is searchable in the KB');
+
+    // B. install() auto-creates the KB and reports knowledgeReady
+    const inf = pth.join(os.tmpdir(), `aiwx_onb_inst_${Date.now()}.json`);
+    const agf = pth.join(os.tmpdir(), `aiwx_onb_ag_${Date.now()}.json`);
+    const cnf = pth.join(os.tmpdir(), `aiwx_onb_cn_${Date.now()}.json`);
+    const kf2 = pth.join(os.tmpdir(), `aiwx_onb_kb2_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cnf });
+    const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns, knowledgeBase: new KnowledgeBase({ file: kf2 }) });
+    const res = await inst.install({ tenantId: 'biz2', vertical: 'legal', selectedConnectors: [], businessName: 'Acme Legal' });
+    assert(res.knowledge && res.knowledge.compiled.ready === true, 'install() auto-creates the KB during onboarding');
+    const st = await inst.status({ tenantId: 'biz2' });
+    assert(st.knowledgeReady === true && st.knowledgeChunks >= 1, 'Install status reports the KB as ready (ONB-KB-03)');
+    try { [inf, agf, cnf, kf2].forEach(f => fsx.unlinkSync(f)); } catch (e) {}
+
+    // C. Every command is cross-referenced against the company KB (XREF-01)
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'biz1' });
+    const interp = await taskReq.interpretRequest({ query: 'conflict of interest check before a matter', tenantId: 'biz1', connectionRegistry: conns, knowledgeBase: kb });
+    assert(Array.isArray(interp.knowledgeRefs) && interp.knowledgeRefs.length > 0, 'Task-request interpretation cross-references the company KB (XREF-01)');
+
+    // D. Chat ToT shows the KB cross-reference branch grounded in company knowledge
+    const pf = pth.join(os.tmpdir(), `aiwx_onb_plan_${Date.now()}.json`);
+    const chat = new ChatSession({ file: pf, connectionRegistry: conns, knowledgeBase: kb });
+    const plan = await chat.interpret({ query: 'conflict of interest check before a matter', tenantId: 'biz1', vertical: 'legal' });
+    const xrefBranch = plan.plan.treeOfThought.branches.find(b => /knowledge base/i.test(b.thought));
+    assert(xrefBranch && /company KB reference/.test(xrefBranch.detail), 'The chat tree-of-thought grounds the request in company KB references (XREF-02)');
+    assert(plan.plan.understanding.knowledgeRefs.length > 0, 'The understanding attaches the grounding knowledge references');
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { fsx.unlinkSync(kbf); fsx.unlinkSync(cnf); fsx.unlinkSync(pf); } catch (e) {}
+  } catch (e) {
+    assert(false, `Auto-KB onboarding / cross-reference (ONB-KB/XREF) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

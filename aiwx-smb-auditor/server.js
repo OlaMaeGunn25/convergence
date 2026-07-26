@@ -25,15 +25,17 @@ const { AgentRegistry } = require('./lib/agent_model');
 const { AttributionLog } = require('./lib/attribution');
 const { TelemetryStream } = require('./lib/agent_telemetry');
 const { ChatSession } = require('./lib/hitl_chat');
+const { KnowledgeBase } = require('./lib/knowledge_ingest');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
-const installationSvc = new Installation({ connectionRegistry });
+const knowledgeBaseSvc = new KnowledgeBase();
+const installationSvc = new Installation({ connectionRegistry, knowledgeBase: knowledgeBaseSvc });
 const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
 const telemetrySvc = new TelemetryStream();
 const connTaskModel = new ConnTaskModel();
-const chatSessionSvc = new ChatSession({ connectionRegistry, taskModel: connTaskModel, attributionLog: attributionLogSvc });
+const chatSessionSvc = new ChatSession({ connectionRegistry, taskModel: connTaskModel, attributionLog: attributionLogSvc, knowledgeBase: knowledgeBaseSvc });
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
 const { authenticate, isAuthConfigured } = require('./lib/auth');
@@ -419,7 +421,7 @@ app.post('/api/task-request', async (req, res) => {
   try {
     const { query, tenantId } = req.body || {};
     if (!query) return res.status(400).json({ success: false, error: 'A request "query" is required.' });
-    const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry });
+    const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry, knowledgeBase: knowledgeBaseSvc });
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Task interpretation failed.' });
@@ -449,9 +451,9 @@ app.post('/api/tasks/:id/cancel', async (req, res) => {
 // Install CONVERGENCE-Ai for a tenant/vertical (provision roster + record selection).
 app.post('/api/install', async (req, res) => {
   try {
-    const { tenantId, vertical, selectedConnectors } = req.body || {};
+    const { tenantId, vertical, selectedConnectors, businessName, businessProfile, seedDocs } = req.body || {};
     if (!tenantId || !vertical) return res.status(400).json({ success: false, error: 'tenantId and vertical are required.' });
-    const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], actor: req.actor || null });
+    const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], businessName: businessName || null, businessProfile: businessProfile || {}, seedDocs: seedDocs || [], actor: req.actor || null });
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Install failed.' });

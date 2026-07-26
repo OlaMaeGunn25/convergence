@@ -26,17 +26,19 @@ const { AgentRegistry } = require('../lib/agent_model');
 const { AttributionLog } = require('../lib/attribution');
 const { TelemetryStream } = require('../lib/agent_telemetry');
 const { ChatSession } = require('../lib/hitl_chat');
+const { KnowledgeBase } = require('../lib/knowledge_ingest');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
 const connections = new ConnectionRegistry();
-const installationSvc = new Installation({ connectionRegistry: connections });
+const knowledgeBaseSvc = new KnowledgeBase();
+const installationSvc = new Installation({ connectionRegistry: connections, knowledgeBase: knowledgeBaseSvc });
 const agentRegistrySvc = new AgentRegistry();
 const attributionLogSvc = new AttributionLog();
 const telemetrySvc = new TelemetryStream();
 const taskModel = new TaskModel();
-const chatSessionSvc = new ChatSession({ connectionRegistry: connections, taskModel, attributionLog: attributionLogSvc });
+const chatSessionSvc = new ChatSession({ connectionRegistry: connections, taskModel, attributionLog: attributionLogSvc, knowledgeBase: knowledgeBaseSvc });
 
 router.get('/api/connectors', (req, res) => {
   const items = req.query.vertical ? catalog.byVertical(req.query.vertical) : catalog.list();
@@ -80,9 +82,9 @@ router.get('/api/onboarding/status', asyncHandler('[Onboarding]', 'Failed to loa
 
 // Install CONVERGENCE-Ai for a tenant/vertical (INS-01/02).
 router.post('/api/install', asyncHandler('[Install]', 'Install failed.', async (req, res) => {
-  const { tenantId, vertical, selectedConnectors } = req.body || {};
+  const { tenantId, vertical, selectedConnectors, businessName, businessProfile, seedDocs } = req.body || {};
   if (!tenantId || !vertical) return sendError(res, 400, 'tenantId and vertical are required.', { context: '[Install]' });
-  const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], actor: req.actor || null });
+  const result = await installationSvc.install({ tenantId, vertical, selectedConnectors: selectedConnectors || [], businessName: businessName || null, businessProfile: businessProfile || {}, seedDocs: seedDocs || [], actor: req.actor || null });
   res.json({ success: true, ...result });
 }));
 
@@ -132,7 +134,7 @@ router.post('/api/chat/confirm', asyncHandler('[Chat]', 'Confirm failed.', async
 router.post('/api/task-request', asyncHandler('[TaskRequest]', 'Task interpretation failed.', async (req, res) => {
   const { query, tenantId } = req.body || {};
   if (!query) return sendError(res, 400, 'A request "query" is required.', { context: '[TaskRequest]' });
-  const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry: connections });
+  const result = await taskRequest.interpretRequest({ query, tenantId: tenantId || null, connectionRegistry: connections, knowledgeBase: knowledgeBaseSvc });
   res.json({ success: true, ...result });
 }));
 

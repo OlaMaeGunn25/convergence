@@ -26,12 +26,13 @@ const precommit = require('./precommit');
 
 const EMPTY = { plans: [] };
 
-function treeOfThought(query, top, vertical) {
+function treeOfThought(query, top, vertical, knowledgeRefs = []) {
   return {
     root: `Fulfill the request: "${query}"`,
     branches: [
       { thought: 'Understand the request', detail: top ? `Interpreted intent: ${top.action}.` : 'Intent is unclear — human disambiguation needed.' },
       { thought: 'Locate the capability', detail: top ? `Matched connected capability "${top.capability}" on ${top.system} (confidence ${top.confidence}).` : 'No connected system exposes a matching capability.' },
+      { thought: 'Cross-reference company knowledge base', detail: knowledgeRefs.length ? `Grounded in ${knowledgeRefs.length} company KB reference(s): ${knowledgeRefs.map(r => r.sourceRef || '(doc)').join(', ')}.` : 'No matching company knowledge found — proceeding on general practice.' },
       { thought: 'Apply governing practice + SOP', detail: top ? `Governed by ${vertical || 'general'} industry practice + the company SOP.` : 'n/a' },
       { thought: 'Assess risk', detail: top ? (top.type === 'write' ? 'Write/destructive action — requires HITL confirmation (or an autonomy grant + compliance floor check).' : 'Read-only action — low risk.') : 'n/a' },
       { thought: 'Project the outcome', detail: top ? `Will ${top.action}.` : 'Cannot proceed until a valid capability is identified.' }
@@ -55,6 +56,7 @@ class ChatSession {
     this.connectionRegistry = options.connectionRegistry || null;
     this.taskModel = options.taskModel || null;
     this.attributionLog = options.attributionLog || null;
+    this.knowledgeBase = options.knowledgeBase || null;
   }
 
   /**
@@ -62,14 +64,16 @@ class ChatSession {
    * a pending plan AWAITING confirmation. Nothing executes here.
    */
   async interpret({ query, tenantId = null, hitlId = null, vertical = null }) {
-    const interpretation = await taskRequest.interpretRequest({ query, tenantId, connectionRegistry: this.connectionRegistry });
+    const interpretation = await taskRequest.interpretRequest({ query, tenantId, connectionRegistry: this.connectionRegistry, knowledgeBase: this.knowledgeBase });
     const top = interpretation.top;
-    const tot = treeOfThought(query, top, vertical);
+    const knowledgeRefs = interpretation.knowledgeRefs || [];
+    const tot = treeOfThought(query, top, vertical, knowledgeRefs);
     const understanding = {
       interpretedIntent: top ? top.action : null,
       capability: top || null,
       needsDisambiguation: interpretation.needsDisambiguation,
-      candidates: interpretation.candidates
+      candidates: interpretation.candidates,
+      knowledgeRefs
     };
     const projectedOutcomes = top ? [{
       system: top.system, connectorId: top.connectorId, capability: top.capability,
