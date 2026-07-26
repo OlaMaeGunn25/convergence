@@ -13,12 +13,14 @@ const { isSupabaseConfigured } = require('./supabase');
 function deploymentInfo() {
   const supa = isSupabaseConfigured();
   const mode = (process.env.DEPLOYMENT_MODE || (supa ? 'cloud' : 'onprem')).toLowerCase();
+  const optionalBackends = require('./integration_seams').seams().summary;
   return {
     mode, // 'cloud' | 'onprem'
     selfHosted: mode === 'onprem',
     stateBackend: supa ? 'supabase' : 'json-file',
     chromium: process.env.PUPPETEER_EXECUTABLE_PATH || 'bundled',
     cloudDependencies: supa ? ['supabase'] : [],
+    optionalBackends, // { total, live, fallback } — live backends activate at cloud-deploy time
     note: mode === 'onprem'
       ? 'On-prem: all governed state is local (JSON store or a self-hosted Postgres/Supabase); no mandatory external cloud dependency.'
       : 'Cloud-native: Supabase-backed governed state (mandatory at multi-instance scale).'

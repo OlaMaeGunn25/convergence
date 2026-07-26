@@ -47,6 +47,7 @@ const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
 const { deploymentInfo } = require('./deployment');
+const integrationSeams = require('./integration_seams');
 const verticals = require('./verticals');
 
 const taskModel = new TaskModel();
@@ -1002,6 +1003,15 @@ register({
   }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input) => modelRouter.route(input)
+});
+
+register({
+  name: 'get_integration_seams',
+  title: 'Live-backend readiness (pre-cloud seams)',
+  description: 'Report which optional external backends are configured (live) vs. running on their local fallback — vector embeddings, reranker, connector fetchers, regulatory search, systems crawl, negotiation LLM. Seeds the cloud-deploy task list; reads env flags only, no network.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => integrationSeams.seams()
 });
 
 register({

@@ -1402,6 +1402,37 @@ async function runTests() {
     assert(false, `Reranker / model router (RRK/MCR) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 32: Integration seams — live-backend readiness (pre-cloud) ---
+  try {
+    const fsx = require('fs'); const pth = require('path');
+    const seamsLib = require('../lib/integration_seams');
+    const { deploymentInfo } = require('../lib/deployment');
+    const reg = require('../lib/tool_registry');
+
+    // A. Seams report every optional backend with fallback + activation
+    const s = seamsLib.seams();
+    assert(s.seams.length >= 7 && s.summary.total === s.seams.length, 'Seams report every optional backend');
+    ['vector_embeddings', 'reranker', 'connector_fetchers', 'regulatory_search', 'state_backend'].forEach(id =>
+      assert(s.seams.some(x => x.id === id), `Seams include the ${id} backend`));
+    assert(s.seams.every(x => Array.isArray(x.env) && x.fallback && x.activation), 'Each seam documents its env, fallback, and activation');
+
+    // B. In this (pre-cloud) environment the seams run on fallbacks
+    const emb = s.seams.find(x => x.id === 'vector_embeddings');
+    assert(emb.configured === false, 'Vector embeddings run on the local fallback until configured');
+
+    // C. deploymentInfo surfaces the optional-backend summary
+    const info = deploymentInfo();
+    assert(info.optionalBackends && typeof info.optionalBackends.live === 'number' && typeof info.optionalBackends.fallback === 'number', 'deploymentInfo surfaces the optional-backend readiness summary');
+
+    // D. Registry tool + seams doc present
+    assert(reg.has('get_integration_seams'), 'get_integration_seams tool is registered');
+    const t = await reg.invoke('get_integration_seams', {});
+    assert(t.ok && t.result.summary.total >= 7, 'get_integration_seams tool returns the readiness map');
+    assert(fsx.existsSync(pth.join(__dirname, '..', '..', 'docs', 'INTEGRATION_SEAMS.md')), 'The integration-seams reference doc exists');
+  } catch (e) {
+    assert(false, `Integration seams (pre-cloud readiness) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
