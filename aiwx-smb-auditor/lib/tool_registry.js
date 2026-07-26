@@ -34,6 +34,7 @@ const { KnowledgeBase } = require('./knowledge_ingest');
 const industry = require('./industry_practices');
 const { Installation } = require('./installation');
 const { AttestationLog } = require('./attestation');
+const { TelemetryStream } = require('./agent_telemetry');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -43,6 +44,7 @@ const attributionLog = new AttributionLog();
 const knowledgeBase = new KnowledgeBase();
 const installation = new Installation({ agentRegistry, connectionRegistry });
 const attestationLog = new AttestationLog();
+const telemetry = new TelemetryStream();
 
 const registry = new Map();
 
@@ -649,6 +651,45 @@ register({
     if (!gate.ok) return { ok: false, status: 'completion_blocked', reason: gate.reason };
     const task = await taskModel.transition(input.taskId, 'done', { actor: ctx.actor });
     return { ok: true, task };
+  }
+});
+
+// ── Telemetry, floating monitor & traceability (Phase 4, MON/TRC) ────────────
+
+register({
+  name: 'emit_telemetry',
+  title: 'Emit an agent/task telemetry event',
+  description: 'The Monitoring agent emits a live event (agent lifecycle, task started/progress/completed/failed/blocked, onboarding update) to the telemetry stream that feeds the floating monitor (MON-01).',
+  inputSchema: z.object({
+    tenantId: z.string().optional(), agentId: z.string().optional(), taskId: z.string().optional(),
+    event: z.string(), status: z.string().optional(), detail: z.any().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => telemetry.emit({
+    tenantId: input.tenantId || ctx.tenantId || null, agentId: input.agentId || ctx.agentId || null,
+    taskId: input.taskId || null, event: input.event, status: input.status || 'info', detail: input.detail || null
+  })
+});
+
+register({
+  name: 'get_agent_telemetry',
+  title: 'Read the agent/task telemetry stream',
+  description: 'Newest-first agent + task events for the floating monitor / HITL status feed (MON-02/03).',
+  inputSchema: z.object({ tenantId: z.string().optional(), taskId: z.string().optional(), since: z.string().optional(), limit: z.number().int().min(1).max(500).optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => telemetry.list({ tenantId: input.tenantId || ctx.tenantId || undefined, taskId: input.taskId, since: input.since, limit: input.limit || 100 }).then(events => ({ events }))
+});
+
+register({
+  name: 'get_task_trace',
+  title: 'Task chain-of-custody (attribution + telemetry)',
+  description: 'Reconstruct a task\'s complete chain-of-custody (TRC-03): the attributable prompt/output records + the telemetry event stream for the task.',
+  inputSchema: z.object({ taskId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: async (input) => {
+    const attribution = await attributionLog.trace(input.taskId);
+    const events = await telemetry.list({ taskId: input.taskId, limit: 500 });
+    return { taskId: input.taskId, attribution: attribution.records, telemetry: events, count: attribution.count + events.length };
   }
 });
 

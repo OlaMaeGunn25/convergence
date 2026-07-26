@@ -81,8 +81,7 @@ const ROLES = {
     title: 'Monitoring Agent',
     plane: PLANES.BUSINESS,
     duty: 'Emits live telemetry to the floating monitor; keeps agent/task/onboarding state current.',
-    tools: ['get_connection_status', 'get_governance_report'],
-    pending: ['agent_telemetry']
+    tools: ['emit_telemetry', 'get_agent_telemetry', 'get_connection_status', 'get_governance_report']
   },
   reporting: {
     title: 'Reporting Agent',

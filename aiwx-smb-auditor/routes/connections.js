@@ -21,12 +21,18 @@ const catalog = require('../lib/connectors/catalog');
 const systemEvaluator = require('../lib/system_evaluator');
 const { ConnectionRegistry } = require('../lib/connection_registry');
 const { Installation } = require('../lib/installation');
+const { AgentRegistry } = require('../lib/agent_model');
+const { AttributionLog } = require('../lib/attribution');
+const { TelemetryStream } = require('../lib/agent_telemetry');
 const clio = require('../lib/connectors/clio');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
 const connections = new ConnectionRegistry();
 const installationSvc = new Installation({ connectionRegistry: connections });
+const agentRegistrySvc = new AgentRegistry();
+const attributionLogSvc = new AttributionLog();
+const telemetrySvc = new TelemetryStream();
 const taskModel = new TaskModel();
 
 router.get('/api/connectors', (req, res) => {
@@ -82,6 +88,25 @@ router.get('/api/install/status', asyncHandler('[Install]', 'Failed to load inst
   if (!req.query.tenantId) return sendError(res, 400, 'tenantId is required.', { context: '[Install]' });
   const status = await installationSvc.status({ tenantId: req.query.tenantId });
   res.json({ success: true, ...status });
+}));
+
+// Provisioned agents (floating monitor: agent tiles + states).
+router.get('/api/agents', asyncHandler('[Agents]', 'Failed to list agents.', async (req, res) => {
+  const agents = await agentRegistrySvc.list({ tenantId: req.query.tenantId || undefined, role: req.query.role, vertical: req.query.vertical });
+  res.json({ success: true, agents });
+}));
+
+// Live agent/task telemetry stream (MON-01).
+router.get('/api/agents/telemetry', asyncHandler('[Telemetry]', 'Failed to load telemetry.', async (req, res) => {
+  const events = await telemetrySvc.list({ tenantId: req.query.tenantId || undefined, taskId: req.query.taskId, since: req.query.since, limit: parseInt(req.query.limit, 10) || 100 });
+  res.json({ success: true, events, generatedAt: new Date().toISOString() });
+}));
+
+// Task chain-of-custody: attributable prompts/outputs + telemetry (TRC-03).
+router.get('/api/tasks/:id/trace', asyncHandler('[Trace]', 'Failed to load task trace.', async (req, res) => {
+  const attribution = await attributionLogSvc.trace(req.params.id);
+  const events = await telemetrySvc.list({ taskId: req.params.id, limit: 500 });
+  res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
 }));
 
 router.post('/api/connections/disconnect', asyncHandler('[Connections]', 'Failed to disconnect.', async (req, res) => {

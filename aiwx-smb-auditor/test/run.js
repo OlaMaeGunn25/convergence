@@ -371,7 +371,8 @@ async function runTests() {
       'GET /api/scholar/search', 'POST /api/export-crm', 'POST /api/audit-queue', 'GET /health',
       'GET /api/connectors', 'GET /api/connections', 'POST /api/connections',
       'GET /api/orchestrator/capabilities', 'GET /api/onboarding/status',
-      'POST /api/install', 'GET /api/install/status'
+      'POST /api/install', 'GET /api/install/status',
+      'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -839,6 +840,45 @@ async function runTests() {
     assert(done.result.ok === true && done.result.task.status === 'done', 'complete_task transitions the task to done once attested');
   } catch (e) {
     assert(false, `Installation / attestation (Phase 3) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 20: Telemetry + floating monitor + task trace (Phase 4) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { TelemetryStream } = require('../lib/agent_telemetry');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    // A. Telemetry stream: emit, list newest-first, ring-buffer cap
+    const tf = pth.join(os.tmpdir(), `aiwx_tel_${Date.now()}.json`);
+    const tel = new TelemetryStream({ file: tf, max: 5 });
+    await tel.emit({ tenantId: 'tt', taskId: 'k1', event: 'task.started', status: 'info' });
+    await tel.emit({ tenantId: 'tt', taskId: 'k1', event: 'task.completed', status: 'completed' });
+    const evs = await tel.list({ tenantId: 'tt' });
+    assert(evs.length === 2 && evs[0].event === 'task.completed', 'Telemetry lists events newest-first');
+    for (let i = 0; i < 10; i++) await tel.emit({ tenantId: 'tt', event: 'info' });
+    assert((await tel.list({ tenantId: 'tt', limit: 100 })).length <= 5, 'Telemetry ring-buffer caps stored events');
+    let evReq = false; try { await tel.emit({ tenantId: 'tt' }); } catch (e) { evReq = /event/.test(e.message); }
+    assert(evReq, 'Telemetry requires an event name');
+    try { fsx.unlinkSync(tf); } catch (e) {}
+
+    // B. Monitoring role bound to telemetry tools
+    assert(roster.roleAllowsTool('monitoring', 'emit_telemetry') && roster.roleAllowsTool('monitoring', 'get_agent_telemetry'), 'Monitoring agent is bound to the telemetry tools');
+
+    // C. Registry tools + task trace (attribution + telemetry)
+    assert(reg.has('emit_telemetry') && reg.has('get_agent_telemetry') && reg.has('get_task_trace'), 'Phase 4 telemetry/trace tools are registered');
+    const t = 'trace-' + Date.now();
+    await reg.invoke('emit_telemetry', { tenantId: t, taskId: 'kt', event: 'task.started' }, { actor: 'op' });
+    const emitted = await reg.invoke('get_agent_telemetry', { tenantId: t });
+    assert(emitted.ok && emitted.result.events.length >= 1, 'get_agent_telemetry returns emitted events');
+    // Attribution + telemetry both surface in the task trace
+    const email = `mon-${Date.now()}@acme-corp.com`;
+    const onb = await reg.invoke('onboard_hitl', { email, tenantId: t }, { actor: 'op' });
+    await reg.invoke('record_attribution', { type: 'prompt', hitlId: onb.result.hitl.id, taskId: 'kt', content: 'do the thing' }, { actor: 'op' });
+    const trace = await reg.invoke('get_task_trace', { taskId: 'kt' });
+    assert(trace.ok && trace.result.telemetry.length >= 1 && trace.result.attribution.length >= 1, 'get_task_trace reconstructs the chain-of-custody (attribution + telemetry)');
+  } catch (e) {
+    assert(false, `Telemetry / trace (Phase 4) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

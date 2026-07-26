@@ -20,10 +20,16 @@ const connectorCatalog = require('./lib/connectors/catalog');
 const systemEvaluator = require('./lib/system_evaluator');
 const { ConnectionRegistry } = require('./lib/connection_registry');
 const { Installation } = require('./lib/installation');
+const { AgentRegistry } = require('./lib/agent_model');
+const { AttributionLog } = require('./lib/attribution');
+const { TelemetryStream } = require('./lib/agent_telemetry');
 const clioConnector = require('./lib/connectors/clio');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
 const installationSvc = new Installation({ connectionRegistry });
+const agentRegistrySvc = new AgentRegistry();
+const attributionLogSvc = new AttributionLog();
+const telemetrySvc = new TelemetryStream();
 const connTaskModel = new ConnTaskModel();
 const { isSupabaseConfigured, insertRow } = require('./lib/supabase');
 const { searchScholar, isScholarConfigured } = require('./lib/scholar');
@@ -242,7 +248,10 @@ const PROTECTED_READS = [
   '/api/connectors',
   // Orchestrator capability model + onboarding readiness (internal tenant data).
   '/api/orchestrator/capabilities',
-  '/api/onboarding/status'
+  '/api/onboarding/status',
+  // Agent roster, telemetry stream, and task chain-of-custody (internal).
+  '/api/agents',
+  '/api/tasks'
 ];
 app.use(PROTECTED_MUTATIONS, authenticate);
 app.use(PROTECTED_READS, authenticate);
@@ -343,6 +352,35 @@ app.get('/api/onboarding/status', async (req, res) => {
     res.json({ success: true, ...status });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load onboarding status.' });
+  }
+});
+
+// Provisioned agents for a tenant (floating monitor: agent tiles + states).
+app.get('/api/agents', async (req, res) => {
+  try {
+    const agents = await agentRegistrySvc.list({ tenantId: req.query.tenantId || undefined, role: req.query.role, vertical: req.query.vertical });
+    res.json({ success: true, agents });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to list agents.' });
+  }
+});
+// Live agent/task telemetry stream (short-interval polling feeds the monitor).
+app.get('/api/agents/telemetry', async (req, res) => {
+  try {
+    const events = await telemetrySvc.list({ tenantId: req.query.tenantId || undefined, taskId: req.query.taskId, since: req.query.since, limit: parseInt(req.query.limit, 10) || 100 });
+    res.json({ success: true, events, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load telemetry.' });
+  }
+});
+// Task chain-of-custody: attributable prompts/outputs + telemetry (TRC-03).
+app.get('/api/tasks/:id/trace', async (req, res) => {
+  try {
+    const attribution = await attributionLogSvc.trace(req.params.id);
+    const events = await telemetrySvc.list({ taskId: req.params.id, limit: 500 });
+    res.json({ success: true, taskId: req.params.id, attribution: attribution.records, telemetry: events });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load task trace.' });
   }
 });
 
