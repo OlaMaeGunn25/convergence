@@ -570,6 +570,67 @@ async function runTests() {
     assert(false, `Systems-evaluation / connections tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 15: Agentic Operations Layer — roster + agent model (Phase 0) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const roster = require('../lib/agent_roster');
+    const { AgentRegistry, canTransition } = require('../lib/agent_model');
+    const reg = require('../lib/tool_registry');
+
+    // A. Roster: 13 roles across the business + human-care planes
+    const roles = roster.listRoles();
+    assert(roles.length === 13, 'Roster defines the 13 agent roles');
+    const rids = roles.map(r => r.id);
+    ['orchestrator', 'configurator', 'onboarding', 'systems_configurator', 'knowledge_compilation',
+      'compliance', 'operations', 'admin_support', 'delivery', 'qa', 'monitoring', 'reporting', 'human_companion']
+      .forEach(r => assert(rids.includes(r), `Roster includes the ${r} role`));
+    assert(roster.ROLES.human_companion.plane === 'human', 'Human Companion agent is on the human-care plane');
+    assert(roster.roleAllowsTool('orchestrator', 'anything') === true, 'Orchestrator may invoke any tool (wildcard)');
+    assert(roster.roleAllowsTool('operations', 'clio_list_matters') === true, 'Operations role is bound to its system tools');
+    assert(roster.roleAllowsTool('operations', 'get_governance_report') === false, 'Least privilege: Operations cannot invoke an out-of-scope tool');
+
+    // B. Agent model state machine (temp file)
+    const af = pth.join(os.tmpdir(), `aiwx_agents_${Date.now()}.json`);
+    const agents = new AgentRegistry({ file: af });
+    const a = await agents.provision({ role: 'operations', tenantId: 't1', vertical: 'legal' });
+    assert(a.status === 'provisioned' && a.plane === 'business', 'Provisioned agent starts in provisioned (business plane)');
+    assert(canTransition('provisioned', 'configuring') && !canTransition('provisioned', 'active'), 'State machine blocks skipping provisioned→active');
+    await agents.transition(a.id, 'configuring'); await agents.transition(a.id, 'training');
+    assert((await agents.transition(a.id, 'ready')).status === 'ready', 'Agent walks provisioned→configuring→training→ready');
+
+    // C. mayInvoke gate: live status + least privilege + kill-switch
+    assert((await agents.mayInvoke(a.id, 'clio_list_matters')).ok === true, 'A live (ready) Operations agent may invoke its bound tool');
+    assert((await agents.mayInvoke(a.id, 'get_governance_report')).ok === false, 'mayInvoke denies an out-of-role tool');
+    await agents.transition(a.id, 'active'); await agents.transition(a.id, 'paused');
+    assert((await agents.mayInvoke(a.id, 'clio_list_matters')).ok === false, 'A paused agent is refused at the gate (kill-switch)');
+
+    // D. provisionRoster = isolated team per instance/vertical (idempotent)
+    await agents.provisionRoster({ tenantId: 't2', vertical: 'medical' });
+    assert((await agents.list({ tenantId: 't2' })).length === 13, 'provisionRoster creates the full 13-agent team for a tenant');
+    await agents.provisionRoster({ tenantId: 't2', vertical: 'medical' });
+    assert((await agents.list({ tenantId: 't2' })).length === 13, 'provisionRoster is idempotent per (tenant, role)');
+    try { fsx.unlinkSync(af); } catch (e) {}
+
+    // E. Registry tools + invoke() gate integration (module store, unique tenant)
+    assert(reg.has('list_agent_roles') && reg.has('provision_roster') && reg.has('deploy_agent') && reg.has('control_agent'), 'Phase 0 agent tools are registered');
+    const rolesTool = await reg.invoke('list_agent_roles', {});
+    assert(rolesTool.ok && rolesTool.result.roles.length === 13, 'list_agent_roles tool returns the 13 roles');
+    const deployGated = await reg.invoke('deploy_agent', { id: 'nope' }, { actor: 'op' });
+    assert(deployGated.ok === false && deployGated.status === 'requires_approval', 'deploy_agent (go-live) is HITL-approval-gated');
+    const tp = 'test-p0-' + Date.now();
+    await reg.invoke('provision_roster', { tenantId: tp, vertical: 'legal' }, { actor: 'op' });
+    const mod = new AgentRegistry(); // default config/agents.json, shared with the module registry
+    const ops = (await mod.list({ tenantId: tp, role: 'operations' }))[0];
+    for (const s of ['configuring', 'training', 'ready', 'active']) await mod.transition(ops.id, s);
+    const forbidden = await reg.invoke('get_governance_report', {}, { agentId: ops.id });
+    assert(forbidden.ok === false && forbidden.status === 'agent_forbidden', 'invoke() enforces the agent gate: an out-of-role tool is forbidden');
+    const allowed = await reg.invoke('clio_list_matters', { limit: 1 }, { agentId: ops.id });
+    assert(allowed.ok === true, 'invoke() allows an active agent to call its bound tool');
+    await mod.transition(ops.id, 'shutdown');
+  } catch (e) {
+    assert(false, `Agentic operations (Phase 0) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

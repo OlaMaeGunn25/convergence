@@ -25,9 +25,12 @@ const catalog = require('./connectors/catalog');
 const { matchIntegrations } = require('./integration_matcher');
 const { ConnectionRegistry } = require('./connection_registry');
 const clio = require('./connectors/clio');
+const roster = require('./agent_roster');
+const { AgentRegistry } = require('./agent_model');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
+const agentRegistry = new AgentRegistry();
 
 const registry = new Map();
 
@@ -88,6 +91,14 @@ async function invoke(name, input = {}, ctx = {}) {
   const parsed = tool.inputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: 'Input validation failed.', issues: parsed.error.issues.map(i => ({ path: i.path.join('.'), message: i.message })) };
+  }
+
+  // Agent governance gate (AGT-03 / CTL-05): when a specific agent is the caller,
+  // enforce its live status (paused/shutdown agents are refused) and its
+  // least-privilege role→tool binding. Callers without ctx.agentId are unaffected.
+  if (ctx.agentId) {
+    const permit = await agentRegistry.mayInvoke(ctx.agentId, name);
+    if (!permit.ok) return { ok: false, status: 'agent_forbidden', error: permit.reason };
   }
 
   // Central governance gate: destructive/approval-required tools cannot execute
@@ -318,6 +329,76 @@ register({
   }),
   annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
   handler: (input, ctx) => clio.recordTrustTransaction(Object.assign({}, input, { approved: ctx.approved === true }))
+});
+
+// ── Agentic Operations Layer (Phase 0): roster + lifecycle ───────────────────
+
+register({
+  name: 'list_agent_roles',
+  title: 'List the agent roster roles',
+  description: 'Discover the 13 agent roles CONVERGENCE-Ai provisions per tenant/vertical (business plane + the human-care plane), with each role\'s duty and permitted tools.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => ({ roles: roster.listRoles() })
+});
+
+register({
+  name: 'provision_roster',
+  title: 'Provision the agent team for a tenant/vertical',
+  description: 'Provision the full 13-role agent team for a tenant + vertical (the isolated team-per-instance). Idempotent per (tenant, role). Agents start in "provisioned"; going live to "active" is a separate HITL-gated step.',
+  inputSchema: z.object({
+    tenantId: z.string().optional(),
+    vertical: z.string().optional(),
+    scopeConnectors: z.array(z.string()).optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => agentRegistry.provisionRoster({
+    tenantId: input.tenantId || ctx.tenantId || null,
+    vertical: input.vertical || null,
+    scopeConnectors: input.scopeConnectors || []
+  }).then(agents => ({ provisioned: agents.length, agents }))
+});
+
+register({
+  name: 'list_agents',
+  title: 'List provisioned agents',
+  description: 'List agents for a tenant (optionally filtered by role or vertical) with their lifecycle status.',
+  inputSchema: z.object({ tenantId: z.string().optional(), role: z.string().optional(), vertical: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => agentRegistry.list({
+    tenantId: input.tenantId || ctx.tenantId || undefined,
+    role: input.role, vertical: input.vertical
+  }).then(agents => ({ agents }))
+});
+
+register({
+  name: 'get_agent',
+  title: 'Get an agent',
+  description: 'Fetch a single agent by id (role, scope, bound tools, lifecycle status).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => agentRegistry.get(input.id).then(agent => ({ agent }))
+});
+
+register({
+  name: 'deploy_agent',
+  title: 'Deploy an agent (go live)',
+  description: 'Transition an agent from ready → active (go-live). Governed: deploying an operating agent requires explicit human approval (ONB-05).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: false, destructive: false, requiresApproval: true, openWorld: false },
+  handler: (input, ctx) => agentRegistry.transition(input.id, 'active', { actor: ctx.actor }).then(agent => ({ agent }))
+});
+
+register({
+  name: 'control_agent',
+  title: 'HITL control: pause / resume / shutdown an agent',
+  description: 'Exercise HITL control over an agent (CTL-04/05). pause suspends new tool invocations; resume returns to active; shutdown is terminal (re-provision to restore).',
+  inputSchema: z.object({ id: z.string(), action: z.enum(['pause', 'resume', 'shutdown']) }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => {
+    const toStatus = input.action === 'pause' ? 'paused' : input.action === 'resume' ? 'active' : 'shutdown';
+    return agentRegistry.transition(input.id, toStatus, { actor: ctx.actor }).then(agent => ({ agent }));
+  }
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };
