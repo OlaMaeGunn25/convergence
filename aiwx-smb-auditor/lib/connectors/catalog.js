@@ -158,6 +158,43 @@ const CONNECTORS = [
     docs: 'https://developer.zendesk.com'
   },
   {
+    id: 'reso_web_api', name: 'RESO Web API (MLS)', category: 'Real Estate MLS',
+    kind: 'api', auth: 'oauth2', envKeys: ['RESO_API_URL', 'RESO_TOKEN_URL', 'RESO_CLIENT_ID', 'RESO_CLIENT_SECRET'],
+    vertical: ['Real Estate', 'realestate'],
+    matchSignals: ['mls', 'reso', 'realtor', 'listing', 'brokerage', 'broker', 'real estate'],
+    capabilities: ['search_listings', 'get_listing', 'list_members', 'list_offices', 'list_open_houses'],
+    destructiveCapabilities: [],
+    status: 'available', region: true,
+    docs: 'https://www.reso.org/reso-web-api/'
+  },
+  {
+    id: 'trestle', name: 'CoreLogic Trestle (MLS)', category: 'Real Estate MLS',
+    kind: 'api', auth: 'oauth2', envKeys: ['TRESTLE_CLIENT_ID', 'TRESTLE_CLIENT_SECRET'],
+    vertical: ['Real Estate', 'realestate'],
+    matchSignals: ['trestle', 'corelogic', 'mls'],
+    capabilities: ['search_listings', 'get_listing'],
+    destructiveCapabilities: [], status: 'beta', region: true,
+    docs: 'https://trestle.corelogic.com'
+  },
+  {
+    id: 'mls_grid', name: 'MLS Grid', category: 'Real Estate MLS',
+    kind: 'api', auth: 'api_key', envKeys: ['MLSGRID_API_TOKEN'],
+    vertical: ['Real Estate', 'realestate'],
+    matchSignals: ['mls grid', 'mlsgrid', 'mls'],
+    capabilities: ['search_listings', 'get_listing'],
+    destructiveCapabilities: [], status: 'beta', region: true,
+    docs: 'https://www.mlsgrid.com'
+  },
+  {
+    id: 'bridge', name: 'Bridge Interactive (MLS)', category: 'Real Estate MLS',
+    kind: 'api', auth: 'api_key', envKeys: ['BRIDGE_SERVER_TOKEN'],
+    vertical: ['Real Estate', 'realestate'],
+    matchSignals: ['bridge interactive', 'zillow bridge', 'mls'],
+    capabilities: ['search_listings', 'get_listing'],
+    destructiveCapabilities: [], status: 'beta', region: true,
+    docs: 'https://bridgedataoutput.com'
+  },
+  {
     id: 'twilio', name: 'Twilio', category: 'Messaging & Voice',
     kind: 'api', auth: 'api_key', envKeys: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'],
     vertical: 'universal',

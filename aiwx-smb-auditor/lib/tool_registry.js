@@ -49,6 +49,7 @@ const { HumanCompanion } = require('./human_companion');
 const { deploymentInfo } = require('./deployment');
 const integrationSeams = require('./integration_seams');
 const verticals = require('./verticals');
+const regionalSources = require('./regional_sources');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -1012,6 +1013,33 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: () => integrationSeams.seams()
+});
+
+register({
+  name: 'detect_region',
+  title: 'Detect the tenant region (GPS / address / explicit)',
+  description: 'Resolve the tenant\'s region from GPS lat/lng, a postal address, or an explicit region — for surfacing local/regional data sources (REG-02).',
+  inputSchema: z.object({
+    gps: z.object({ lat: z.number(), lng: z.number() }).optional(),
+    address: z.string().optional(),
+    region: z.string().optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => regionalSources.detectRegion(input)
+});
+
+register({
+  name: 'recommend_regional_sources',
+  title: 'Recommend regional data sources (e.g. real-estate MLS)',
+  description: 'For a vertical with local/regional dependencies, detect the region and propose the correct local source (e.g. the tenant\'s MLS via the RESO Web API) for HITL-approved connection (REG-01/03).',
+  inputSchema: z.object({
+    vertical: z.string(),
+    region: z.string().optional(),
+    address: z.string().optional(),
+    gps: z.object({ lat: z.number(), lng: z.number() }).optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => regionalSources.recommendSources(input)
 });
 
 register({

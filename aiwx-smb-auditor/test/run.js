@@ -1433,6 +1433,40 @@ async function runTests() {
     assert(false, `Integration seams (pre-cloud readiness) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 33: Regional data sources — real-estate MLS + region detection (REG) ---
+  try {
+    const regional = require('../lib/regional_sources');
+    const catalog = require('../lib/connectors/catalog');
+    const verticals = require('../lib/verticals');
+    const reg = require('../lib/tool_registry');
+
+    // A. Real-estate MLS connectors exist in the catalog (RESO + aggregators)
+    assert(catalog.get('reso_web_api') && /MLS/.test(catalog.get('reso_web_api').category), 'The RESO Web API (MLS) connector is in the catalog');
+    assert(catalog.byVertical('Real Estate').some(c => c.id === 'reso_web_api'), 'byVertical surfaces MLS connectors for Real Estate');
+    assert(['reso_web_api', 'trestle', 'mls_grid', 'bridge'].every(id => catalog.has(id)), 'RESO + Trestle + MLS Grid + Bridge MLS connectors are registered');
+
+    // B. Region detection: GPS, address, explicit
+    assert(regional.detectRegion({ gps: { lat: 34.05, lng: -118.24 } }).region === 'CA', 'GPS coordinates resolve to a region (LA -> CA)');
+    assert(regional.detectRegion({ address: '123 Main St, Austin, TX 78701' }).region === 'TX', 'A postal address resolves to a region (TX)');
+    assert(regional.detectRegion({ region: 'ny' }).region === 'NY', 'An explicit region is honored');
+    assert(regional.detectRegion({}).region === null, 'An unresolvable region returns null');
+
+    // C. Recommend regional sources for real estate (HITL-approval-gated)
+    const rec = regional.recommendSources({ vertical: 'realestate', gps: { lat: 34.05, lng: -118.24 } });
+    assert(rec.regional === true && rec.detectedRegion === 'CA' && rec.sources[0].connectorId === 'reso_web_api' && rec.sources[0].requiresApprovalToConnect === true, 'Real-estate MLS is recommended for the detected region, gated on HITL approval (REG-01/03)');
+    assert(rec.standard === 'RESO Web API' && /CRMLS/.test(rec.sources[0].name), 'The recommended source names the local MLS via the RESO Web API standard');
+    const legalReg = regional.recommendSources({ vertical: 'legal' });
+    assert(legalReg.regional === false, 'A vertical with no regional dependency reports none');
+
+    // D. Vertical is flagged region-dependent + tools registered
+    assert(verticals.get('realestate').regionalSources, 'The Real Estate vertical is flagged as region-dependent');
+    assert(reg.has('detect_region') && reg.has('recommend_regional_sources'), 'REG tools are registered');
+    const rt = await reg.invoke('recommend_regional_sources', { vertical: 'realestate', region: 'FL' });
+    assert(rt.ok && rt.result.detectedRegion === 'FL' && /Stellar/.test(rt.result.sources[0].name), 'recommend_regional_sources tool returns the region-local MLS');
+  } catch (e) {
+    assert(false, `Regional sources / MLS (REG) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

@@ -11,7 +11,7 @@
 const VERTICALS = [
   { id: 'medical', name: 'Medical & Healthcare', compliance: ['HIPAA', 'BAA'] },
   { id: 'legal', name: 'Legal Services', compliance: ['IOLTA', 'ABA-Model-1.15'] },
-  { id: 'realestate', name: 'Real Estate', compliance: ['Fair-Housing-Act'] },
+  { id: 'realestate', name: 'Real Estate', compliance: ['Fair-Housing-Act'], regionalSources: 'MLS (RESO Web API)' },
   { id: 'retail', name: 'Retail & E-commerce', compliance: ['PCI-DSS'] },
   { id: 'hospitality', name: 'Hospitality & Leisure', compliance: [] },
   { id: 'finance', name: 'Financial & Bookkeeping', compliance: ['GLBA-Safeguards', 'PCI-DSS'] },
