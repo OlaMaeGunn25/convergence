@@ -631,6 +631,65 @@ async function runTests() {
     assert(false, `Agentic operations (Phase 0) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 16: HITL identity, lifecycle & attribution (Phase 0.5) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { HitlRegistry, validateDomainEmail } = require('../lib/hitl_identity');
+    const { AttributionLog } = require('../lib/attribution');
+    const reg = require('../lib/tool_registry');
+
+    // A. Domain-email rule (IDN-02)
+    assert(validateDomainEmail('jane@acme-corp.com').ok === true, 'Corporate email is accepted as a HITL identity');
+    assert(validateDomainEmail('jane@gmail.com').ok === false, 'Consumer email domain is rejected');
+    assert(validateDomainEmail('jane@other.com', 'acme-corp.com').ok === false, 'Email domain must match the tenant domain when set');
+    assert(validateDomainEmail('jane@acme-corp.com', 'acme-corp.com').ok === true, 'Matching tenant-domain email is accepted');
+
+    // B. HITL lifecycle (HLC) + authorization (IDN-03)
+    const hf = pth.join(os.tmpdir(), `aiwx_hitl_${Date.now()}.json`);
+    const hitl = new HitlRegistry({ file: hf });
+    const u = await hitl.onboard({ email: 'lead@acme-corp.com', tenantId: 't1', authorityLevel: 'lead' });
+    assert(u.status === 'onboarding' && u.domain === 'acme-corp.com', 'Onboarded HITL starts in onboarding with a resolved domain');
+    let rejected = false; try { await hitl.onboard({ email: 'x@gmail.com' }); } catch (e) { rejected = /Consumer/.test(e.message); }
+    assert(rejected, 'onboard rejects a consumer email');
+    assert((await hitl.isAuthorized(u.id)).ok === false, 'A HITL in onboarding is not yet authorized');
+    await hitl.setStatus(u.id, 'trained'); await hitl.setStatus(u.id, 'active');
+    assert((await hitl.isAuthorized(u.id)).ok === true, 'An active HITL is authorized');
+    await hitl.setStatus(u.id, 'suspended');
+    assert((await hitl.isAuthorized(u.id)).ok === false, 'A suspended HITL is not authorized');
+    await hitl.offboard(u.id);
+    let illegal = false; try { await hitl.setStatus(u.id, 'active'); } catch (e) { illegal = /Illegal/.test(e.message); }
+    assert(illegal, 'Offboarding is terminal (cannot reactivate)');
+    try { fsx.unlinkSync(hf); } catch (e) {}
+
+    // C. Attribution log (ATR) — append-only, attribution required
+    const attrF = pth.join(os.tmpdir(), `aiwx_attr_${Date.now()}.json`);
+    const attr = new AttributionLog({ file: attrF });
+    let noAttr = false; try { await attr.record({ type: 'prompt', content: 'x' }); } catch (e) { noAttr = /attributable HITL/.test(e.message); }
+    assert(noAttr, 'Attribution rejects an unattributable record (no hitlId)');
+    await attr.recordPrompt({ hitlId: 'h1', taskId: 'tk1', content: 'reengineered ToT prompt' });
+    await attr.recordOutput({ hitlId: 'h1', agentId: 'a1', taskId: 'tk1', content: { result: 'done' } });
+    const tr = await attr.trace('tk1');
+    assert(tr.count === 2 && tr.records[0].type === 'prompt' && tr.records[1].type === 'output', 'Attribution trace returns the ordered prompt+output chain for a task');
+    assert(typeof tr.records[0].digest === 'string' && tr.records[0].digest.length === 64, 'Attribution records a sha256 content digest');
+    try { fsx.unlinkSync(attrF); } catch (e) {}
+
+    // D. Registry tools + invoke() HITL gate
+    assert(reg.has('onboard_hitl') && reg.has('set_hitl_status') && reg.has('authorize_hitl') && reg.has('record_attribution') && reg.has('get_attribution_trace'), 'Phase 0.5 identity/attribution tools are registered');
+    const email = `hitl-${Date.now()}@acme-corp.com`;
+    const onb = await reg.invoke('onboard_hitl', { email, tenantId: 'p05' }, { actor: 'op' });
+    assert(onb.ok && onb.result.hitl.status === 'onboarding', 'onboard_hitl tool onboards a corporate HITL');
+    const hid = onb.result.hitl.id;
+    await reg.invoke('set_hitl_status', { id: hid, status: 'trained' });
+    await reg.invoke('set_hitl_status', { id: hid, status: 'active' });
+    assert((await reg.invoke('list_agent_roles', {}, { hitlId: hid })).ok === true, 'invoke() allows an authorized (active) HITL identity');
+    await reg.invoke('set_hitl_status', { id: hid, status: 'suspended' });
+    const blocked = await reg.invoke('list_agent_roles', {}, { hitlId: hid });
+    assert(blocked.ok === false && blocked.status === 'hitl_unauthorized', 'invoke() refuses a non-authorized HITL identity');
+    await reg.invoke('set_hitl_status', { id: hid, status: 'offboarded' });
+  } catch (e) {
+    assert(false, `HITL identity/attribution (Phase 0.5) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

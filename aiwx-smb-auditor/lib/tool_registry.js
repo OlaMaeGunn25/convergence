@@ -27,10 +27,14 @@ const { ConnectionRegistry } = require('./connection_registry');
 const clio = require('./connectors/clio');
 const roster = require('./agent_roster');
 const { AgentRegistry } = require('./agent_model');
+const { HitlRegistry } = require('./hitl_identity');
+const { AttributionLog } = require('./attribution');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
 const agentRegistry = new AgentRegistry();
+const hitlRegistry = new HitlRegistry();
+const attributionLog = new AttributionLog();
 
 const registry = new Map();
 
@@ -91,6 +95,13 @@ async function invoke(name, input = {}, ctx = {}) {
   const parsed = tool.inputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: 'Input validation failed.', issues: parsed.error.issues.map(i => ({ path: i.path.join('.'), message: i.message })) };
+  }
+
+  // HITL identity gate (IDN-03): when a HITL identity is attached, it must be an
+  // authorized, active HITL. Callers without ctx.hitlId are unaffected.
+  if (ctx.hitlId) {
+    const auth = await hitlRegistry.isAuthorized(ctx.hitlId);
+    if (!auth.ok) return { ok: false, status: 'hitl_unauthorized', error: auth.reason };
   }
 
   // Agent governance gate (AGT-03 / CTL-05): when a specific agent is the caller,
@@ -399,6 +410,90 @@ register({
     const toStatus = input.action === 'pause' ? 'paused' : input.action === 'resume' ? 'active' : 'shutdown';
     return agentRegistry.transition(input.id, toStatus, { actor: ctx.actor }).then(agent => ({ agent }));
   }
+});
+
+// ── HITL identity, lifecycle & attribution (Phase 0.5) ───────────────────────
+
+register({
+  name: 'onboard_hitl',
+  title: 'Onboard a HITL user',
+  description: 'Onboard a human-in-the-loop (Onboarding agent, HLC-01). Requires a corporate/domain email — consumer domains and (when a tenant domain is set) mismatched domains are rejected. Starts in "onboarding".',
+  inputSchema: z.object({
+    email: z.string(),
+    tenantId: z.string().optional(),
+    name: z.string().optional(),
+    authorityLevel: z.enum(['operator', 'lead']).optional(),
+    tenantDomain: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => hitlRegistry.onboard({
+    email: input.email, tenantId: input.tenantId || ctx.tenantId || null,
+    name: input.name || null, authorityLevel: input.authorityLevel || 'operator',
+    tenantDomain: input.tenantDomain || null
+  }).then(hitl => ({ hitl }))
+});
+
+register({
+  name: 'set_hitl_status',
+  title: 'HITL lifecycle: train / activate / suspend / offboard',
+  description: 'Move a HITL through its lifecycle (onboarding→trained→active→suspended, or →offboarded). Offboarding is terminal and revokes authorization + access (HLC-03).',
+  inputSchema: z.object({ id: z.string(), status: z.enum(['trained', 'active', 'suspended', 'offboarded']) }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => hitlRegistry.setStatus(input.id, input.status).then(hitl => ({ hitl }))
+});
+
+register({
+  name: 'list_hitl',
+  title: 'List HITL users',
+  description: 'List HITL users for a tenant (optionally filtered by lifecycle status).',
+  inputSchema: z.object({ tenantId: z.string().optional(), status: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => hitlRegistry.list({ tenantId: input.tenantId || ctx.tenantId || undefined, status: input.status }).then(hitl => ({ hitl }))
+});
+
+register({
+  name: 'get_hitl',
+  title: 'Get a HITL user',
+  description: 'Fetch a HITL identity by id (email, domain, authority level, lifecycle status).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => hitlRegistry.get(input.id).then(hitl => ({ hitl }))
+});
+
+register({
+  name: 'authorize_hitl',
+  title: 'Check HITL authorization',
+  description: 'Return whether a HITL is an authorized, active identity permitted to approve/confirm/grant/control (IDN-03).',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => hitlRegistry.isAuthorized(input.id)
+});
+
+register({
+  name: 'record_attribution',
+  title: 'Record an attributable prompt or output',
+  description: 'Append an immutable, attributable record of a re-engineered prompt or a system output (ATR-01/02). Requires an attributable HITL (hitlId) — unattributable events are rejected.',
+  inputSchema: z.object({
+    type: z.enum(['prompt', 'output']),
+    hitlId: z.string(),
+    agentId: z.string().optional(),
+    taskId: z.string().optional(),
+    content: z.any(),
+    summary: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => attributionLog.record(input).then(record => ({ record }))
+});
+
+register({
+  name: 'get_attribution_trace',
+  title: 'Attribution chain-of-custody',
+  description: 'Return the ordered, attributable record chain (prompts + outputs) for a task or a HITL (ATR-03 / TRC-03).',
+  inputSchema: z.object({ taskId: z.string().optional(), hitlId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => input.taskId
+    ? attributionLog.trace(input.taskId)
+    : attributionLog.list({ hitlId: input.hitlId }).then(records => ({ hitlId: input.hitlId, records, count: records.length }))
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };
