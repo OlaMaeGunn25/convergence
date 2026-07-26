@@ -736,6 +736,56 @@ async function runTests() {
     assert(false, `System comprehension (Phase 1) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 18: Knowledge ingestion + industry-practice correlation (Phase 2) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { KnowledgeBase } = require('../lib/knowledge_ingest');
+    const industry = require('../lib/industry_practices');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    // A. Ingestion contract (ING-04): scope-approved, read-only, on-prem roadmap
+    const kf = pth.join(os.tmpdir(), `aiwx_kb_${Date.now()}.json`);
+    const kb = new KnowledgeBase({ file: kf });
+    let scopeReq = false; try { await kb.ingest({ source: 'upload', docs: [{ text: 'x' }] }); } catch (e) { scopeReq = /HITL-approved/.test(e.message); }
+    assert(scopeReq, 'Ingestion refuses to run without HITL scope approval (ING-04)');
+    let roadmap = false; try { await kb.ingest({ source: 'on_prem_crawl', docs: [{ text: 'x' }], approvedScope: true }); } catch (e) { roadmap = /roadmap/.test(e.message); }
+    assert(roadmap, 'on_prem_crawl adapter is refused (roadmap)');
+    const ing = await kb.ingest({ tenantId: 'kbt', source: 'upload', approvedScope: true, docs: [
+      { ref: 'sop-intake.pdf', text: 'Standard operating procedure: Before opening a new client matter, always run a conflict of interest check against existing parties. Record an engagement letter.' },
+      { ref: 'sop-trust.pdf', text: 'Client trust funds must be held in a segregated IOLTA account and never commingled with operating funds.' }
+    ] });
+    assert(ing.ingested >= 2, 'Ingestion chunks and stores documents with provenance');
+
+    // B. Hybrid search + compile
+    const found = await kb.search({ tenantId: 'kbt', query: 'conflict of interest check before matter', k: 3 });
+    assert(found.results.length > 0 && found.results[0].provenance && found.results[0].provenance.ref, 'Hybrid search returns provenance-tagged hits');
+    const comp = await kb.compile({ tenantId: 'kbt' });
+    assert(comp.ready === true && comp.documents >= 2, 'compile summarizes the company KB (ready)');
+    try { fsx.unlinkSync(kf); } catch (e) {}
+
+    // C. Industry practices + correlation (KNW-01/02/03)
+    assert(industry.getPractices('legal').some(p => p.id === 'legal-trust-segregation'), 'Legal vertical carries industry-standard practices');
+    const corr = await industry.correlate({ vertical: 'legal', capability: 'record_trust_transaction' });
+    assert(corr.industryPractices.some(p => p.id === 'legal-trust-segregation') && corr.sopGoverns === true, 'correlate maps a capability to its industry practice; company SOP governs');
+    assert(typeof corr.plan === 'string' && corr.plan.includes('record_trust_transaction'), 'correlate produces a grounded plan');
+
+    // D. Roster binding + registry tools
+    assert(roster.roleAllowsTool('knowledge_compilation', 'ingest_source') === true, 'Knowledge Compilation agent is now bound to ingest_source');
+    assert(reg.has('ingest_source') && reg.has('search_knowledge_base') && reg.has('compile_knowledge_base') && reg.has('get_industry_practices') && reg.has('correlate_task'), 'Phase 2 knowledge tools are registered');
+    const t = 'kbtool-' + Date.now();
+    const ingTool = await reg.invoke('ingest_source', { tenantId: t, source: 'upload', approvedScope: true, docs: [{ ref: 'p.pdf', text: 'Refund policy: never store raw card numbers; use the tokenized processor.' }] }, { actor: 'op' });
+    assert(ingTool.ok && ingTool.result.ingested >= 1, 'ingest_source tool ingests with scope approval');
+    const searchTool = await reg.invoke('search_knowledge_base', { tenantId: t, query: 'refund card processor' });
+    assert(searchTool.ok && searchTool.result.results.length > 0, 'search_knowledge_base tool returns hits');
+    const practicesTool = await reg.invoke('get_industry_practices', { vertical: 'finance' });
+    assert(practicesTool.ok && practicesTool.result.practices.length > 0, 'get_industry_practices tool returns a vertical corpus');
+    const corrTool = await reg.invoke('correlate_task', { vertical: 'finance', capability: 'record_payment', tenantId: t });
+    assert(corrTool.ok && corrTool.result.plan, 'correlate_task tool returns a grounded plan');
+  } catch (e) {
+    assert(false, `Knowledge ingestion (Phase 2) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

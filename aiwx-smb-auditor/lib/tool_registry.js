@@ -30,12 +30,15 @@ const { AgentRegistry } = require('./agent_model');
 const { HitlRegistry } = require('./hitl_identity');
 const { AttributionLog } = require('./attribution');
 const systemEvaluator = require('./system_evaluator');
+const { KnowledgeBase } = require('./knowledge_ingest');
+const industry = require('./industry_practices');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
 const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
+const knowledgeBase = new KnowledgeBase();
 
 const registry = new Map();
 
@@ -525,6 +528,65 @@ register({
   inputSchema: z.object({ tenantId: z.string().optional() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => systemEvaluator.onboardingStatus({ tenantId: input.tenantId || ctx.tenantId || null, connectionRegistry })
+});
+
+// ── Knowledge ingestion + industry-practice correlation (Phase 2, ING/KNW) ───
+
+register({
+  name: 'ingest_source',
+  title: 'Ingest company documents into the knowledge base',
+  description: 'Knowledge Compilation agent: ingest SOPs/docs from a source (connector_read | upload) into the company KB. READ-ONLY + scope must be HITL-approved (approvedScope:true) + provenance-tagged (ING-04). on_prem_crawl is roadmap.',
+  inputSchema: z.object({
+    tenantId: z.string().optional(),
+    source: z.enum(['connector_read', 'upload', 'on_prem_crawl']),
+    docs: z.array(z.object({ ref: z.string().optional(), text: z.string() })),
+    approvedScope: z.boolean()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => knowledgeBase.ingest({
+    tenantId: input.tenantId || ctx.tenantId || null, source: input.source,
+    docs: input.docs, approvedScope: input.approvedScope, actor: ctx.actor || null
+  })
+});
+
+register({
+  name: 'search_knowledge_base',
+  title: 'Hybrid search the company knowledge base',
+  description: 'Hybrid (keyword + semantic-overlap) search over the ingested company SOPs/docs, with provenance on every hit (grounds agent actions).',
+  inputSchema: z.object({ tenantId: z.string().optional(), query: z.string(), k: z.number().int().min(1).max(20).optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  provenance: { returnsProvenance: true, note: 'Each hit carries source + reference provenance.' },
+  handler: (input, ctx) => knowledgeBase.search({ tenantId: input.tenantId || ctx.tenantId || null, query: input.query, k: input.k || 5 })
+});
+
+register({
+  name: 'compile_knowledge_base',
+  title: 'Compile the company knowledge base',
+  description: 'Knowledge Compilation agent aggregate (KNW-04): the compiled company KB summary (chunks, sources, documents, readiness) the Orchestrator uses to ground task assignment.',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => knowledgeBase.compile({ tenantId: input.tenantId || ctx.tenantId || null })
+});
+
+register({
+  name: 'get_industry_practices',
+  title: 'Per-vertical industry-standard practices',
+  description: 'Return the industry-standard-practices corpus for a vertical (KNW-01).',
+  inputSchema: z.object({ vertical: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => ({ vertical: input.vertical, practices: industry.getPractices(input.vertical) })
+});
+
+register({
+  name: 'correlate_task',
+  title: 'Correlate a task: practice ↔ SOP ↔ capability',
+  description: 'Ground an intended capability against the industry practice, the governing company SOP (from the KB), and the system capability. The company SOP governs on conflict, which is flagged to HITL (KNW-02/03).',
+  inputSchema: z.object({ vertical: z.string(), capability: z.string(), connectorId: z.string().optional(), tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => industry.correlate({
+    vertical: input.vertical, capability: input.capability, connectorId: input.connectorId || null,
+    knowledgeBase, tenantId: input.tenantId || ctx.tenantId || null
+  })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

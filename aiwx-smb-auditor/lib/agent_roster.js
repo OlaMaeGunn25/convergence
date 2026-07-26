@@ -43,8 +43,7 @@ const ROLES = {
     title: 'Knowledge Compilation Agent',
     plane: PLANES.BUSINESS,
     duty: 'Compiles one company knowledge base from RAG scour + upload + connector-read + system manifests, for the Orchestrator to ground task assignment.',
-    tools: ['search_scholar'], // stand-in doc search; RAG-ingest tools bind in Phase 2
-    pending: ['ingest_source', 'compile_knowledge_base']
+    tools: ['ingest_source', 'compile_knowledge_base', 'search_knowledge_base', 'correlate_task', 'search_scholar']
   },
   compliance: {
     title: 'Compliance Agent',
