@@ -39,6 +39,8 @@ const { AutonomyGrants } = require('./autonomy');
 const taskRequest = require('./task_request');
 const { ChatSession } = require('./hitl_chat');
 const precommit = require('./precommit');
+const compliance = require('./compliance');
+const { ComplianceReporting } = require('./compliance_reporting');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -51,6 +53,7 @@ const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
 const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog });
+const complianceReporting = new ComplianceReporting();
 
 const registry = new Map();
 
@@ -836,6 +839,50 @@ register({
     toolName: input.toolName || input.capability || null,
     connectionRegistry, knowledgeBase, approved: input.approved === true
   })
+});
+
+// ── Compliance validation + exportable evidence (Phase 9, CMP/RPT) ───────────
+
+register({
+  name: 'regulatory_search',
+  title: 'Search local/state/federal regulations',
+  description: 'The Compliance agent\'s governed external regulatory search for a vertical (local/state/federal), degrading to a labeled simulated corpus without a search key (CMP-02).',
+  inputSchema: z.object({ vertical: z.string(), locale: z.string().optional(), capability: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  provenance: { returnsProvenance: true, note: 'Rules carry level + provenance (live|simulated).' },
+  handler: (input) => compliance.regulatorySearch({ vertical: input.vertical, locale: input.locale || null, capability: input.capability || null })
+});
+
+register({
+  name: 'validate_compliance',
+  title: 'Validate compliance + record evidence',
+  description: 'The Compliance agent validates an action/I/O against the vertical\'s regulations (industry/domain/vertical), screens I/O for sensitive data, and HANDS the determination to the Reporting agent as immutable evidence (CMP-01/03/04/05).',
+  inputSchema: z.object({ vertical: z.string(), capability: z.string().optional(), connectorId: z.string().optional(), locale: z.string().optional(), tenantId: z.string().optional(), io: z.any().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: true },
+  provenance: { returnsProvenance: true },
+  handler: async (input, ctx) => {
+    const determination = compliance.validate({ vertical: input.vertical, capability: input.capability || null, connectorId: input.connectorId || null, locale: input.locale || null, tenantId: input.tenantId || ctx.tenantId || null, io: input.io });
+    await complianceReporting.record(determination); // Compliance -> Reporting handoff
+    return determination;
+  }
+});
+
+register({
+  name: 'compliance_report',
+  title: 'Visual compliance report',
+  description: 'The Reporting agent\'s visual compliance report (counts by verdict/level/rule + a headline) from the immutable evidence (RPT-01).',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => complianceReporting.report({ tenantId: input.tenantId || ctx.tenantId || null })
+});
+
+register({
+  name: 'export_compliance_evidence',
+  title: 'Export compliance evidence',
+  description: 'Export the immutable compliance evidence as json | csv | html for audits/regulators (RPT-03).',
+  inputSchema: z.object({ tenantId: z.string().optional(), format: z.enum(['json', 'csv', 'html']).optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => complianceReporting.export({ tenantId: input.tenantId || ctx.tenantId || null, format: input.format || 'json' })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };

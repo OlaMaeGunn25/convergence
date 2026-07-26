@@ -49,8 +49,7 @@ const ROLES = {
     title: 'Compliance Agent',
     plane: PLANES.BUSINESS,
     duty: 'Validates compliance by industry/domain/vertical; runs a governed external search of local/state/federal regulations; screens all I/O before the commit boundary; hands evidence to the Reporting Agent.',
-    tools: ['search_scholar', 'get_governance_report'], // regulatory-search tool binds in Phase 9
-    pending: ['regulatory_search', 'screen_io']
+    tools: ['regulatory_search', 'validate_compliance', 'precommit_review', 'search_scholar', 'get_governance_report']
   },
   operations: {
     title: 'Operations Agent',
@@ -87,8 +86,7 @@ const ROLES = {
     title: 'Reporting Agent',
     plane: PLANES.BUSINESS,
     duty: 'Generates visual compliance reports and keeps immutable, exportable record evidence.',
-    tools: ['get_governance_report'],
-    pending: ['export_evidence']
+    tools: ['compliance_report', 'export_compliance_evidence', 'get_governance_report']
   },
   human_companion: {
     title: 'Human Companion (HR Generalist) Agent',

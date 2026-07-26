@@ -1077,6 +1077,56 @@ async function runTests() {
     assert(false, `Pre-commit checks-and-balances (NEG) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 25: Compliance agent + Reporting evidence (Phase 9, CMP/RPT) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const compliance = require('../lib/compliance');
+    const { ComplianceReporting } = require('../lib/compliance_reporting');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    // A. Regulatory search (industry/domain/vertical, local/state/federal)
+    const search = compliance.regulatorySearch({ vertical: 'medical' });
+    assert(search.levels.join(',') === 'local,state,federal' && search.rules.some(r => /HIPAA/.test(r.code)), 'Regulatory search returns local/state/federal rules for the vertical');
+    assert(search.simulated === true && search.provenance === 'simulated', 'Regulatory search is labeled simulated without a search key');
+
+    // B. Validate + I/O screening
+    const passDet = compliance.validate({ vertical: 'legal', capability: 'list_matters' });
+    assert(passDet.verdict === 'pass', 'A non-sensitive action validates as pass');
+    const flagDet = compliance.validate({ vertical: 'legal', capability: 'record_trust_transaction' });
+    assert(flagDet.verdict === 'flag' && flagDet.citations.some(c => c.code === 'IOLTA'), 'A trust action is flagged with regulatory citations');
+    const blockDet = compliance.validate({ vertical: 'medical', capability: 'create_event', io: { note: 'SSN 123-45-6789' } });
+    assert(blockDet.verdict === 'block' && blockDet.ioFlags.includes('SSN-like'), 'Sensitive data in I/O is screened and blocks (CMP-03)');
+
+    // C. Reporting: immutable evidence + visual report + exports
+    const ef = pth.join(os.tmpdir(), `aiwx_cmp_ev_${Date.now()}.json`);
+    const rpt = new ComplianceReporting({ file: ef });
+    await rpt.record(flagDet); await rpt.record(blockDet);
+    const report = await rpt.report({ tenantId: null });
+    assert(report.total === 2 && report.byVerdict.flag === 1 && report.byVerdict.block === 1 && report.headline === 'blocked', 'Reporting compiles a visual report from evidence');
+    const csv = await rpt.export({ format: 'csv' });
+    assert(csv.format === 'csv' && /verdict/.test(csv.content) && csv.count === 2, 'Evidence exports as CSV');
+    const html = await rpt.export({ format: 'html' });
+    assert(html.format === 'html' && /Compliance Evidence/.test(html.content), 'Evidence exports as an HTML summary');
+    try { fsx.unlinkSync(ef); } catch (e) {}
+
+    // D. Roster bindings + registry tools + Compliance->Reporting handoff
+    assert(roster.roleAllowsTool('compliance', 'validate_compliance') && roster.roleAllowsTool('reporting', 'export_compliance_evidence'), 'Compliance + Reporting roles are bound to their tools');
+    assert(reg.has('regulatory_search') && reg.has('validate_compliance') && reg.has('compliance_report') && reg.has('export_compliance_evidence'), 'Phase 9 tools are registered');
+    const t = 'cmp-' + Date.now();
+    const vc = await reg.invoke('validate_compliance', { vertical: 'legal', capability: 'record_trust_transaction', tenantId: t }, { actor: 'op' });
+    assert(vc.ok && vc.result.verdict === 'flag', 'validate_compliance validates + hands evidence to Reporting');
+    const cr = await reg.invoke('compliance_report', { tenantId: t });
+    assert(cr.ok && cr.result.total >= 1, 'compliance_report reflects the recorded evidence (handoff worked)');
+
+    // E. Pre-commit now includes a compliance screen that blocks leaked PII/PHI
+    const precommit = require('../lib/precommit');
+    const leaked = await precommit.review({ vertical: 'medical', capability: 'create_event', io: { patient: 'card 4111 1111 1111 1111' } });
+    assert(leaked.ok === false && leaked.blockers.includes('compliance'), 'Pre-commit blocks a commit that would leak sensitive I/O (CMP-03)');
+  } catch (e) {
+    assert(false, `Compliance / reporting (Phase 9) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

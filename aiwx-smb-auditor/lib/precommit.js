@@ -22,9 +22,10 @@
 
 const systemEvaluator = require('./system_evaluator');
 const industry = require('./industry_practices');
+const compliance = require('./compliance');
 const { isComplianceFloor } = require('./autonomy');
 
-async function review({ tenantId = null, vertical = null, connectorId = null, capability = null, toolName = null, connectionRegistry = null, knowledgeBase = null, approved = false, elevated = false } = {}) {
+async function review({ tenantId = null, vertical = null, connectorId = null, capability = null, toolName = null, connectionRegistry = null, knowledgeBase = null, approved = false, elevated = false, io = null } = {}) {
   const checks = [];
   const blockers = [];
 
@@ -56,6 +57,15 @@ async function review({ tenantId = null, vertical = null, connectorId = null, ca
     if (!floorOk) blockers.push('compliance_floor');
   } else {
     checks.push({ name: 'compliance_floor', pass: true, detail: 'Not a compliance-floor action.' });
+  }
+
+  // 4. Compliance screen (CMP-03): the Compliance agent validates the action + I/O
+  //    against the vertical's regulations. A hard `block` (e.g. leaked PII/PHI in
+  //    I/O) blocks the commit; a `flag` is recorded as evidence but does not block.
+  if (vertical) {
+    const det = compliance.validate({ vertical, capability, connectorId, tenantId, io });
+    checks.push({ name: 'compliance', pass: det.verdict !== 'block', detail: `Compliance verdict: ${det.verdict}${det.citations.length ? ` (${det.citations.map(c => c.code).join(', ')})` : ''}.`, verdict: det.verdict, citations: det.citations });
+    if (det.verdict === 'block') blockers.push('compliance');
   }
 
   const ok = blockers.length === 0;
