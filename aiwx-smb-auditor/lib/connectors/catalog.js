@@ -158,6 +158,17 @@ const CONNECTORS = [
     docs: 'https://developer.zendesk.com'
   },
   {
+    id: 'gusto', name: 'Gusto', category: 'HR, Payroll & Benefits',
+    kind: 'api', auth: 'oauth2', envKeys: ['GUSTO_CLIENT_ID', 'GUSTO_CLIENT_SECRET', 'GUSTO_ACCESS_TOKEN'],
+    vertical: 'universal',
+    matchSignals: ['gusto', 'gusto.com', 'payroll', 'hr', 'benefits', 'onboarding'],
+    capabilities: ['list_employees', 'list_time_off_requests', 'list_payrolls'],
+    // Payroll + termination sit on the compliance floor (money movement / employment).
+    destructiveCapabilities: ['submit_time_off_request', 'decide_time_off_request', 'run_payroll', 'terminate_employee'],
+    status: 'available', plane: 'human',
+    docs: 'https://docs.gusto.com/embedded-payroll/docs'
+  },
+  {
     id: 'reso_web_api', name: 'RESO Web API (MLS)', category: 'Real Estate MLS',
     kind: 'api', auth: 'oauth2', envKeys: ['RESO_API_URL', 'RESO_TOKEN_URL', 'RESO_CLIENT_ID', 'RESO_CLIENT_SECRET'],
     vertical: ['Real Estate', 'realestate'],

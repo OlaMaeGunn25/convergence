@@ -374,7 +374,8 @@ async function runTests() {
       'POST /api/install', 'GET /api/install/status',
       'GET /api/agents', 'GET /api/agents/telemetry', 'GET /api/tasks/:id/trace',
       'POST /api/tasks/:id/correct', 'POST /api/tasks/:id/cancel', 'POST /api/task-request',
-      'POST /api/chat', 'POST /api/chat/confirm', 'POST /api/knowledge/ingest'
+      'POST /api/chat', 'POST /api/chat/confirm', 'POST /api/knowledge/ingest',
+      'POST /api/clio/webhook', 'POST /api/gusto/webhook'
     ];
     const missing = mustHave.filter(r => !paths.has(r));
     assert(missing.length === 0, `routes/ covers every critical endpoint (missing: ${missing.join(', ') || 'none'})`);
@@ -1465,6 +1466,75 @@ async function runTests() {
     assert(rt.ok && rt.result.detectedRegion === 'FL' && /Stellar/.test(rt.result.sources[0].name), 'recommend_regional_sources tool returns the region-local MLS');
   } catch (e) {
     assert(false, `Regional sources / MLS (REG) tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 34: Gusto HR connector + Human Companion integration ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const gusto = require('../lib/connectors/gusto');
+    const { HumanCompanion } = require('../lib/human_companion');
+    const { isComplianceFloor } = require('../lib/autonomy');
+    const catalog = require('../lib/connectors/catalog');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    // A. Catalog: Gusto is registered on the human-care plane
+    const g = catalog.get('gusto');
+    assert(g && /HR/.test(g.category) && g.plane === 'human', 'Gusto is in the catalog on the human-care plane');
+    assert(g.destructiveCapabilities.includes('run_payroll'), 'Gusto marks run_payroll as destructive');
+
+    // B. Reads degrade to a labeled simulated dataset
+    const emps = await gusto.listEmployees({ limit: 5 });
+    assert(emps.simulated === true && Array.isArray(emps.data) && emps.data.length > 0, 'Gusto listEmployees degrades to a labeled simulated dataset');
+    const to = await gusto.listTimeOffRequests({ status: 'pending' });
+    assert(to.simulated === true && to.data.every(r => r.status === 'pending'), 'Gusto time-off requests filter by status');
+
+    // C. Compensation is REDACTED at the boundary (confidential HR data)
+    const red = gusto.redactCompensation({ name: 'Dana', compensation: { rate: '85000' }, nested: { salary: '90000', dept: 'Ops' } });
+    assert(/redacted/.test(red.compensation) && /redacted/.test(red.nested.salary) && red.nested.dept === 'Ops', 'Compensation/salary fields are redacted, non-sensitive fields preserved');
+    const payrolls = await gusto.listPayrolls({});
+    assert(payrolls.simulated === true, 'Gusto payrolls degrade to simulated');
+
+    // D. Payroll is on the COMPLIANCE FLOOR + double-gated in the connector
+    assert(isComplianceFloor('gusto_run_payroll') === true, 'Running payroll is a compliance-floor action (money movement)');
+    assert(isComplianceFloor('gusto_terminate_employee') === true, 'Termination is a compliance-floor action');
+    const blockedPay = await gusto.runPayroll({ payrollId: 'pay_9001' });
+    assert(blockedPay.success === false && blockedPay.requiresApproval === true, 'runPayroll refuses without explicit approval (connector-level gate)');
+    assert((await gusto.runPayroll({ payrollId: 'pay_9001', approved: true })).success === true, 'runPayroll proceeds once approved');
+
+    // E. Webhooks map to governed tasks; payroll/termination land pending_approval
+    assert(gusto.mapWebhookToTask({ event_type: 'time_off_request.created' }).status === 'proposed', 'A time-off webhook maps to a proposed task');
+    const payHook = gusto.mapWebhookToTask({ event_type: 'payroll.submitted', payload: { net_pay: '5000', id: 'p1' } });
+    assert(payHook.status === 'pending_approval' && payHook.payload.plane === 'human', 'A payroll webhook lands pending_approval on the human-care plane');
+    assert(/redacted/.test(payHook.payload.data.net_pay), 'Webhook payloads redact compensation before landing on a task');
+    assert(gusto.mapWebhookToTask({ event_type: 'employee.terminated' }).status === 'pending_approval', 'A termination webhook requires approval');
+
+    // F. Human Companion files PTO into the HR system — approval-gated, complaints never
+    const hf = pth.join(os.tmpdir(), `aiwx_gusto_hr_${Date.now()}.json`);
+    const hc = new HumanCompanion({ file: hf, hrSystem: gusto });
+    const pto = await hc.submit({ employeeId: 'emp_1001', type: 'pto', detail: 'Aug 4-8 vacation' });
+    const notApproved = await hc.fileWithHrSystem({ id: pto.id });
+    assert(notApproved.ok === false && notApproved.requiresApproval === true, 'Filing into the HR system requires explicit approval');
+    const filed = await hc.fileWithHrSystem({ id: pto.id, approved: true, startDate: '2026-08-04', endDate: '2026-08-08' });
+    assert(filed.ok === true && filed.filed.simulated === true, 'An approved PTO request files into the HR system (simulated without a token)');
+    assert((await hc.get(pto.id)).status === 'filed', 'The companion records that the request was filed');
+    const complaint = await hc.submit({ employeeId: 'emp_1001', type: 'complaint', detail: 'sensitive' });
+    let refused = false; try { await hc.fileWithHrSystem({ id: complaint.id, approved: true }); } catch (e) { refused = /never filed/.test(e.message); }
+    assert(refused, 'A confidential complaint is NEVER filed into the HR system (HRC-03/04)');
+    try { fsx.unlinkSync(hf); } catch (e) {}
+
+    // G. Plane isolation + tools registered + registry approval gate
+    assert(roster.roleAllowsTool('human_companion', 'gusto_run_payroll') === true, 'The Human Companion is bound to the Gusto tools');
+    assert(roster.roleAllowsTool('operations', 'gusto_list_employees') === false, 'Business-plane agents cannot read Gusto employee data (confidentiality partition)');
+    assert(roster.roleAllowsTool('admin_support', 'gusto_list_payrolls') === false, 'Admin-Support cannot read payroll data');
+    ['gusto_list_employees', 'gusto_list_time_off_requests', 'gusto_list_payrolls', 'gusto_submit_time_off_request', 'gusto_decide_time_off_request', 'gusto_run_payroll', 'hr_file_with_hr_system']
+      .forEach(t => assert(reg.has(t), `Tool ${t} is registered`));
+    const gated = await reg.invoke('gusto_run_payroll', { payrollId: 'pay_9001' }, { actor: 'op' });
+    assert(gated.ok === false && gated.status === 'requires_approval', 'gusto_run_payroll is approval-gated by the registry');
+    const okRead = await reg.invoke('gusto_list_employees', { limit: 2 });
+    assert(okRead.ok === true && okRead.result.simulated === true, 'gusto_list_employees reads through the registry');
+  } catch (e) {
+    assert(false, `Gusto HR connector tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

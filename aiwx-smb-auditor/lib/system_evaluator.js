@@ -35,6 +35,11 @@ const PROCESS_TEMPLATES = {
   hubspot: [
     { name: 'Lead → deal', steps: ['list_contacts', 'create_contact', 'update_deal'] }
   ],
+  gusto: [
+    { name: 'Time-off request → manager decision', steps: ['list_time_off_requests', 'submit_time_off_request', 'decide_time_off_request'] },
+    { name: 'Payroll run (HITL, compliance floor)', steps: ['list_payrolls', 'run_payroll'] },
+    { name: 'Employee onboarding', steps: ['list_employees'] }
+  ],
   stripe: [
     { name: 'Charge → refund (HITL)', steps: ['list_charges', 'create_refund'] }
   ]

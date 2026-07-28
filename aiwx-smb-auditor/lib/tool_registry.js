@@ -46,6 +46,7 @@ const precommit = require('./precommit');
 const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
+const gusto = require('./connectors/gusto');
 const { deploymentInfo } = require('./deployment');
 const integrationSeams = require('./integration_seams');
 const verticals = require('./verticals');
@@ -63,7 +64,7 @@ const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
 const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog, knowledgeBase });
 const complianceReporting = new ComplianceReporting();
-const humanCompanion = new HumanCompanion();
+const humanCompanion = new HumanCompanion({ hrSystem: gusto });
 
 const registry = new Map();
 
@@ -969,6 +970,78 @@ register({
   inputSchema: z.object({ id: z.string(), status: z.string() }),
   annotations: { readOnly: false, destructive: false, openWorld: false },
   handler: (input) => humanCompanion.setStatus(input.id, input.status).then(request => ({ request }))
+});
+
+// ── Gusto (HR system of record) — human-care plane ───────────────────────────
+
+register({
+  name: 'gusto_list_employees',
+  title: 'Gusto — list employees',
+  description: 'Read the employee roster from Gusto (HR system of record). Compensation fields are REDACTED by default — they are confidential to the human-care plane. Degrades to a labeled simulated dataset without GUSTO_ACCESS_TOKEN.',
+  inputSchema: z.object({ companyId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), includeCompensation: z.boolean().optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  provenance: { returnsProvenance: true, note: 'Rows carry provenance live|simulated.' },
+  handler: (input) => gusto.listEmployees(input)
+});
+
+register({
+  name: 'gusto_list_time_off_requests',
+  title: 'Gusto — list time-off requests',
+  description: 'Read time-off (PTO/sick) requests from Gusto, optionally filtered by status — what the Human Companion uses to track an employee\'s requests.',
+  inputSchema: z.object({ companyId: z.string().optional(), status: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  provenance: { returnsProvenance: true },
+  handler: (input) => gusto.listTimeOffRequests(input)
+});
+
+register({
+  name: 'gusto_list_payrolls',
+  title: 'Gusto — list payrolls',
+  description: 'Read payroll runs from Gusto. Compensation/tax figures are REDACTED at the boundary (confidential HR data).',
+  inputSchema: z.object({ companyId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: true },
+  provenance: { returnsProvenance: true },
+  handler: (input) => gusto.listPayrolls(input)
+});
+
+register({
+  name: 'gusto_submit_time_off_request',
+  title: 'Gusto — submit a time-off request',
+  description: 'File a time-off request in Gusto on an employee\'s behalf. DESTRUCTIVE — writes to the HR system of record; requires human approval.',
+  inputSchema: z.object({
+    employeeId: z.string(), policy: z.string().optional(),
+    startDate: z.string(), endDate: z.string(),
+    hours: z.number().optional(), note: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input) => gusto.submitTimeOffRequest(input)
+});
+
+register({
+  name: 'gusto_decide_time_off_request',
+  title: 'Gusto — approve/deny a time-off request',
+  description: 'Record a manager decision (approve|deny) on a Gusto time-off request. DESTRUCTIVE — requires human approval; the decision must come from an authorized HITL.',
+  inputSchema: z.object({ requestId: z.string(), decision: z.enum(['approve', 'deny']), approverId: z.string().optional(), note: z.string().optional() }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input) => gusto.decideTimeOffRequest(input)
+});
+
+register({
+  name: 'gusto_run_payroll',
+  title: 'Gusto — run payroll',
+  description: 'Submit a payroll run in Gusto. HIGHEST-RISK HR action (moves employee money) — COMPLIANCE FLOOR: requires explicit human approval and cannot be delegated by a standard autonomy grant; the connector re-checks the approval.',
+  inputSchema: z.object({ payrollId: z.string(), companyId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => gusto.runPayroll(Object.assign({}, input, { approved: ctx.approved === true }))
+});
+
+register({
+  name: 'hr_file_with_hr_system',
+  title: 'Human Companion — file an HR request into Gusto',
+  description: 'File the employee\'s PTO request into the HR system of record (Gusto) on their behalf. DESTRUCTIVE — requires human approval; a confidential complaint is NEVER filed here (it routes to the confidential HR channel).',
+  inputSchema: z.object({ id: z.string(), startDate: z.string().optional(), endDate: z.string().optional(), hours: z.number().optional() }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => humanCompanion.fileWithHrSystem(Object.assign({}, input, { approved: ctx.approved === true }))
 });
 
 register({

@@ -92,7 +92,14 @@ const ROLES = {
     title: 'Human Companion (HR Generalist) Agent',
     plane: PLANES.HUMAN,
     duty: 'HR generalist assigned to protect the human: PTO, assignment status, manager approvals, complaints/grievances, work-life balance. Operates under a confidentiality partition isolated from the business/ops plane.',
-    tools: ['hr_submit_request', 'hr_list_requests', 'hr_manager_view', 'hr_route_approval', 'hr_set_status', 'hr_wellbeing_check']
+    tools: [
+      'hr_submit_request', 'hr_list_requests', 'hr_manager_view', 'hr_route_approval', 'hr_set_status', 'hr_wellbeing_check',
+      // Gusto = the HR system of record. Bound ONLY to the human-care plane so
+      // business/ops agents can never read employee or payroll data.
+      'gusto_list_employees', 'gusto_list_time_off_requests', 'gusto_list_payrolls',
+      'gusto_submit_time_off_request', 'gusto_decide_time_off_request', 'gusto_run_payroll',
+      'hr_file_with_hr_system'
+    ]
   }
 };
 

@@ -19,8 +19,10 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 
-const FLOOR_TOOLS = new Set(['clio_record_trust_transaction']);
-const FLOOR_PATTERN = /trust|iolta|refund|payment|payout|transfer|wire|phi/i;
+const FLOOR_TOOLS = new Set(['clio_record_trust_transaction', 'gusto_run_payroll', 'gusto_terminate_employee']);
+// Highest-risk actions: money movement, trust funds, protected health info, and
+// payroll/compensation (moves employee money + exposes compensation data).
+const FLOOR_PATTERN = /trust|iolta|refund|payment|payout|transfer|wire|phi|payroll|compensation|salary|terminate/i;
 
 function isComplianceFloor(toolName) {
   return FLOOR_TOOLS.has(toolName) || FLOOR_PATTERN.test(String(toolName || ''));

@@ -30,6 +30,7 @@ const { createEmbedder } = require('./lib/embeddings');
 const { createReranker } = require('./lib/reranker');
 const ingestionAdapters = require('./lib/ingestion_adapters');
 const clioConnector = require('./lib/connectors/clio');
+const gustoConnector = require('./lib/connectors/gusto');
 const { TaskModel: ConnTaskModel } = require('./lib/task_model');
 const connectionRegistry = new ConnectionRegistry();
 const knowledgeBaseSvc = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
@@ -484,6 +485,28 @@ app.get('/api/install/status', async (req, res) => {
     res.json({ success: true, ...status });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Failed to load install status.' });
+  }
+});
+
+// Gusto (HR) webhook -> governed task on the human-care plane. HMAC-verified when
+// GUSTO_WEBHOOK_SECRET is set; payroll/termination events land pending_approval.
+app.post('/api/gusto/webhook', async (req, res) => {
+  try {
+    const secret = process.env.GUSTO_WEBHOOK_SECRET;
+    if (secret) {
+      const crypto = require('crypto');
+      const sig = req.get('X-Gusto-Signature') || '';
+      const expected = crypto.createHmac('sha256', secret).update(JSON.stringify(req.body || {})).digest('hex');
+      const a = Buffer.from(sig), b = Buffer.from(expected);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        return res.status(401).json({ success: false, error: 'Invalid webhook signature.' });
+      }
+    }
+    const descriptor = gustoConnector.mapWebhookToTask(req.body || {});
+    const task = await connTaskModel.create(descriptor);
+    res.json({ success: true, task });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Webhook processing failed.' });
   }
 });
 

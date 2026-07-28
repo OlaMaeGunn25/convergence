@@ -31,6 +31,7 @@ const { createEmbedder } = require('../lib/embeddings');
 const { createReranker } = require('../lib/reranker');
 const ingestionAdapters = require('../lib/ingestion_adapters');
 const clio = require('../lib/connectors/clio');
+const gusto = require('../lib/connectors/gusto');
 const { TaskModel } = require('../lib/task_model');
 
 const router = express.Router();
@@ -178,6 +179,23 @@ router.post('/api/connections/disconnect', asyncHandler('[Connections]', 'Failed
  * NOTE: robust HMAC needs the raw request body; wire an express.raw() capture on
  * this path in production. Here we sign the re-serialized body as a best effort.
  */
+// Gusto (HR) webhook -> governed task on the human-care plane.
+router.post('/api/gusto/webhook', asyncHandler('[Gusto]', 'Webhook processing failed.', async (req, res) => {
+  const secret = process.env.GUSTO_WEBHOOK_SECRET;
+  if (secret) {
+    const sig = req.get('X-Gusto-Signature') || '';
+    const expected = crypto.createHmac('sha256', secret).update(JSON.stringify(req.body || {})).digest('hex');
+    const a = Buffer.from(sig); const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return sendError(res, 401, 'Invalid webhook signature.', { context: '[Gusto]' });
+    }
+  }
+  const descriptor = gusto.mapWebhookToTask(req.body || {});
+  const task = await taskModel.create(descriptor);
+  logger.info(`[Gusto] Webhook ${descriptor.payload.event} -> task ${task.id} (${task.status})`);
+  res.json({ success: true, task });
+}));
+
 router.post('/api/clio/webhook', asyncHandler('[Clio]', 'Webhook processing failed.', async (req, res) => {
   const secret = process.env.CLIO_WEBHOOK_SECRET;
   if (secret) {

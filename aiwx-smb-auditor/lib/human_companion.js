@@ -39,6 +39,10 @@ class HumanCompanion {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
     this.file = options.file || path.join(__dirname, '..', 'config', 'hr_requests.json');
+    // Optional HR system of record (e.g. the Gusto connector). The Companion owns
+    // the employee-facing record; filing it into the HR system is a separate,
+    // approval-gated step so the human stays in control (HRC-04 + CTL-02).
+    this.hrSystem = options.hrSystem || null;
   }
 
   /** Submit an HR request. Complaints are confidential by default. */
@@ -127,6 +131,30 @@ class HumanCompanion {
 
   async setStatus(id, status) {
     return this._patch(id, { status });
+  }
+
+  /**
+   * File an HR request into the HR system of record (e.g. Gusto) on the
+   * employee's behalf. DESTRUCTIVE + approval-gated: refuses without an explicit
+   * approval, and refuses confidential complaints outright (a grievance is never
+   * auto-filed into payroll/HR software — it goes to the confidential channel).
+   */
+  async fileWithHrSystem({ id, approved = false, startDate = null, endDate = null, hours = null }) {
+    if (!this.hrSystem) throw new Error('No HR system of record is connected.');
+    const r = await this.get(id);
+    if (!r) throw new Error(`HR request ${id} not found.`);
+    if (r.confidential) throw new Error('A confidential complaint is never filed into the HR system — it routes to the confidential HR channel.');
+    if (!approved) {
+      return { ok: false, requiresApproval: true, id, message: 'Filing into the HR system of record requires explicit human approval.' };
+    }
+    if (r.type !== 'pto') throw new Error(`Only PTO requests can be filed into the HR system (got "${r.type}").`);
+    const filed = await this.hrSystem.submitTimeOffRequest({
+      employeeId: r.employeeId, policy: 'Vacation',
+      startDate: startDate || r.startDate || null, endDate: endDate || r.endDate || null,
+      hours, note: r.detail || null
+    });
+    await this._patch(id, { status: 'filed', hrSystemRef: (filed.data && filed.data.id) || null, hrSystemSimulated: !!filed.simulated });
+    return { ok: true, id, filed };
   }
 
   /** Work-life-balance signal — the Companion advocates for the employee. */
