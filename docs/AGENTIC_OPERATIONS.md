@@ -66,7 +66,33 @@ component). See `docs/AUDITOR_REFRAME.md` and `SYSTEM_HANDOVER_SPECIFICATION.md`
 
 ---
 
-## Part A — Tree-of-Thought derivation
+## Prompt re-engineering — Graph-of-Thought (CHT-02) `[N]`
+
+> **Every prompt entered by every company running CONVERGENCE-Ai is re-engineered
+> through the GRAPH-OF-THOUGHT framework** (`lib/graph_of_thought.js`) before it is
+> planned, previewed, or executed. This replaces the earlier tree-of-thought.
+
+A tree forces each line of reasoning into an isolated branch. A graph lets thoughts
+**cross-inform, contradict, aggregate, and refine**:
+
+| Property | Why a graph (not a tree) |
+|---|---|
+| **Cross-linking** | Candidate capabilities, the company KB, and industry practice inform one another. |
+| **Contradiction** | An SOP that forbids the action is a first-class `contradicts` edge that measurably lowers the plan score — a tree can only annotate it. |
+| **Aggregation** | Supporting thoughts merge into ONE synthesized plan node. |
+| **Refinement loop** | The risk/compliance verdict feeds **back** into the plan node (a cycle a tree cannot express). |
+| **Scoring** | Every node carries a support score; the graph yields a confidence + verdict for the whole plan. |
+
+Node types: `request · understanding · candidate · knowledge · practice · risk ·
+aggregate · refinement · outcome`. Edge types: `derives · informs · supports ·
+contradicts · aggregates · refines`. Verdicts: `ready · hold_for_confirmation ·
+needs_disambiguation · blocked_by_sop`. Enforced on **both** prompt paths (the HITL
+chat and the task-request interface) and exposed as the `reengineer_prompt` tool.
+The re-engineered graph is recorded in the attribution log (ATR-01).
+
+---
+
+## Part A — Requirements derivation (authoring method)
 
 **Branch 1 — Lifecycle (Connection → Comprehend → Ingest → Train → Ready → Deploy).**
 A connected system is inert until an agent understands its capabilities *and*

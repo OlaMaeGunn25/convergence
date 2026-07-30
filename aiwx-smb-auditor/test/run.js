@@ -998,7 +998,9 @@ async function runTests() {
 
     // A. Interpret: ToT + understanding + projected outcomes, awaiting confirmation
     const plan = await chat.interpret({ query: 'create a time activity on the matter', tenantId: 'ch', hitlId: 'h1', vertical: 'legal' });
-    assert(plan.plan.treeOfThought.branches.length === 6 && plan.plan.treeOfThought.branches.some(b => /knowledge base/i.test(b.thought)), 'Every prompt is re-engineered into a tree-of-thought incl. a company-KB cross-reference branch (CHT-02/XREF-02)');
+    const g8 = plan.plan.graphOfThought;
+    assert(g8 && g8.framework === 'graph-of-thought' && g8.nodes.length >= 7 && g8.edges.length >= 7, 'Every prompt is re-engineered into a GRAPH of thought (nodes + edges), not a tree (CHT-02)');
+    assert(g8.nodes.some(n => n.type === 'knowledge') && g8.nodes.some(n => n.type === 'aggregate') && g8.nodes.some(n => n.type === 'refinement'), 'The graph includes the company-KB, aggregation and refinement nodes (XREF-02)');
     assert(plan.plan.understanding.interpretedIntent && plan.plan.understanding.capability.connectorId === 'clio', 'The system echoes what it understood — the interpreted action (CHT-03)');
     assert(plan.plan.projectedOutcomes.length === 1 && plan.status === 'awaiting_confirmation', 'Projected outcomes are shown and the plan awaits confirmation (CHT-04)');
 
@@ -1022,7 +1024,7 @@ async function runTests() {
     // D. Registry tools
     assert(reg.has('chat_interpret') && reg.has('chat_confirm') && reg.has('get_chat_plan'), 'Phase 8 chat tools are registered');
     const ci = await reg.invoke('chat_interpret', { query: 'hello', tenantId: 'none' });
-    assert(ci.ok && ci.result.plan.treeOfThought, 'chat_interpret tool returns a tree-of-thought plan');
+    assert(ci.ok && ci.result.plan.graphOfThought && ci.result.plan.graphOfThought.framework === 'graph-of-thought', 'chat_interpret tool returns a graph-of-thought plan');
   } catch (e) {
     assert(false, `HITL chat (Phase 8) tests crashed: ${e.message}`);
   }
@@ -1284,8 +1286,9 @@ async function runTests() {
     const pf = pth.join(os.tmpdir(), `aiwx_onb_plan_${Date.now()}.json`);
     const chat = new ChatSession({ file: pf, connectionRegistry: conns, knowledgeBase: kb });
     const plan = await chat.interpret({ query: 'conflict of interest check before a matter', tenantId: 'biz1', vertical: 'legal' });
-    const xrefBranch = plan.plan.treeOfThought.branches.find(b => /knowledge base/i.test(b.thought));
-    assert(xrefBranch && /company KB reference/.test(xrefBranch.detail), 'The chat tree-of-thought grounds the request in company KB references (XREF-02)');
+    const kbNode = plan.plan.graphOfThought.nodes.find(n => n.type === 'knowledge');
+    assert(kbNode && /company KB reference/.test(kbNode.detail), 'The chat graph-of-thought grounds the request in company KB references (XREF-02)');
+    assert(plan.plan.graphOfThought.edges.some(e => e.from === 'knowledge' && e.type === 'supports'), 'The KB node SUPPORTS the chosen candidate (cross-linked, not an isolated branch)');
     assert(plan.plan.understanding.knowledgeRefs.length > 0, 'The understanding attaches the grounding knowledge references');
     delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
     try { fsx.unlinkSync(kbf); fsx.unlinkSync(cnf); fsx.unlinkSync(pf); } catch (e) {}
@@ -1535,6 +1538,66 @@ async function runTests() {
     assert(okRead.ok === true && okRead.result.simulated === true, 'gusto_list_employees reads through the registry');
   } catch (e) {
     assert(false, `Gusto HR connector tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 35: Graph-of-Thought prompt re-engineering (CHT-02) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { graphOfThought, reengineerPrompt } = require('../lib/graph_of_thought');
+    const taskReq = require('../lib/task_request');
+    const { ConnectionRegistry } = require('../lib/connection_registry');
+    const reg = require('../lib/tool_registry');
+
+    const top = { action: 'create activity via Clio', capability: 'create_activity', system: 'Clio', connectorId: 'clio', type: 'write', score: 0.8 };
+    const cands = [top, { action: 'list matters via Clio', capability: 'list_matters', system: 'Clio', connectorId: 'clio', type: 'read', score: 0.6 }];
+    const refs = [{ sourceRef: 'intake-sop.pdf', text: 'Run a conflict check first.' }];
+
+    // A. It is a GRAPH: nodes + typed edges, not a branch list
+    const g = graphOfThought({ query: 'log a time entry', top, candidates: cands, vertical: 'legal', knowledgeRefs: refs });
+    assert(g.framework === 'graph-of-thought' && Array.isArray(g.nodes) && Array.isArray(g.edges), 'Re-engineering produces a graph (nodes + edges)');
+    assert(!('branches' in g), 'The tree-of-thought branch structure is gone');
+    ['request', 'understanding', 'candidate', 'knowledge', 'practice', 'risk', 'aggregate', 'refinement', 'outcome']
+      .forEach(t => assert(g.nodes.some(n => n.type === t), `Graph contains a ${t} node`));
+
+    // B. CROSS-LINKING: alternatives inform each other (impossible in a tree)
+    assert(g.edges.some(e => e.from === 'candidate_1' && e.to === 'candidate_2' && e.type === 'informs'), 'Candidate alternatives cross-inform each other (graph-only property)');
+    assert(g.edges.some(e => e.from === 'knowledge' && e.type === 'supports'), 'Company knowledge SUPPORTS the chosen candidate');
+
+    // C. AGGREGATION + REFINEMENT FEEDBACK LOOP (a cycle a tree cannot express)
+    assert(g.edges.filter(e => e.type === 'aggregates').length >= 3, 'Multiple thoughts AGGREGATE into one synthesized plan');
+    assert(g.edges.some(e => e.type === 'refines' && e.from === 'risk' && e.to === 'aggregate'), 'The risk verdict feeds BACK into the plan (refinement cycle)');
+    assert(g.refinement && g.aggregate, 'The graph exposes its aggregate + refined plan');
+
+    // D. CONTRADICTION: an SOP conflict is a first-class edge that lowers the score
+    const clean = graphOfThought({ query: 'x', top, candidates: [top], vertical: 'legal', knowledgeRefs: refs, correlation: { conflictFlaggedToHitl: false, governingSop: { text: 'ok' } } });
+    const conflicted = graphOfThought({ query: 'x', top, candidates: [top], vertical: 'legal', knowledgeRefs: refs, correlation: { conflictFlaggedToHitl: true, governingSop: { text: 'never create_activity' } } });
+    assert(conflicted.edges.some(e => e.type === 'contradicts'), 'An SOP conflict is a first-class CONTRADICTS edge');
+    assert(conflicted.confidence < clean.confidence, 'A contradiction measurably lowers the plan confidence');
+    assert(conflicted.verdict === 'blocked_by_sop' && conflicted.requiresHumanConfirmation === true, 'An SOP-conflicted graph is blocked and held for a human');
+
+    // E. Scoring + verdicts across cases
+    assert(graphOfThought({ query: 'zzz', top: null, candidates: [] }).verdict === 'needs_disambiguation', 'No capability -> needs_disambiguation verdict');
+    const readOnly = graphOfThought({ query: 'list matters', top: cands[1], candidates: [cands[1]], vertical: 'legal', knowledgeRefs: refs });
+    assert(readOnly.nodes.find(n => n.type === 'risk').score > g.nodes.find(n => n.type === 'risk').score, 'A read-only action scores lower risk than a destructive one');
+    assert(g.requiresHumanConfirmation === true, 'A destructive action is held for human confirmation');
+
+    // F. INVARIANT: every prompt path re-engineers via GoT (task-request too)
+    const cf = pth.join(os.tmpdir(), `aiwx_got_${Date.now()}.json`);
+    const conns = new ConnectionRegistry({ file: cf });
+    process.env.CLIO_CLIENT_ID = 'x'; process.env.CLIO_CLIENT_SECRET = 'y'; process.env.CLIO_ACCESS_TOKEN = 'z';
+    await conns.build('clio', { tenantId: 'got' });
+    const interp = await taskReq.interpretRequest({ query: 'create a time activity on the matter', tenantId: 'got', connectionRegistry: conns });
+    assert(interp.graphOfThought && interp.graphOfThought.framework === 'graph-of-thought', 'The task-request path also re-engineers every prompt via GoT');
+    delete process.env.CLIO_CLIENT_ID; delete process.env.CLIO_CLIENT_SECRET; delete process.env.CLIO_ACCESS_TOKEN;
+    try { fsx.unlinkSync(cf); } catch (e) {}
+
+    // G. Registry tool
+    assert(reg.has('reengineer_prompt'), 'reengineer_prompt tool is registered');
+    const rp = await reg.invoke('reengineer_prompt', { query: 'anything', tenantId: 'none' });
+    assert(rp.ok && rp.result.framework === 'graph-of-thought' && rp.result.nodes.length >= 7, 'reengineer_prompt tool returns a graph of thought');
+    assert(typeof reengineerPrompt === 'function', 'reengineerPrompt is the shared entry point for every prompt path');
+  } catch (e) {
+    assert(false, `Graph-of-Thought (CHT-02) tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

@@ -23,22 +23,13 @@ const jsonFile = require('./stores/json_file');
 const taskRequest = require('./task_request');
 const industry = require('./industry_practices');
 const precommit = require('./precommit');
+const { reengineerPrompt } = require('./graph_of_thought');
 
 const EMPTY = { plans: [] };
 
-function treeOfThought(query, top, vertical, knowledgeRefs = []) {
-  return {
-    root: `Fulfill the request: "${query}"`,
-    branches: [
-      { thought: 'Understand the request', detail: top ? `Interpreted intent: ${top.action}.` : 'Intent is unclear — human disambiguation needed.' },
-      { thought: 'Locate the capability', detail: top ? `Matched connected capability "${top.capability}" on ${top.system} (confidence ${top.confidence}).` : 'No connected system exposes a matching capability.' },
-      { thought: 'Cross-reference company knowledge base', detail: knowledgeRefs.length ? `Grounded in ${knowledgeRefs.length} company KB reference(s): ${knowledgeRefs.map(r => r.sourceRef || '(doc)').join(', ')}.` : 'No matching company knowledge found — proceeding on general practice.' },
-      { thought: 'Apply governing practice + SOP', detail: top ? `Governed by ${vertical || 'general'} industry practice + the company SOP.` : 'n/a' },
-      { thought: 'Assess risk', detail: top ? (top.type === 'write' ? 'Write/destructive action — requires HITL confirmation (or an autonomy grant + compliance floor check).' : 'Read-only action — low risk.') : 'n/a' },
-      { thought: 'Project the outcome', detail: top ? `Will ${top.action}.` : 'Cannot proceed until a valid capability is identified.' }
-    ]
-  };
-}
+// Prompt re-engineering is performed by the Graph-of-Thought framework
+// (lib/graph_of_thought.js) — see CHT-02. Every prompt from every installation
+// passes through it before planning, preview, or execution.
 
 function rowToPlan(row) {
   if (!row) return null;
@@ -67,7 +58,18 @@ class ChatSession {
     const interpretation = await taskRequest.interpretRequest({ query, tenantId, connectionRegistry: this.connectionRegistry, knowledgeBase: this.knowledgeBase });
     const top = interpretation.top;
     const knowledgeRefs = interpretation.knowledgeRefs || [];
-    const tot = treeOfThought(query, top, vertical, knowledgeRefs);
+
+    // Correlate FIRST so an SOP conflict becomes a real `contradicts` edge in the
+    // graph rather than a note appended after the fact.
+    const correlation = (top && vertical)
+      ? await industry.correlate({ vertical, capability: top.capability, connectorId: top.connectorId, tenantId, knowledgeBase: this.knowledgeBase })
+      : null;
+
+    // CHT-02: re-engineer the prompt via the Graph-of-Thought framework.
+    const graph = reengineerPrompt({
+      query, top, candidates: interpretation.candidates || [], vertical, knowledgeRefs, correlation
+    });
+
     const understanding = {
       interpretedIntent: top ? top.action : null,
       capability: top || null,
@@ -80,12 +82,9 @@ class ChatSession {
       type: top.type, destructive: top.type === 'write',
       effect: top.action
     }] : [];
-    const correlation = (top && vertical)
-      ? await industry.correlate({ vertical, capability: top.capability, connectorId: top.connectorId, tenantId })
-      : null;
 
     const now = new Date().toISOString();
-    const planBody = { treeOfThought: tot, understanding, projectedOutcomes, correlation, top: top || null };
+    const planBody = { graphOfThought: graph, understanding, projectedOutcomes, correlation, top: top || null };
     const rec = {
       planId: `plan_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
       query, hitlId, tenantId, vertical,
@@ -164,7 +163,7 @@ class ChatSession {
     if (this.attributionLog && attributionHitl) {
       await this.attributionLog.recordPrompt({
         hitlId: attributionHitl, taskId: task ? task.id : null,
-        content: { query: plan.query, treeOfThought: plan.plan.treeOfThought, understanding: plan.plan.understanding },
+        content: { query: plan.query, graphOfThought: plan.plan.graphOfThought, understanding: plan.plan.understanding },
         summary: `HITL chat: ${plan.query}`
       });
     }
@@ -173,4 +172,4 @@ class ChatSession {
   }
 }
 
-module.exports = { ChatSession, treeOfThought };
+module.exports = { ChatSession };

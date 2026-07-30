@@ -42,6 +42,7 @@ const { TelemetryStream } = require('./agent_telemetry');
 const { AutonomyGrants } = require('./autonomy');
 const taskRequest = require('./task_request');
 const { ChatSession } = require('./hitl_chat');
+const { reengineerPrompt } = require('./graph_of_thought');
 const precommit = require('./precommit');
 const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
@@ -831,9 +832,33 @@ register({
 // ── HITL primary chat: ToT re-engineer → preview → confirm (Phase 8, CHT) ────
 
 register({
+  name: 'reengineer_prompt',
+  title: 'Re-engineer a prompt (Graph-of-Thought)',
+  description: 'Re-engineer any prompt into a GRAPH of thought — cross-linked candidate/knowledge/practice/risk nodes, `supports` and `contradicts` edges, an aggregation node, and a refinement feedback loop, with a scored confidence and verdict. Every prompt entered by any installation passes through this before planning or execution (CHT-02).',
+  inputSchema: z.object({
+    query: z.string(),
+    tenantId: z.string().optional(),
+    vertical: z.string().optional()
+  }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: async (input, ctx) => {
+    const tenantId = input.tenantId || ctx.tenantId || null;
+    const interpretation = await taskRequest.interpretRequest({ query: input.query, tenantId, connectionRegistry, knowledgeBase });
+    const top = interpretation.top;
+    const correlation = (top && input.vertical)
+      ? await industry.correlate({ vertical: input.vertical, capability: top.capability, connectorId: top.connectorId, tenantId, knowledgeBase })
+      : null;
+    return reengineerPrompt({
+      query: input.query, top, candidates: interpretation.candidates || [],
+      vertical: input.vertical || null, knowledgeRefs: interpretation.knowledgeRefs || [], correlation
+    });
+  }
+});
+
+register({
   name: 'chat_interpret',
-  title: 'HITL chat: interpret + tree-of-thought preview',
-  description: 'Re-engineer a HITL prompt into a tree-of-thought, echo what the system understood, and project the outcome(s) — a pending plan AWAITING confirmation (CHT-02/03/04). Nothing executes.',
+  title: 'HITL chat: interpret + graph-of-thought preview',
+  description: 'Re-engineer a HITL prompt via the GRAPH-OF-THOUGHT framework (cross-linked thoughts, contradiction edges, aggregation + refinement, scored), echo what the system understood, and project the outcome(s) — a pending plan AWAITING confirmation (CHT-02/03/04). Nothing executes.',
   inputSchema: z.object({ query: z.string(), tenantId: z.string().optional(), hitlId: z.string().optional(), vertical: z.string().optional() }),
   annotations: { readOnly: false, destructive: false, openWorld: false },
   handler: (input, ctx) => chatSession.interpret({ query: input.query, tenantId: input.tenantId || ctx.tenantId || null, hitlId: input.hitlId || ctx.hitlId || null, vertical: input.vertical || null })
@@ -851,7 +876,7 @@ register({
 register({
   name: 'get_chat_plan',
   title: 'Get a HITL chat plan',
-  description: 'Fetch a pending/confirmed chat plan (its tree-of-thought, understanding, projected outcomes, status).',
+  description: 'Fetch a pending/confirmed chat plan (its graph-of-thought, understanding, projected outcomes, status).',
   inputSchema: z.object({ planId: z.string() }),
   annotations: { readOnly: true, openWorld: false },
   handler: (input) => chatSession.getPlan(input.planId).then(plan => ({ plan }))

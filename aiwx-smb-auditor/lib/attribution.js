@@ -1,7 +1,7 @@
 /**
  * Attribution Log (Phase 0.5, ATR)
  * ================================
- * An append-only record of every re-engineered (tree-of-thought) prompt and every
+ * An append-only record of every re-engineered (graph-of-thought) prompt and every
  * system output, each attributable to the assigned HITL and the acting agent —
  * the non-repudiation spine (ATR-01..04). Nothing may be recorded without an
  * attributable HITL; records are never updated or deleted.

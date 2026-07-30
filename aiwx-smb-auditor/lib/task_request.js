@@ -13,6 +13,7 @@
 
 const systemEvaluator = require('./system_evaluator');
 const { keywordsOf } = require('./knowledge_ingest');
+const { reengineerPrompt } = require('./graph_of_thought');
 
 function humanize(s) { return String(s || '').replace(/_/g, ' '); }
 
@@ -73,10 +74,16 @@ async function interpretRequest({ query, tenantId, connectionRegistry, knowledge
     knowledgeRefs = kb.results || [];
   }
 
+  // CHT-02 invariant: EVERY prompt is re-engineered via Graph-of-Thought before it
+  // can become a task — including requests entered through the task interface.
+  // (The chat path recomputes this with practice/SOP correlation attached.)
+  const graphOfThought = reengineerPrompt({ query, top, candidates, vertical: null, knowledgeRefs, correlation: null });
+
   return {
     query, candidates, top, confidence,
     needsDisambiguation: !top || confidence < threshold,
     knowledgeRefs,
+    graphOfThought,
     offeredFrom: items.length
   };
 }

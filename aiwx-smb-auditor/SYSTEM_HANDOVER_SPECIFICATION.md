@@ -74,7 +74,7 @@ Base URL: `http://<host>:3003`. All under `/api/…`. Key endpoints:
 | `POST /api/install` · `GET /api/install/status` | Install the 13-agent roster for a tenant/vertical; readiness gate | Provision-on-install (INS); complete when every selected system is `agent_ready`. |
 | `GET /api/agents` · `GET /api/agents/telemetry` | Roster states + live event stream | Feed the floating agent monitor (polling). |
 | `GET /api/orchestrator/capabilities` · `GET /api/onboarding/status` | Unified capability model + onboarding readiness | COMP-02 / ONB-02. |
-| `POST /api/chat` · `POST /api/chat/confirm` | HITL primary chat: tree-of-thought + preview → **confirm-before-act** | CHT. Pre-commit checks-and-balances run at confirm. |
+| `POST /api/chat` · `POST /api/chat/confirm` | HITL primary chat: **graph-of-thought** re-engineering + preview → **confirm-before-act** | CHT. Every prompt is re-engineered as a GoT graph; pre-commit checks-and-balances run at confirm. |
 | `POST /api/task-request` | Interpret a typed/voice request → closest executable task | Capability-populated; low confidence → disambiguation. |
 | `GET /api/tasks/:id/trace` · `POST /api/tasks/:id/{correct,cancel}` | Chain-of-custody + HITL course-correct/cancel | TRC-03 / CTL. |
 | `POST /api/audit-queue` / `GET /api/audit-queue` | Enqueue/inspect automated audits | Crash-safe background loop. |
