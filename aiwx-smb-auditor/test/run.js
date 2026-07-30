@@ -1600,6 +1600,109 @@ async function runTests() {
     assert(false, `Graph-of-Thought (CHT-02) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 36: Companion-delivered upskilling — ZERO personal-data leakage ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const upskilling = require('../lib/upskilling');
+    const { UpskillingEnrollment } = require('../lib/upskilling');
+    const { HitlOnboarding } = require('../lib/hitl_onboarding');
+    const { HumanCompanion } = require('../lib/human_companion');
+    const { HitlRegistry } = require('../lib/hitl_identity');
+    const roster = require('../lib/agent_roster');
+    const reg = require('../lib/tool_registry');
+
+    // A. Curriculum half is ROLE-KEYED and carries no personal data
+    const cur = upskilling.curriculumForRole('Customer Support Lead');
+    assert(cur.curriculumKey === 'customer_support' && cur.modules.length > 0 && cur.timeline.length === 3, 'Curriculum is role-keyed with a 90-day timeline');
+    assert(cur.personalData === false, 'The curriculum half declares it carries no personal data');
+    const curJson = JSON.stringify(upskilling.listCurricula()) + JSON.stringify(cur);
+    assert(!/hitlId|employeeId|email|@/.test(curJson), 'No person identifier appears anywhere in the curriculum half');
+    assert(JSON.stringify(upskilling.curriculumForRole('Ops')) !== JSON.stringify(cur), 'Different roles get different curricula');
+    assert(upskilling.curriculumForRole('anything unknown').curriculumKey === 'general', 'Every HITL gets at least the general HITL curriculum');
+
+    // B. Enrolment needs only the ROLE — no personal profile required
+    const ef = pth.join(os.tmpdir(), `aiwx_ups_${Date.now()}.json`);
+    const enr = new UpskillingEnrollment({ file: ef });
+    const e1 = await enr.enroll({ hitlId: 'hitl_a', role: 'Customer Support Lead' });
+    assert(e1.hitlId === 'hitl_a' && e1.curriculumKey === 'customer_support' && e1.status === 'enrolled', 'A HITL enrols using only their role');
+    assert((await enr.enroll({ hitlId: 'hitl_a', role: 'Customer Support Lead' })).id === e1.id, 'Enrolment is idempotent');
+
+    // C. ZERO OUTBOUND: there is NO aggregate/cohort/export/list-all code path
+    const enrolApi = Object.getOwnPropertyNames(Object.getPrototypeOf(enr));
+    assert(!enrolApi.some(m => /aggregate|cohort|summary|report|listAll|export|all|count|stats/i.test(m)), 'UpskillingEnrollment exposes NO aggregate/cohort/export/list-all method (absence is the guarantee)');
+    const moduleApi = Object.keys(upskilling);
+    assert(!moduleApi.some(m => /aggregate|cohort|report|export|stats/i.test(m)), 'The upskilling module exports no aggregate/report/export function');
+    let needsId = false; try { await enr.myRecord({}); } catch (e) { needsId = /no cross-person read path/.test(e.message); }
+    assert(needsId, 'Every person-keyed read REQUIRES a hitlId — there is no cross-person read path');
+
+    // D. Progress is person-scoped and never returns another person's data
+    await enr.enroll({ hitlId: 'hitl_b', role: 'Billing' });
+    await enr.completeModule({ hitlId: 'hitl_a', moduleId: 'gen-1' });
+    const pathA = await enr.myLearningPath({ hitlId: 'hitl_a' });
+    assert(pathA.completed === 1 && pathA.percentComplete > 0, 'Progress is recorded for the employee');
+    assert(!JSON.stringify(pathA).includes('hitl_b'), 'One employee\'s learning path never contains another employee\'s data');
+    let badModule = false; try { await enr.completeModule({ hitlId: 'hitl_a', moduleId: 'bil-1' }); } catch (e) { badModule = /not in this role/.test(e.message); }
+    assert(badModule, 'A module outside the role curriculum cannot be completed');
+
+    // E. Employee-owned erasure
+    await enr.eraseMyRecord({ hitlId: 'hitl_b' });
+    assert((await enr.myRecord({ hitlId: 'hitl_b' })) === null, 'The employee can erase their own training record');
+    try { fsx.unlinkSync(ef); } catch (err) {}
+
+    // F. Delivery via the Companion + PLANE ISOLATION (the leak gate)
+    const cf = pth.join(os.tmpdir(), `aiwx_ups_hr_${Date.now()}.json`);
+    const ef2 = pth.join(os.tmpdir(), `aiwx_ups_e2_${Date.now()}.json`);
+    const hc = new HumanCompanion({ file: cf, enrollment: new UpskillingEnrollment({ file: ef2 }) });
+    await hc.enrollInUpskilling({ hitlId: 'hitl_c', role: 'Operations' });
+    const lp = await hc.myLearningPath({ hitlId: 'hitl_c' });
+    assert(lp && lp.modules.length > 0, 'All training is delivered through the Human Companion');
+    ['hr_my_learning_path', 'hr_enroll_upskilling', 'hr_complete_training_module', 'hr_erase_my_training_record']
+      .forEach(t => {
+        assert(roster.roleAllowsTool('human_companion', t) === true, `Companion is bound to ${t}`);
+        assert(roster.roleAllowsTool('operations', t) === false, `Business-plane Operations agent CANNOT invoke ${t} (no leakage)`);
+        assert(roster.roleAllowsTool('reporting', t) === false, `Reporting agent CANNOT invoke ${t} (no leakage)`);
+        assert(roster.roleAllowsTool('monitoring', t) === false, `Monitoring agent CANNOT invoke ${t} (no leakage)`);
+      });
+    try { fsx.unlinkSync(cf); fsx.unlinkSync(ef2); } catch (err) {}
+
+    // G. HITL assignment at onboarding AND post-install, both enrolling in upskilling
+    const hf = pth.join(os.tmpdir(), `aiwx_hob_${Date.now()}.json`);
+    const idf = pth.join(os.tmpdir(), `aiwx_hob_id_${Date.now()}.json`);
+    const ef3 = pth.join(os.tmpdir(), `aiwx_hob_e_${Date.now()}.json`);
+    const hitlReg = new HitlRegistry({ file: idf });
+    const enr3 = new UpskillingEnrollment({ file: ef3 });
+    const hob = new HitlOnboarding({ file: hf, hitlRegistry: hitlReg, enrollment: enr3 });
+    const atInstall = await hob.onboardHitls({ tenantId: 'ups', source: 'installation', hitls: [{ email: 'lead@acme-corp.com', role: 'Operations', authorityLevel: 'lead' }] });
+    assert(atInstall.source === 'installation' && atInstall.onboarded.length === 1 && atInstall.onboarded[0].enrolled === true, 'HITLs are assigned at onboarding AND enrolled in upskilling');
+    const later = await hob.onboardHitls({ tenantId: 'ups', source: 'post_install', hitls: [{ email: 'new@acme-corp.com', role: 'Billing' }, { email: 'bad@gmail.com' }] });
+    assert(later.source === 'post_install' && later.onboarded.length === 1 && later.failed.length === 1, 'A separate post-install HITL onboarding instance adds HITLs later; consumer emails are refused');
+    assert(later.onboarded[0].enrolled === true, 'A post-install HITL is enrolled in upskilling too — every HITL can upskill');
+    const instances = await hob.listInstances({ tenantId: 'ups' });
+    assert(instances.length === 2 && instances.every(i => typeof i.onboarded === 'number' && !('hitls' in i)), 'Onboarding instances expose COUNTS only — no per-person training data');
+    try { [hf, idf, ef3].forEach(f => fsx.unlinkSync(f)); } catch (err) {}
+
+    // H. REGRESSION: the JSON fallback must never leak state between stores.
+    //    (jsonFile.readSync used to return the shared EMPTY constant by reference,
+    //     so pushes polluted it and a fresh store inherited another store's rows.)
+    const jsonFile = require('../lib/stores/json_file');
+    const SHARED = { rows: [] };
+    const fA = pth.join(os.tmpdir(), `aiwx_bleed_a_${Date.now()}.json`);
+    const fB = pth.join(os.tmpdir(), `aiwx_bleed_b_${Date.now()}.json`);
+    await jsonFile.mutate(fA, SHARED, (store) => { const rows = store.rows || []; rows.push({ id: 'tenant-a-secret' }); return { value: { rows }, result: null }; });
+    const freshB = jsonFile.readSync(fB, SHARED);
+    assert(freshB.rows.length === 0, 'A store whose file does not exist starts EMPTY — no state bleeds in from another store');
+    assert(SHARED.rows.length === 0, 'The shared fallback constant is never mutated by a store write');
+    try { fsx.unlinkSync(fA); } catch (err) {}
+
+    // I. Registry tools + the curriculum tool leaks nothing
+    ['get_role_curriculum', 'list_curricula', 'hr_my_learning_path', 'hr_enroll_upskilling', 'hr_complete_training_module', 'onboard_hitls', 'list_hitl_onboarding_instances']
+      .forEach(t => assert(reg.has(t), `Tool ${t} is registered`));
+    const ct = await reg.invoke('get_role_curriculum', { role: 'Billing Specialist' });
+    assert(ct.ok && !/hitlId|@/.test(JSON.stringify(ct.result)), 'get_role_curriculum returns role-level content with no personal data');
+  } catch (e) {
+    assert(false, `Companion upskilling / zero-leak tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

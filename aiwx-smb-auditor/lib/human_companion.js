@@ -43,6 +43,36 @@ class HumanCompanion {
     // the employee-facing record; filing it into the HR system is a separate,
     // approval-gated step so the human stays in control (HRC-04 + CTL-02).
     this.hrSystem = options.hrSystem || null;
+    // Upskilling enrolment lives on the human-care plane; the Companion is the
+    // ONLY delivery surface for training (zero outbound to the business plane).
+    this.enrollment = options.enrollment || null;
+  }
+
+  /**
+   * The employee's learning path, delivered through the Companion. Returns ONLY
+   * this person's record — there is no cross-person read path by construction.
+   */
+  async myLearningPath({ hitlId }) {
+    if (!this.enrollment) throw new Error('No upskilling enrolment is connected.');
+    return this.enrollment.myLearningPath({ hitlId });
+  }
+
+  /** Enrol a HITL in their ROLE's curriculum (no personal profile required). */
+  async enrollInUpskilling({ hitlId, role = 'general' }) {
+    if (!this.enrollment) throw new Error('No upskilling enrolment is connected.');
+    return this.enrollment.enroll({ hitlId, role });
+  }
+
+  /** Record the employee completing a training module (their own record only). */
+  async completeTrainingModule({ hitlId, moduleId }) {
+    if (!this.enrollment) throw new Error('No upskilling enrolment is connected.');
+    return this.enrollment.completeModule({ hitlId, moduleId });
+  }
+
+  /** Employee-owned erasure of their own training record. */
+  async eraseMyTrainingRecord({ hitlId }) {
+    if (!this.enrollment) throw new Error('No upskilling enrolment is connected.');
+    return this.enrollment.eraseMyRecord({ hitlId });
   }
 
   /** Submit an HR request. Complaints are confidential by default. */

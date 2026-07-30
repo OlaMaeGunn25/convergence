@@ -38,14 +38,32 @@ function withLock(filePath, fn) {
   return next;
 }
 
-function readSync(filePath, fallbackValue) {
+/**
+ * Deep-copy the caller's fallback before handing it back.
+ *
+ * Callers pass a module-level constant (e.g. `const EMPTY = { tasks: [] }`) and
+ * then push into the array they get back. Returning the constant BY REFERENCE let
+ * those pushes mutate the shared object, so a store whose file did not exist yet
+ * would start out holding records written by an unrelated store/tenant earlier in
+ * the same process. Copying makes the fallback inert.
+ */
+function cloneFallback(fallbackValue) {
+  if (fallbackValue === null || typeof fallbackValue !== 'object') return fallbackValue;
   try {
-    if (!fs.existsSync(filePath)) return fallbackValue;
-    const raw = fs.readFileSync(filePath, 'utf8');
-    if (!raw.trim()) return fallbackValue;
-    return JSON.parse(raw);
+    return JSON.parse(JSON.stringify(fallbackValue));
   } catch (e) {
     return fallbackValue;
+  }
+}
+
+function readSync(filePath, fallbackValue) {
+  try {
+    if (!fs.existsSync(filePath)) return cloneFallback(fallbackValue);
+    const raw = fs.readFileSync(filePath, 'utf8');
+    if (!raw.trim()) return cloneFallback(fallbackValue);
+    return JSON.parse(raw);
+  } catch (e) {
+    return cloneFallback(fallbackValue);
   }
 }
 

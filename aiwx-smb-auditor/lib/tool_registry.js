@@ -48,6 +48,9 @@ const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
 const gusto = require('./connectors/gusto');
+const upskilling = require('./upskilling');
+const { UpskillingEnrollment } = require('./upskilling');
+const { HitlOnboarding } = require('./hitl_onboarding');
 const { deploymentInfo } = require('./deployment');
 const integrationSeams = require('./integration_seams');
 const verticals = require('./verticals');
@@ -59,13 +62,17 @@ const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
 const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
-const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase });
+// Upskilling enrolment (human-care plane) + HITL onboarding must be constructed
+// BEFORE Installation, which onboards HITLs at install time.
+const upskillingEnrollment = new UpskillingEnrollment();
+const hitlOnboarding = new HitlOnboarding({ hitlRegistry, enrollment: upskillingEnrollment });
+const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase, hitlOnboarding });
 const attestationLog = new AttestationLog();
 const telemetry = new TelemetryStream();
 const autonomy = new AutonomyGrants();
 const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog, knowledgeBase });
 const complianceReporting = new ComplianceReporting();
-const humanCompanion = new HumanCompanion({ hrSystem: gusto });
+const humanCompanion = new HumanCompanion({ hrSystem: gusto, enrollment: upskillingEnrollment });
 
 const registry = new Map();
 
@@ -1067,6 +1074,91 @@ register({
   inputSchema: z.object({ id: z.string(), startDate: z.string().optional(), endDate: z.string().optional(), hours: z.number().optional() }),
   annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
   handler: (input, ctx) => humanCompanion.fileWithHrSystem(Object.assign({}, input, { approved: ctx.approved === true }))
+});
+
+// ── Upskilling delivered by the Human Companion (ZERO outbound personal data) ──
+// The curriculum half is role-keyed and business-safe; the enrolment/progress half
+// is person-keyed and reachable ONLY through the Companion. There is deliberately
+// NO aggregate/cohort/export tool — absence of the path is the guarantee.
+
+register({
+  name: 'get_role_curriculum',
+  title: 'Upskilling curriculum for a role',
+  description: 'The ROLE-KEYED upskilling curriculum (modules, skills, 90-day timeline). Contains no person, no tenant and no company assessment — every HITL in a role gets the same curriculum, which is why no personal training profile is ever needed.',
+  inputSchema: z.object({ role: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => upskilling.curriculumForRole(input.role || 'general')
+});
+
+register({
+  name: 'list_curricula',
+  title: 'List upskilling curricula (role-level)',
+  description: 'All role-level upskilling curricula. Role-keyed only — carries no personal data.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => ({ curricula: upskilling.listCurricula() })
+});
+
+register({
+  name: 'hr_my_learning_path',
+  title: 'Human Companion — my learning path',
+  description: 'The employee\'s OWN learning path + progress, delivered through the Companion. Requires a hitlId and returns exactly one person\'s record — there is no cross-person read path in the system.',
+  inputSchema: z.object({ hitlId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => humanCompanion.myLearningPath({ hitlId: input.hitlId }).then(path => ({ path }))
+});
+
+register({
+  name: 'hr_enroll_upskilling',
+  title: 'Human Companion — enrol in upskilling',
+  description: 'Enrol a HITL in their ROLE\'s curriculum. Keyed on the role, so no personal training profile is created on the business plane.',
+  inputSchema: z.object({ hitlId: z.string(), role: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => humanCompanion.enrollInUpskilling({ hitlId: input.hitlId, role: input.role || 'general' }).then(enrollment => ({ enrollment }))
+});
+
+register({
+  name: 'hr_complete_training_module',
+  title: 'Human Companion — complete a training module',
+  description: 'Record that the employee completed a module in their own record. Stored in the human-care partition; never emitted to the business plane.',
+  inputSchema: z.object({ hitlId: z.string(), moduleId: z.string() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => humanCompanion.completeTrainingModule(input).then(enrollment => ({ enrollment }))
+});
+
+register({
+  name: 'hr_erase_my_training_record',
+  title: 'Human Companion — erase my training record',
+  description: 'Employee-owned erasure of their own training record (data-subject right).',
+  inputSchema: z.object({ hitlId: z.string() }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: false, openWorld: false },
+  handler: (input) => humanCompanion.eraseMyTrainingRecord({ hitlId: input.hitlId })
+});
+
+register({
+  name: 'onboard_hitls',
+  title: 'HITL onboarding instance (install or post-install)',
+  description: 'Open a HITL onboarding instance and onboard a batch of HITLs — source "installation" (at company install) or "post_install" (added later). Each is identity-verified (corporate domain email) and enrolled in their ROLE curriculum so they can upskill via the Companion immediately.',
+  inputSchema: z.object({
+    tenantId: z.string().optional(),
+    tenantDomain: z.string().optional(),
+    source: z.enum(['installation', 'post_install']).optional(),
+    hitls: z.array(z.object({ email: z.string(), name: z.string().optional(), role: z.string().optional(), authorityLevel: z.enum(['operator', 'lead']).optional() }))
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => hitlOnboarding.onboardHitls({
+    tenantId: input.tenantId || ctx.tenantId || null, hitls: input.hitls,
+    tenantDomain: input.tenantDomain || null, source: input.source || 'post_install', actor: ctx.actor || null
+  })
+});
+
+register({
+  name: 'list_hitl_onboarding_instances',
+  title: 'List HITL onboarding instances',
+  description: 'Onboarding instances with COUNTS only (how many were onboarded/failed, and when) — never per-person training or progress data.',
+  inputSchema: z.object({ tenantId: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => hitlOnboarding.listInstances({ tenantId: input.tenantId || ctx.tenantId || undefined }).then(instances => ({ instances }))
 });
 
 register({

@@ -98,7 +98,12 @@ const ROLES = {
       // business/ops agents can never read employee or payroll data.
       'gusto_list_employees', 'gusto_list_time_off_requests', 'gusto_list_payrolls',
       'gusto_submit_time_off_request', 'gusto_decide_time_off_request', 'gusto_run_payroll',
-      'hr_file_with_hr_system'
+      'hr_file_with_hr_system',
+      // Upskilling DELIVERY. The person-keyed tools are bound here and NOWHERE
+      // else, so no business/ops agent can read an individual's training record.
+      // (The role-keyed curriculum tools are business-safe and bound below too.)
+      'hr_my_learning_path', 'hr_enroll_upskilling', 'hr_complete_training_module',
+      'hr_erase_my_training_record', 'get_role_curriculum', 'list_curricula'
     ]
   }
 };

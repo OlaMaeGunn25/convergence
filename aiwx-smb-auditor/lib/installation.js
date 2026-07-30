@@ -27,6 +27,8 @@ class Installation {
     this.agents = options.agentRegistry || new AgentRegistry(options.agentOptions || {});
     this.connections = options.connectionRegistry || null;
     this.knowledgeBase = options.knowledgeBase || new KnowledgeBase(options.knowledgeOptions || {});
+    // HITL onboarding (assignment + role-keyed upskilling enrolment) at install.
+    this.hitlOnboarding = options.hitlOnboarding || null;
   }
 
   /**
@@ -34,7 +36,7 @@ class Installation {
    * and AUTO-CREATE the company knowledge base from the onboarding business
    * intelligence (ONB-KB-01/02).
    */
-  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], auditPackage = null, actor = null }) {
+  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], auditPackage = null, hitls = [], tenantDomain = null, actor = null }) {
     if (!tenantId) throw new Error('tenantId is required to install.');
     if (!vertical) throw new Error('vertical is required (the locked vertical).');
     const roster = await this.agents.provisionRoster({ tenantId, vertical, scopeConnectors: selectedConnectors });
@@ -63,7 +65,19 @@ class Installation {
       knowledge = { error: kbErr.message };
     }
 
-    return { install: record, roster: roster.length, knowledge };
+    // Assign HITLs at onboarding (HLC-01) + enrol each in their ROLE curriculum.
+    let hitlOnboarding = null;
+    if (this.hitlOnboarding && Array.isArray(hitls) && hitls.length) {
+      try {
+        hitlOnboarding = await this.hitlOnboarding.onboardHitls({
+          tenantId, hitls, tenantDomain, source: 'installation', actor
+        });
+      } catch (e) {
+        hitlOnboarding = { error: e.message };
+      }
+    }
+
+    return { install: record, roster: roster.length, knowledge, hitlOnboarding };
   }
 
   async getInstall(tenantId) {
