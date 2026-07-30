@@ -8,6 +8,8 @@
  * compliance overlay that constrains its destructive actions (VRT-02).
  */
 
+const { copy } = require('./immutable');
+
 const VERTICALS = [
   { id: 'medical', name: 'Medical & Healthcare', compliance: ['HIPAA', 'BAA'] },
   { id: 'legal', name: 'Legal Services', compliance: ['IOLTA', 'ABA-Model-1.15'] },
@@ -27,8 +29,10 @@ const VERTICALS = [
 
 const byId = new Map(VERTICALS.map(v => [v.id, v]));
 
-function list() { return VERTICALS; }
-function get(id) { return byId.get(String(id || '').toLowerCase()) || null; }
+// Accessors return DETACHED copies so a caller cannot mutate the canonical
+// vertical registry (or a vertical's compliance overlay) process-wide.
+function list() { return copy(VERTICALS); }
+function get(id) { return copy(byId.get(String(id || '').toLowerCase())) || null; }
 function has(id) { return byId.has(String(id || '').toLowerCase()); }
 function complianceOverlay(id) { const v = get(id); return v ? v.compliance : []; }
 

@@ -26,6 +26,8 @@
  * (`connect_system`) without touching the engine.
  */
 
+const { copy } = require('../immutable');
+
 const CONNECTORS = [
   {
     id: 'clio', name: 'Clio', category: 'Legal Practice Management',
@@ -219,13 +221,17 @@ const CONNECTORS = [
 
 const byId = new Map(CONNECTORS.map(c => [c.id, c]));
 
-/** Full catalog (optionally filtered to available/beta only). */
+/**
+ * Full catalog (optionally filtered to available/beta only).
+ * Returns DETACHED copies — callers must never be able to mutate a connector's
+ * auth/env/capability definitions for the whole process.
+ */
 function list({ includePlanned = true } = {}) {
-  return CONNECTORS.filter(c => includePlanned || c.status !== 'planned');
+  return copy(CONNECTORS.filter(c => includePlanned || c.status !== 'planned'));
 }
 
 function get(id) {
-  return byId.get(id) || null;
+  return copy(byId.get(id)) || null;
 }
 
 function has(id) {
@@ -235,9 +241,9 @@ function has(id) {
 /** Connectors whose vertical affinity includes `vertical` (plus all universals). */
 function byVertical(vertical) {
   const v = (vertical || '').toLowerCase();
-  return CONNECTORS.filter(c =>
+  return copy(CONNECTORS.filter(c =>
     c.vertical === 'universal' ||
-    (Array.isArray(c.vertical) && c.vertical.some(x => x.toLowerCase() === v)));
+    (Array.isArray(c.vertical) && c.vertical.some(x => x.toLowerCase() === v))));
 }
 
 /**

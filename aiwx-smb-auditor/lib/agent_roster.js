@@ -12,6 +12,8 @@
  * `'*'` means the role may invoke any tool (reserved for the lead Orchestrator).
  */
 
+const { copy } = require('./immutable');
+
 const PLANES = { BUSINESS: 'business', HUMAN: 'human' };
 
 const ROLES = {
@@ -122,9 +124,13 @@ function roleAllowsTool(role, toolName) {
   return def.tools.includes(toolName);
 }
 
-/** Public view of the roster (for discovery / GET /api/agent-roles). */
+/**
+ * Public view of the roster (for discovery / GET /api/agent-roles).
+ * Returns DETACHED copies: handing out the live `tools` array would let a caller
+ * push a tool onto a role and permanently bypass least privilege (AGT-03).
+ */
 function listRoles() {
-  return ROLE_IDS.map(id => ({
+  return ROLE_IDS.map(id => copy({
     id, title: ROLES[id].title, plane: ROLES[id].plane, duty: ROLES[id].duty,
     tools: ROLES[id].tools, pending: ROLES[id].pending || []
   }));

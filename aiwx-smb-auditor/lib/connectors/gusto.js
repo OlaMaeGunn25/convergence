@@ -23,6 +23,8 @@
  * (https://api.gusto-demo.com) vs. production (https://api.gusto.com).
  */
 
+const { copy } = require('../immutable');
+
 const API_VERSION = 'v1';
 
 function baseUrl() {
@@ -61,8 +63,10 @@ async function gustoRequest(resourcePath, { method = 'GET', body = null, query =
 }
 
 // ── Simulated fallback datasets (clearly labeled) ────────────────────────────
+// Copy the fixture rows — see lib/immutable.js. Especially important here: these
+// carry employee-shaped data, so a mutation must never persist process-wide.
 function simulated(kind, rows) {
-  return { success: true, simulated: true, provenance: 'simulated', source: 'gusto_simulator', kind, data: rows };
+  return { success: true, simulated: true, provenance: 'simulated', source: 'gusto_simulator', kind, data: copy(rows) };
 }
 
 const SIM_EMPLOYEES = [

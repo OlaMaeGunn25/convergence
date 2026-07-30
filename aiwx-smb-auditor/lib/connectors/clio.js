@@ -23,6 +23,8 @@ const REGIONS = {
   au: 'https://au.app.clio.com'
 };
 
+const { copy } = require('../immutable');
+
 const API_VERSION = 'api/v4';
 
 function baseUrl() {
@@ -62,8 +64,10 @@ async function clioRequest(resourcePath, { method = 'GET', body = null, query = 
 }
 
 // ── Simulated fallback datasets (clearly labeled) ────────────────────────────
+// Copy the fixture rows: handing out the module-level arrays would let a caller
+// mutate the simulator's dataset for every subsequent call in the process.
 function simulated(kind, rows) {
-  return { success: true, simulated: true, provenance: 'simulated', source: 'clio_simulator', kind, data: rows };
+  return { success: true, simulated: true, provenance: 'simulated', source: 'clio_simulator', kind, data: copy(rows) };
 }
 
 const SIM_MATTERS = [

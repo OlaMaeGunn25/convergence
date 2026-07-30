@@ -1703,6 +1703,58 @@ async function runTests() {
     assert(false, `Companion upskilling / zero-leak tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 37: Shared-state protection — no accessor leaks a live reference ---
+  // Regression guard for the defect class behind the JSON state bleed: module-level
+  // constants must never be handed out by reference, or one caller can mutate the
+  // source of truth for the whole process.
+  try {
+    const roster = require('../lib/agent_roster');
+    const catalog = require('../lib/connectors/catalog');
+    const verticals = require('../lib/verticals');
+    const clio = require('../lib/connectors/clio');
+    const gusto = require('../lib/connectors/gusto');
+    const { copy } = require('../lib/immutable');
+
+    // A. copy() detaches
+    const src = { a: [1, 2], b: { c: 3 } };
+    const cp = copy(src); cp.a.push(99); cp.b.c = 99;
+    assert(src.a.length === 2 && src.b.c === 3, 'copy() returns a fully detached deep copy');
+
+    // B. SECURITY: mutating a returned role's tools must NOT grant a permission
+    const roleView = roster.listRoles().find(r => r.id === 'operations');
+    roleView.tools.push('gusto_run_payroll');
+    assert(roster.roleAllowsTool('operations', 'gusto_run_payroll') === false, 'Mutating a returned role view cannot grant a tool (least-privilege bypass blocked)');
+    assert(roster.listRoles().find(r => r.id === 'operations').tools.includes('gusto_run_payroll') === false, 'The roster source of truth is unchanged after the attempted mutation');
+
+    // C. Connector catalog cannot be mutated process-wide
+    const conn = catalog.get('clio');
+    conn.envKeys.push('HACKED'); conn.auth = 'none';
+    const connAgain = catalog.get('clio');
+    assert(!connAgain.envKeys.includes('HACKED') && connAgain.auth === 'oauth2', 'Mutating a returned connector does not alter the catalog');
+    const listed = catalog.list(); listed.push({ id: 'rogue' });
+    assert(!catalog.list().some(c => c.id === 'rogue'), 'Mutating the returned catalog list does not add a connector');
+    const byVert = catalog.byVertical('Real Estate'); byVert.length = 0;
+    assert(catalog.byVertical('Real Estate').length > 0, 'byVertical returns a detached list');
+
+    // D. Vertical registry + compliance overlays cannot be mutated
+    const vlist = verticals.list(); vlist.push({ id: 'rogue_vertical' });
+    assert(verticals.list().length === 14 && !verticals.has('rogue_vertical'), 'Mutating the returned vertical list does not alter the registry');
+    const legal = verticals.get('legal'); legal.compliance.push('HACKED');
+    assert(!verticals.complianceOverlay('legal').includes('HACKED'), 'A vertical compliance overlay cannot be mutated by a caller');
+
+    // E. Simulated connector datasets are per-call copies
+    const m1 = await clio.listMatters({ limit: 5 });
+    m1.data.push({ id: 999, description: 'injected' });
+    const m2 = await clio.listMatters({ limit: 5 });
+    assert(!m2.data.some(r => r.id === 999), 'Clio simulated dataset is not polluted by a caller mutation');
+    const g1 = await gusto.listTimeOffRequests({});
+    g1.data.push({ id: 'injected' });
+    const g2 = await gusto.listTimeOffRequests({});
+    assert(!g2.data.some(r => r.id === 'injected'), 'Gusto simulated dataset is not polluted by a caller mutation');
+  } catch (e) {
+    assert(false, `Shared-state protection tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
