@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Agentic Operations Layer
 
-**Status:** Requirements locked (spec, pre-implementation) · **Target module:**
+**Status:** Implemented — all core phases shipped (see "Delivered since the original spec"). Suite 472/472 · 90 governed tools.
 `aiwx-smb-auditor` gateway · **Date:** 2026-07-23
 
 This document is the single source of truth for the multi-agent operations layer:
@@ -89,6 +89,29 @@ contradicts · aggregates · refines`. Verdicts: `ready · hold_for_confirmation
 needs_disambiguation · blocked_by_sop`. Enforced on **both** prompt paths (the HITL
 chat and the task-request interface) and exposed as the `reengineer_prompt` tool.
 The re-engineered graph is recorded in the attribution log (ATR-01).
+
+---
+
+## Delivered since the original spec (domains added during the build)
+
+The layer grew beyond the 14 domains in Part B. These are all **shipped + tested**:
+
+| Domain | Capability | Key modules |
+|---|---|---|
+| **CHT** | HITL primary chat: Graph-of-Thought re-engineering → understanding + projected outcomes → **confirm-before-act** | `hitl_chat.js`, `graph_of_thought.js` |
+| **NEG** | Orchestrator-mediated **pre-commit checks-and-balances** (capability + practice/SOP + compliance) before the commit boundary | `precommit.js` |
+| **CMP / RPT** | Compliance agent (industry/domain/vertical + local/state/federal regulatory search + I/O screening) → Reporting agent (visual + exportable JSON/CSV/HTML evidence) | `compliance.js`, `compliance_reporting.js` |
+| **HRC** | Human Companion (HR generalist) on an isolated human-care plane; Gusto as HR system of record | `human_companion.js`, `connectors/gusto.js` |
+| **UPS** | Companion-delivered upskilling, **zero personal-data leakage** (role-keyed curriculum ↔ person-keyed progress; no aggregate/export path exists) | `upskilling.js`, `hitl_onboarding.js` |
+| **REG** | Regional/local data sources — real-estate **MLS via RESO Web API** + GPS/address region detection, HITL-gated | `regional_sources.js` |
+| **ING / XREF** | Unified ingestion (upload · connector-read scour · audit-scour) all building ONE company KB, auto-created at onboarding and cross-referenced on every command | `ingestion_adapters.js`, `business_onboarding.js` |
+| **RRK / MCR** | LLM cost levers: two-stage retrieval + reranker, and a model-cascade router (cheapest capable tier by confidence + risk) | `reranker.js`, `model_router.js` |
+| **DEP** | Cloud **and** on-prem Docker deployment from one codebase; live-backend seam reporting | `deployment.js`, `integration_seams.js` |
+
+**Cross-cutting hardening:** shared-mutable-state protection (`immutable.js` +
+`stores/json_file.js` fallback copying) closes a defect class that caused a
+cross-tenant state bleed in the JSON path and a latent least-privilege bypass in
+the agent roster.
 
 ---
 
