@@ -25,6 +25,8 @@
  * Deterministic + offline, so it is fully testable and adds no LLM cost.
  */
 
+const injectionGuard = require('./injection_guard');
+
 const EDGE = { DERIVES: 'derives', INFORMS: 'informs', SUPPORTS: 'supports', CONTRADICTS: 'contradicts', AGGREGATES: 'aggregates', REFINES: 'refines' };
 
 function clamp(n) { return Math.max(0, Math.min(1, Number(n) || 0)); }
@@ -71,14 +73,23 @@ function graphOfThought({ query, top = null, candidates = [], vertical = null, k
   const chosen = candIds[0] || 'understanding';
 
   // 4. Company knowledge — grounds (supports) the chosen candidate.
-  const kbScore = knowledgeRefs.length ? clamp(0.4 + 0.2 * knowledgeRefs.length) : 0;
+  //    Retrieved document text is UNTRUSTED data. If any of it matched an
+  //    injection pattern it must not silently strengthen the plan (CHT/SEC).
+  const evidence = injectionGuard.assessRetrieved(knowledgeRefs);
+  const kbScore = knowledgeRefs.length
+    ? clamp((0.4 + 0.2 * knowledgeRefs.length) * (evidence.trustworthy ? 1 : 0.3))
+    : 0;
   add('knowledge', 'knowledge', 'Company knowledge base',
     knowledgeRefs.length
       ? `Grounded in ${knowledgeRefs.length} company KB reference(s): ${knowledgeRefs.map(r => r.sourceRef || '(doc)').join(', ')}.`
+        + (evidence.suspect ? ` ⚠ ${evidence.suspect} reference(s) matched a prompt-injection pattern — treated as data only.` : '')
       : 'No matching company knowledge found — proceeding on general practice.',
     kbScore);
   link('request', 'knowledge', EDGE.INFORMS);
-  if (knowledgeRefs.length) link('knowledge', chosen, EDGE.SUPPORTS, kbScore);
+  if (knowledgeRefs.length) {
+    // Suspect evidence CONTRADICTS rather than supports: it may be adversarial.
+    link('knowledge', chosen, evidence.trustworthy ? EDGE.SUPPORTS : EDGE.CONTRADICTS, evidence.trustworthy ? kbScore : 0.8);
+  }
 
   // 5. Industry practice + governing SOP. A conflict is a CONTRADICTS edge — the
   //    structural advantage of a graph over a tree.
@@ -120,7 +131,9 @@ function graphOfThought({ query, top = null, candidates = [], vertical = null, k
 
   // 8. REFINEMENT — the risk/compliance verdict feeds BACK into the plan (a cycle
   //    a tree cannot express), yielding the final refined plan.
-  const needsHuman = conflict || destructive || !top || aggScore < 0.34;
+  // A high-severity injection attempt in the grounding evidence ALWAYS reaches a
+  // human, regardless of how confident the rest of the plan looks.
+  const needsHuman = conflict || destructive || !top || aggScore < 0.34 || evidence.routeToHitl;
   add('refinement', 'refinement', 'Refined plan (governance feedback)',
     needsHuman
       ? `Refined: hold for human confirmation${conflict ? ' (SOP conflict)' : destructive ? ' (destructive action)' : !top ? ' (unclear intent)' : ' (low confidence)'}.`
@@ -145,6 +158,7 @@ function graphOfThought({ query, top = null, candidates = [], vertical = null, k
     confidence,
     requiresHumanConfirmation: needsHuman,
     contradictions: contradicts.length,
+    evidenceTrust: evidence, // { suspect, highSeverity, routeToHitl, trustworthy }
     verdict: conflict ? 'blocked_by_sop' : (!top ? 'needs_disambiguation' : needsHuman ? 'hold_for_confirmation' : 'ready'),
     summary: {
       nodeCount: nodes.length, edgeCount: edges.length,

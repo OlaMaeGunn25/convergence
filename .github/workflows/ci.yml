@@ -1,0 +1,106 @@
+# CONVERGENCE-Ai — CI
+#
+# Closes the long-standing "the Docker image has never been built end-to-end" gap:
+# every push builds the production image and boots it, so a broken image can never
+# reach an AWS deployment unnoticed.
+#
+# Jobs:
+#   test   — the governed test suite (must stay green)
+#   docker — build the single-container production image + boot smoke test
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install auditor dependencies
+        working-directory: aiwx-smb-auditor
+        run: npm install --no-audit --no-fund
+      - name: Run governed test suite
+        working-directory: aiwx-smb-auditor
+        run: node test/run.js
+
+  docker:
+    name: Docker image build + smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build the real production image (Node 20 + system Chromium, non-root).
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: convergence-ai:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Boot the image and prove the gateway actually serves /health.
+      - name: Boot smoke test
+        run: |
+          set -euo pipefail
+          docker run -d --name convergence-smoke \
+            -e NODE_ENV=production \
+            -e PORT=3003 \
+            -e GATEWAY_API_KEY=ci-smoke-key \
+            -e FIRECRAWL_API_KEY=ci-placeholder \
+            -e GA4_PROPERTY_ID=1 \
+            -e GA4_MEASUREMENT_ID=G-CI \
+            -p 3003:3003 \
+            convergence-ai:ci
+
+          echo "Waiting for /health ..."
+          for i in $(seq 1 30); do
+            if curl -fsS -H "x-api-key: ci-smoke-key" http://localhost:3003/health >/dev/null 2>&1; then
+              echo "gateway is up (attempt $i)"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::Gateway did not become healthy in time"
+              docker logs convergence-smoke
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "--- /health ---"
+          curl -fsS -H "x-api-key: ci-smoke-key" http://localhost:3003/health
+
+          # The governed tool registry must be served from inside the image.
+          TOOLS=$(curl -fsS -H "x-api-key: ci-smoke-key" http://localhost:3003/api/tools \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).tools.length))")
+          echo "tools exposed: $TOOLS"
+          if [ "$TOOLS" -lt 80 ]; then
+            echo "::error::Expected the full tool registry (>=80 tools), got $TOOLS"
+            docker logs convergence-smoke
+            exit 1
+          fi
+
+          # Chromium must be present for the Puppeteer/audit path.
+          docker exec convergence-smoke /usr/bin/chromium --version
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs convergence-smoke || true
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f convergence-smoke || true

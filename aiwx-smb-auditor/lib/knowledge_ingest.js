@@ -20,6 +20,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const injectionGuard = require('./injection_guard');
 
 const SOURCES = ['connector_read', 'upload', 'on_prem_crawl', 'audit_scour'];
 const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'for', 'on', 'is', 'are', 'with', 'by', 'at', 'as', 'be', 'this', 'that', 'it', 'from', 'must', 'shall', 'any', 'all']);
@@ -66,13 +67,20 @@ class KnowledgeBase {
 
     const now = new Date().toISOString();
     const chunks = [];
+    let suspectChunks = 0;
     for (const d of docs) {
       chunkText(d.text || '').forEach((text, i) => {
+        // Prompt-injection guard: every ingested chunk is scanned and labelled at
+        // the door. Ingested content is DATA — it can never become an instruction.
+        const scan = injectionGuard.scanContent(text);
+        if (!scan.clean) suspectChunks++;
         chunks.push({
           id: `kb_${Date.now()}_${crypto.randomBytes(3).toString('hex')}_${i}`,
           tenantId, source, sourceRef: d.ref || null, text,
           keywords: keywordsOf(text),
-          provenance: { source, ref: d.ref || null, ingestedAt: now, actor },
+          trust: scan.trust,
+          injectionFlags: scan.flags,
+          provenance: { source, ref: d.ref || null, ingestedAt: now, actor, trust: scan.trust },
           createdAt: now
         });
       });
@@ -88,15 +96,16 @@ class KnowledgeBase {
       for (const c of chunks) {
         await insertRow('knowledge_base', {
           id: c.id, tenant_id: tenantId, source, source_ref: c.sourceRef,
-          text: c.text, keywords: c.keywords, provenance: c.provenance, created_at: now
+          text: c.text, keywords: c.keywords, trust: c.trust,
+          injection_flags: c.injectionFlags, provenance: c.provenance, created_at: now
         });
       }
-      return { ingested: chunks.length, source };
+      return { ingested: chunks.length, source, suspectChunks };
     }
     return jsonFile.mutate(this.file, EMPTY, (store) => {
       const arr = Array.isArray(store.chunks) ? store.chunks : [];
       arr.push(...chunks); // append-only
-      return { value: { chunks: arr }, result: { ingested: chunks.length, source } };
+      return { value: { chunks: arr }, result: { ingested: chunks.length, source, suspectChunks } };
     });
   }
 
@@ -131,7 +140,14 @@ class KnowledgeBase {
         let inter = 0; for (const t of qset) if (ck.has(t)) inter++;
         const sem = qset.size ? inter / qset.size : 0;
         const score = 0.5 * (qk.length ? lex / qk.length : 0) + 0.5 * sem;
-        return { text: c.text, sourceRef: c.sourceRef, source: c.source, provenance: c.provenance, score: Number(score.toFixed(3)) };
+        // Trust labels travel WITH the evidence — downstream context builders must
+        // be able to tell document text from platform instruction.
+        return {
+          text: c.text, sourceRef: c.sourceRef, source: c.source, provenance: c.provenance,
+          trust: c.trust || injectionGuard.TRUST.UNTRUSTED,
+          injectionFlags: c.injectionFlags || [],
+          score: Number(score.toFixed(3))
+        };
       }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, recallK);
     }
 
