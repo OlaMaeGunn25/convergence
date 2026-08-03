@@ -31,8 +31,17 @@ the agent roster) changes when they flip on.
 
 ## Relationship to cloud deploy
 
-When you're ready for GCP or AWS, the deploy task list is essentially: pick the
-state store (managed Supabase/Postgres), flip the seams above that you want live
-(embeddings, reranker, Firecrawl, SerpApi, provider keys), set secrets in the
-cloud secret manager, and configure CPU-always-on + min-instances ≥ 1 for the
-background loops. Until then, this file is the checklist-in-waiting.
+**Target cloud: AWS** (decided 2026-08; GCP no longer under consideration for the
+initial deployment).
+
+The deploy task list is essentially: pick the state store (managed
+Supabase/Postgres or RDS), flip the seams above that you want live (embeddings,
+reranker, Firecrawl, SerpApi, provider keys), set secrets in **AWS Secrets
+Manager**, push the image to **ECR**, run on **ECS/Fargate or App Runner** with the
+equivalent of CPU-always-on + min-instances ≥ 1 so the background loops keep
+running, and size for Chromium (2–4 GB).
+
+See also `docs/FUTURE_STATE_ELARION_SOVEREIGNGUARD.md` — a proposed pre-deployment
+semantic-memory + governance-kernel integration that would add one containerized
+service (Virtuoso) alongside the gateway. Not built; recorded so the AWS
+architecture stays open to it.
