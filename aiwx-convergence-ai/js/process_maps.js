@@ -435,6 +435,75 @@ export function renderProcessMap(templateKey) {
     });
 }
 
+/**
+ * Hub template key -> gateway process-map key. The gateway
+ * (lib/process_map_bridge.js) owns the governed definitions; a hub template
+ * without a mapping can still be visualized, it just cannot be run for real yet.
+ */
+const GOVERNED_MAP_KEYS = {
+    p2p: 'procure_to_pay',
+    travel: 'corporate_travel',
+    legal_deposition: 'client_intake_legal'
+};
+
+/**
+ * Run a process map FOR REAL through the governed gateway.
+ *
+ * runAgentProcessMap() below animates the pipeline for the operator; this function
+ * instantiates the same map as governed tasks, so each step becomes a real task and
+ * a HITL checkpoint becomes an actual pending_approval gate that blocks everything
+ * downstream — not a drawing of one. Requires the `process_mapping` add-on.
+ */
+export async function instantiateGovernedProcessMap(templateKey) {
+    const template = PROCESS_TEMPLATES[templateKey];
+    const mapKey = GOVERNED_MAP_KEYS[templateKey];
+    if (!mapKey) {
+        logConsole(`"${template ? template.title : templateKey}" is visual-only for now — no governed map is defined for it yet.`, 'warn');
+        return null;
+    }
+
+    const config = STATE.tenantConfig || {};
+    const ep = config.apiEndpoint || 'http://localhost:8080';
+    logConsole(`Instantiating governed task chain for: ${template.title}`, 'info');
+
+    try {
+        const res = await fetch(`${ep}/api/tools/instantiate_process_map`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: { mapKey } })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.success === false) {
+            const msg = data.error || `Gateway returned ${res.status}`;
+            if (data.status === 'module_disabled') {
+                logConsole(`Six Sigma Process Mapping is an add-on and is not enabled for this tenant.`, 'warn');
+            } else {
+                logConsole(`Could not instantiate governed process map: ${msg}`, 'error');
+            }
+            return null;
+        }
+
+        const result = data.result || {};
+        const tasks = result.tasks || [];
+        logConsole(`Created ${tasks.length} governed task(s) for "${result.title}".`, 'success');
+        tasks.forEach(t => {
+            const gate = t.type === 'hitl';
+            logConsole(
+                `  Step ${t.stepId}: ${t.label} — ${gate ? 'AWAITING HUMAN APPROVAL' : t.status}`,
+                gate ? 'warn' : 'info'
+            );
+        });
+        if (result.hitlCheckpoints > 0) {
+            logConsole(`${result.hitlCheckpoints} human checkpoint(s) must be approved in the HITL queue before downstream steps can run.`, 'warn');
+        }
+        return result;
+    } catch (err) {
+        logConsole(`Could not reach the governance gateway: ${err.message}`, 'error');
+        return null;
+    }
+}
+
 export function runAgentProcessMap(templateKey, resume = false) {
     if (STATE.processTimer) clearInterval(STATE.processTimer);
     

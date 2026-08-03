@@ -9,7 +9,7 @@ initErrorBoundary();
 import { STATE, saveLocalState, updateState, seedDemoData } from './js/state.js';
 import { logConsole, injectLayout } from './js/components.js';
 import { verifyActivationToken, verifyAdminSession, safeBtoa, safeAtob, parseAndVerifyToken } from './js/auth.js';
-import { PROCESS_TEMPLATES, renderProcessMap, runAgentProcessMap } from './js/process_maps.js';
+import { PROCESS_TEMPLATES, renderProcessMap, runAgentProcessMap, instantiateGovernedProcessMap } from './js/process_maps.js';
 import { updateAgentBadgeState, toggleMinimizeBadge, dismissBadge, restoreBadge, toggleKillSwitch, injectBadge } from './js/agent_badge.js';
 import { renderHITLQueue, approveTask, rejectTask, reverseTask, promptRevision, analyzeAndAutoCorrect, renderReversalHistory, updateConnectionBadge, openAiComposeModal, closeAiComposeModal, applyAiDraft, initTaskStream } from './js/hitl_queue.js';
 import { changeReportFilters, printReport } from './js/reporting.js';
@@ -39,6 +39,9 @@ Object.assign(window, {
     triggerDemoSeed,
     superAdminSwitchVertical,
     runAgentProcessMap,
+    // Runs the SAME map for real through the governed gateway: each step becomes a
+    // governed task and each HITL checkpoint an actual approval gate.
+    instantiateGovernedProcessMap,
     renderProcessMap,
     updateAgentBadgeState,
     toggleMinimizeBadge,

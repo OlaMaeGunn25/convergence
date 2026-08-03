@@ -1902,6 +1902,73 @@ async function runTests() {
     assert(false, `Add-on modules (task record / playbooks / process maps) tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 40: Orchestrator auto-recording + learning loop (wired add-ons) ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const { Orchestrator } = require('../lib/orchestrator');
+    const { TaskModel } = require('../lib/task_model');
+    const { TaskRecordStore } = require('../lib/task_record');
+    const { PlaybookLibrary } = require('../lib/playbook_library');
+
+    const mk = (n) => pth.join(os.tmpdir(), `aiwx_orc_${n}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.json`);
+    const stubRegistry = {
+      get: () => ({ annotations: { requiresApproval: false } }),
+      invoke: async () => ({ ok: true, result: { done: true } })
+    };
+    const run = async ({ modules, registry = stubRegistry }) => {
+      const tmf = mk('tm'), rf = mk('rec'), pf = mk('pb');
+      const tm = new TaskModel({ file: tmf });
+      const recs = new TaskRecordStore({ file: rf });
+      const lib = new PlaybookLibrary({ file: pf });
+      const orc = new Orchestrator({ taskModel: tm, registry, typeMap: { 'demo.work': 'run_audit' }, taskRecords: recs, playbooks: lib, modules });
+      const t = await orc.submit({ type: 'demo.work', payload: { connectorId: 'clio' }, actor: 'op' });
+      await tm.transition(t.id, 'executing');
+      const finished = await orc.processTask(await tm.get(t.id));
+      return { finished, record: await recs.getByTask(t.id), playbooks: await lib.list({}), cleanup: () => { try { [tmf, rf, pf].forEach(f => fsx.unlinkSync(f)); } catch (e) {} } };
+    };
+
+    // A. UNLICENSED: behaviour is unchanged — nothing is recorded
+    const off = await run({ modules: [] });
+    assert(off.finished.status === 'done', 'Task still completes normally when the add-on is unlicensed');
+    assert(off.record === null, 'No task record is created without the task_record add-on (strictly additive)');
+    off.cleanup();
+
+    // B. LICENSED task_record: the run is recorded + auto-named/categorized
+    const rec = await run({ modules: ['task_record'] });
+    assert(rec.finished.status === 'done', 'Task completes with recording enabled');
+    assert(rec.record && rec.record.status === 'completed', 'The orchestrator AUTO-STARTS and AUTO-FINALIZES the record');
+    assert(rec.record.steps.length === 1 && rec.record.steps[0].tool === 'run_audit' && rec.record.steps[0].outcome === 'ok', 'The executed step is captured automatically as it runs');
+    assert(rec.record.name && rec.record.category, 'The auto-recorded run is auto-named and auto-categorized');
+    assert(rec.playbooks.length === 0, 'No playbook without the playbook_library add-on (dependency respected)');
+    rec.cleanup();
+
+    // C. LICENSED both: a successful run COMPOUNDS into the playbook library
+    const learn = await run({ modules: ['task_record', 'playbook_library'] });
+    assert(learn.playbooks.length === 1 && learn.playbooks[0].version === 1, 'A successful run is promoted to a playbook automatically');
+    assert(learn.playbooks[0].taskType === 'demo.work', 'The playbook is keyed to the task type for reuse');
+    learn.cleanup();
+
+    // D. FAILURE still records + teaches (the agent learns from failures too)
+    const failing = { get: () => ({ annotations: { requiresApproval: false } }), invoke: async () => ({ ok: false, error: 'boom' }) };
+    const bad = await run({ modules: ['task_record', 'playbook_library'], registry: failing });
+    assert(bad.finished.status === 'failed', 'A failing tool still fails the task');
+    assert(bad.record.status === 'failed' && bad.record.steps[0].outcome === 'failed', 'The failed run is recorded with a failed step');
+    bad.cleanup();
+
+    // E. Recording never breaks execution
+    const brokenRecorder = { start: async () => { throw new Error('recorder down'); }, recordStep: async () => { throw new Error('down'); }, finalize: async () => { throw new Error('down'); } };
+    const tmf2 = mk('tm2');
+    const tm2 = new TaskModel({ file: tmf2 });
+    const orc2 = new Orchestrator({ taskModel: tm2, registry: stubRegistry, typeMap: { 'demo.work': 'run_audit' }, taskRecords: brokenRecorder, modules: ['task_record'] });
+    const t2 = await orc2.submit({ type: 'demo.work', payload: {}, actor: 'op' });
+    await tm2.transition(t2.id, 'executing');
+    const res2 = await orc2.processTask(await tm2.get(t2.id));
+    assert(res2.status === 'done', 'A broken recorder NEVER changes the task outcome (recording is best-effort)');
+    try { fsx.unlinkSync(tmf2); } catch (e) {}
+  } catch (e) {
+    assert(false, `Orchestrator auto-recording tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);
