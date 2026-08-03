@@ -97,6 +97,28 @@ to the tenant brokerage; Convergence is a processor. Attribution, refresh cadenc
 and redistribution limits travel with the data as it moves through agents, task
 records and exports.
 
+## Governed process map
+
+`realestate_buyer_lead` (in `lib/process_map_bridge.js`) turns the hub's "Real
+Estate: Buyer Lead Nurturing & Contracts" drawing into a real task chain:
+
+| # | Step | Type |
+|---|---|---|
+| 1 | Buyer enquiry received | system |
+| 2 | Resolve covering MLS board for the buyer's region | agent |
+| 3 | Search listings against buyer criteria | agent |
+| 4 | Enrich shortlist with public property records | agent |
+| 5 | **HITL Broker Review of shortlist** | gate |
+| 6 | **HITL approval to contact owner (compliance floor)** | gate |
+| 7 | Schedule showing and record the engagement | agent (destructive) |
+
+Two things about the ordering are deliberate. Board resolution is step 2, before
+any search — MLS access is board-bound, so searching before the board is known is
+searching the wrong thing. And contacting an owner is its own gate at step 6,
+separate from the shortlist review, because approving *which houses to show* is
+not the same decision as approving *reaching out to a person*. Every step after
+that gate is blocked behind it by the dependency edge.
+
 ## Rate limits
 
 As documented by the vendor: 1,000,000 records per 24h across the PropertySearch

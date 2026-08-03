@@ -443,7 +443,8 @@ export function renderProcessMap(templateKey) {
 const GOVERNED_MAP_KEYS = {
     p2p: 'procure_to_pay',
     travel: 'corporate_travel',
-    legal_deposition: 'client_intake_legal'
+    legal_deposition: 'client_intake_legal',
+    realestate_lead: 'realestate_buyer_lead'
 };
 
 /** Can this template be committed to the governed queue, or is it a picture only? */

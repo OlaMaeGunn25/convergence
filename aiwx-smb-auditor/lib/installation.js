@@ -36,9 +36,17 @@ class Installation {
    * and AUTO-CREATE the company knowledge base from the onboarding business
    * intelligence (ONB-KB-01/02).
    */
-  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessProfile = {}, seedDocs = [], auditPackage = null, hitls = [], tenantDomain = null, actor = null }) {
+  async install({ tenantId, vertical, selectedConnectors = [], businessName = null, businessAddress = null,
+    locationConsent = null, gps = null, ip = null, ipResolver = null,
+    businessProfile = {}, seedDocs = [], auditPackage = null, hitls = [], tenantDomain = null, actor = null }) {
     if (!tenantId) throw new Error('tenantId is required to install.');
     if (!vertical) throw new Error('vertical is required (the locked vertical).');
+    // LOC-01: asked and required at onboarding. Enforced HERE rather than only in
+    // the KB step, whose errors are caught — a swallowed requirement is no
+    // requirement at all.
+    if (!businessAddress || !String(businessAddress).trim()) {
+      throw new Error('businessAddress is required to install — region-bound capabilities resolve from it (LOC-01).');
+    }
     const roster = await this.agents.provisionRoster({ tenantId, vertical, scopeConnectors: selectedConnectors });
     const now = new Date().toISOString();
     const record = { tenantId, vertical, selectedConnectors, installedAt: now, actor };
@@ -57,7 +65,8 @@ class Installation {
     let knowledge = null;
     try {
       knowledge = await businessOnboarding.onboard({
-        tenantId, vertical, businessName: businessName || tenantId,
+        tenantId, vertical, businessName: businessName || tenantId, businessAddress,
+        locationConsent, gps, ip, ipResolver,
         profile: businessProfile || {}, seedDocs: seedDocs || [], systems: selectedConnectors,
         auditPackage: auditPackage || null, knowledgeBase: this.knowledgeBase, actor
       });
@@ -77,7 +86,7 @@ class Installation {
       }
     }
 
-    return { install: record, roster: roster.length, knowledge, hitlOnboarding };
+    return { install: record, roster: roster.length, knowledge, hitlOnboarding, location: knowledge && knowledge.location ? knowledge.location : null };
   }
 
   async getInstall(tenantId) {

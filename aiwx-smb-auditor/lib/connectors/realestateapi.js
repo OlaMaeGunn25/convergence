@@ -85,21 +85,60 @@ async function reapiRequest(resourcePath, body = {}) {
 
 // ── Personal-data boundary ───────────────────────────────────────────────────
 
+const REDACTION_NOTICE = '[redacted — personal contact data; requires an approved skip trace]';
+
+/**
+ * Leaf fields that are personal contact data wherever they appear.
+ * Mailing address is included deliberately: for an absentee owner it is the
+ * person's home address, and it is exactly what direct-mail solicitation needs.
+ */
+const SENSITIVE_LEAF = /^(phone|phones|phone_?numbers?|phone_?\d+|mobile|landline|cell|fax|email|emails?|email_?\d+|dnc|do_?not_?call|litigator|ssn|social_security_number|date_?of_?birth|dob|age|owner_?email|owner_?phone|mail_?address|mailing_?address|mail_?street|mailing_?street|mail_?full_?address|owner_?mailing_?address)$/i;
+
+/**
+ * Whole subtrees that exist only to carry contact data. Redacting the branch
+ * rather than walking it means a vendor field we have never seen — nested one
+ * level deeper, named something new — cannot slip through on a shape we did not
+ * anticipate. Fail closed, not open.
+ */
+const SENSITIVE_BRANCH = /^(contact|contacts|contact_?info|owner_?contact|skip_?trace|skiptrace|personal|identity|phone_?numbers|email_?addresses)$/i;
+
 /**
  * Strip owner/occupant contact details. Listing and property reads are business
  * data; a person's phone, email and mailing address are not, and they must not
- * ride along on an ordinary search just because the vendor returns them.
+ * ride along on an ordinary search just because the vendor returns them in the
+ * same payload.
  */
 function redactOwnerContact(record) {
   if (!record || typeof record !== 'object') return record;
   if (Array.isArray(record)) return record.map(redactOwnerContact);
-  const SENSITIVE = /^(phone|phone_?numbers?|mobile|landline|email|emails?|dnc|litigator|ssn|social_security_number|date_?of_?birth|dob|owner_?email|owner_?phone)$/i;
   const out = {};
   for (const [k, v] of Object.entries(record)) {
-    if (SENSITIVE.test(k)) { out[k] = '[redacted — personal contact data; requires an approved skip trace]'; continue; }
+    if (SENSITIVE_BRANCH.test(k)) { out[k] = REDACTION_NOTICE; continue; }
+    if (SENSITIVE_LEAF.test(k)) { out[k] = REDACTION_NOTICE; continue; }
     out[k] = (v && typeof v === 'object') ? redactOwnerContact(v) : v;
   }
   return out;
+}
+
+/**
+ * Does this payload still carry unredacted personal contact data?
+ *
+ * The redactor is the control; this is the check on the control. It exists so the
+ * invariant "no read path returns personal contact data" can be ASSERTED against
+ * every read rather than assumed from having called the redactor — including on
+ * payload shapes that arrive from the vendor rather than from our fixtures.
+ */
+function containsPersonalContact(record) {
+  if (!record || typeof record !== 'object') return false;
+  if (Array.isArray(record)) return record.some(containsPersonalContact);
+  for (const [k, v] of Object.entries(record)) {
+    if (SENSITIVE_BRANCH.test(k) || SENSITIVE_LEAF.test(k)) {
+      if (v !== REDACTION_NOTICE) return true;
+      continue;
+    }
+    if (v && typeof v === 'object' && containsPersonalContact(v)) return true;
+  }
+  return false;
 }
 
 /**
@@ -251,7 +290,9 @@ async function boardCoverage({ state, mode = 'boards', groupByState = false, sho
 
   try {
     const data = await reapiRequest('/v3/MLSBoardCoverage', body);
-    return { success: true, simulated: false, provenance: 'live', kind: 'mls_boards', mode, data: data.data || data };
+    // Board metadata should carry no personal data — redacted anyway so that
+    // "every read path is redacted" has no exceptions to remember.
+    return { success: true, simulated: false, provenance: 'live', kind: 'mls_boards', mode, data: redactOwnerContact(data.data || data) };
   } catch (e) {
     const st = String(state).toUpperCase();
     return simulated('mls_boards', SIM_BOARDS.filter(b => b.state === st), { mode, note: `Simulated: ${e.message}` });
@@ -386,5 +427,5 @@ module.exports = {
   isRealEstateApiConfigured, baseUrl, mcpConfig,
   searchListings, getListing, boardCoverage,
   searchProperties, getProperty, skipTrace,
-  redactOwnerContact, licenseNotice, mapListingEventToTask
+  redactOwnerContact, containsPersonalContact, licenseNotice, mapListingEventToTask
 };

@@ -11,11 +11,14 @@
  */
 
 const ingestionAdapters = require('./ingestion_adapters');
+const location = require('./location');
 
 /** Synthesize a business-intelligence profile document from what onboarding knows. */
-function buildProfileDoc({ businessName, vertical, purpose = null, customers = null, databases = null, systems = [] } = {}) {
+function buildProfileDoc({ businessName, vertical, businessAddress = null, region = null, purpose = null, customers = null, databases = null, systems = [] } = {}) {
   const lines = [];
   lines.push(`Company profile for ${businessName || 'the business'}. Business vertical: ${vertical || 'general'}.`);
+  if (businessAddress) lines.push(`Business address: ${businessAddress}.`);
+  if (region) lines.push(`Operating region: ${region}.`);
   if (purpose) lines.push(`Company purpose: ${purpose}.`);
   if (customers) lines.push(`Primary customers: ${customers}.`);
   if (databases) lines.push(`Databases and systems of record: ${databases}.`);
@@ -24,14 +27,39 @@ function buildProfileDoc({ businessName, vertical, purpose = null, customers = n
 }
 
 /**
+ * What onboarding must ASK before it can proceed: the required business address,
+ * and the per-method location-sharing questions. Surfaced as data so the installer
+ * and the hub present the identical prompt (LOC-01/02).
+ */
+function onboardingLocationQuestions() {
+  return location.locationDisclosure();
+}
+
+/**
  * Create the company KB on onboarding.
  * @returns { tenantId, ingested, compiled }
  */
-async function onboard({ tenantId, vertical = null, businessName = null, profile = {}, seedDocs = [], systems = [], auditPackage = null, knowledgeBase, actor = null }) {
+async function onboard({ tenantId, vertical = null, businessName = null, businessAddress = null,
+  locationConsent = null, gps = null, ip = null, ipResolver = null,
+  profile = {}, seedDocs = [], systems = [], auditPackage = null, knowledgeBase, actor = null }) {
   if (!knowledgeBase) throw new Error('A knowledgeBase is required to onboard business knowledge.');
   if (!tenantId) throw new Error('tenantId is required.');
+  // LOC-01: the business address is a required onboarding fact, not an optional
+  // enrichment. Region-bound capabilities have no honest default without it.
+  if (!businessAddress || !String(businessAddress).trim()) {
+    throw new Error('businessAddress is required to onboard — region-bound capabilities (MLS board coverage, state/local regulatory search) resolve from it. See onboardingLocationQuestions().');
+  }
 
-  const profileDoc = buildProfileDoc(Object.assign({ businessName, vertical, systems }, profile));
+  // LOC-02: device-derived location is used ONLY where consent was recorded.
+  // Correlation refuses an unconsented method rather than falling back to it.
+  const locationResult = await location.correlateLocation({
+    businessAddress, gps, ip, consent: locationConsent, resolver: ipResolver
+  });
+
+  const profileDoc = buildProfileDoc(Object.assign(
+    { businessName, vertical, businessAddress, region: locationResult.region, systems },
+    profile
+  ));
   const sources = {};
   let ingested = 0;
 
@@ -52,7 +80,7 @@ async function onboard({ tenantId, vertical = null, businessName = null, profile
   }
 
   const compiled = await knowledgeBase.compile({ tenantId });
-  return { tenantId, ingested, sources, compiled };
+  return { tenantId, ingested, sources, compiled, businessAddress, location: locationResult };
 }
 
-module.exports = { onboard, buildProfileDoc };
+module.exports = { onboard, buildProfileDoc, onboardingLocationQuestions };

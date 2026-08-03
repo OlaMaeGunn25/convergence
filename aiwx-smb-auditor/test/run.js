@@ -808,8 +808,15 @@ async function runTests() {
     const { KnowledgeBase: KB3 } = require('../lib/knowledge_ingest');
     const kbf3 = pth.join(os.tmpdir(), `aiwx_ikb_${Date.now()}.json`);
     const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns, knowledgeBase: new KB3({ file: kbf3 }) });
-    const res = await inst.install({ tenantId: 'i1', vertical: 'legal', selectedConnectors: ['clio'], businessName: 'Lobo Law', businessProfile: { purpose: 'trial defense' } });
+    let addrRequired = false;
+    try {
+      await inst.install({ tenantId: 'i0', vertical: 'legal', businessName: 'No Address Co' });
+    } catch (e) { addrRequired = /businessAddress is required/.test(e.message); }
+    assert(addrRequired === true, 'Install REFUSES without a business address (LOC-01)');
+
+    const res = await inst.install({ tenantId: 'i1', vertical: 'legal', selectedConnectors: ['clio'], businessName: 'Lobo Law', businessAddress: '900 Market St, Seattle, WA 98104', businessProfile: { purpose: 'trial defense' } });
     assert(res.roster === 13, 'Install provisions the full 13-agent roster');
+    assert(res.location && res.location.region === 'WA' && res.location.method === 'address', 'Install correlates the operating region from the declared business address');
     assert(res.knowledge && res.knowledge.ingested >= 1, 'Install AUTO-CREATES the company knowledge base on onboarding (ONB-KB-01)');
     let st = await inst.status({ tenantId: 'i1' });
     assert(st.installed === true && st.complete === false, 'Install is not complete while a selected system is not agent_ready');
@@ -1255,11 +1262,15 @@ async function runTests() {
     const kb = new KnowledgeBase({ file: kbf });
     const onb = await businessOnboarding.onboard({
       tenantId: 'biz1', vertical: 'legal', businessName: 'Lobo Law',
+      businessAddress: '900 Market St, Seattle, WA 98104',
       profile: { purpose: 'trial defense', customers: 'accident victims', databases: 'Clio' },
       seedDocs: [{ ref: 'intake-sop.pdf', text: 'Always run a conflict of interest check before opening a matter.' }],
       systems: ['clio'], knowledgeBase: kb
     });
     assert(onb.ingested >= 2 && onb.compiled.ready === true, 'Onboarding auto-ingests business intelligence + seed docs into the company KB (ONB-KB-01/02)');
+    assert(onb.location.region === 'WA', 'Onboarding correlates the operating region from the required business address');
+    const regionHit = await kb.search({ tenantId: 'biz1', query: 'operating region business address' });
+    assert(regionHit.results.length > 0, 'The business address and operating region are part of the company knowledge base');
     const profileHit = await kb.search({ tenantId: 'biz1', query: 'company purpose trial defense' });
     assert(profileHit.results.length > 0, 'The synthesized business-intelligence profile is searchable in the KB');
 
@@ -1270,7 +1281,7 @@ async function runTests() {
     const kf2 = pth.join(os.tmpdir(), `aiwx_onb_kb2_${Date.now()}.json`);
     const conns = new ConnectionRegistry({ file: cnf });
     const inst = new Installation({ file: inf, agentRegistry: new AgentRegistry({ file: agf }), connectionRegistry: conns, knowledgeBase: new KnowledgeBase({ file: kf2 }) });
-    const res = await inst.install({ tenantId: 'biz2', vertical: 'legal', selectedConnectors: [], businessName: 'Acme Legal' });
+    const res = await inst.install({ tenantId: 'biz2', vertical: 'legal', selectedConnectors: [], businessName: 'Acme Legal', businessAddress: '55 Bay St, Austin, TX 78701' });
     assert(res.knowledge && res.knowledge.compiled.ready === true, 'install() auto-creates the KB during onboarding');
     const st = await inst.status({ tenantId: 'biz2' });
     assert(st.knowledgeReady === true && st.knowledgeChunks >= 1, 'Install status reports the KB as ready (ONB-KB-03)');
@@ -2058,6 +2069,138 @@ async function runTests() {
     assert(reapi.mapListingEventToTask({ event_type: 'listing.wat' }).status === 'pending_approval', 'An unrecognized MLS event fails closed to approval');
   } catch (e) {
     assert(false, `RealEstateAPI MLS connector tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 42: Location disclosure, consent & correlation (LOC) ---
+  try {
+    const loc = require('../lib/location');
+    const onboarding42 = require('../lib/business_onboarding');
+    const registry42 = require('../lib/tool_registry');
+
+    // A. The entity is ASKED: address required, device methods optional
+    const disc = onboarding42.onboardingLocationQuestions();
+    assert(disc.required.field === 'businessAddress' && disc.required.optional === false, 'Onboarding asks for the business address as a REQUIRED field');
+    assert(disc.optional.map(o => o.method).sort().join(',') === 'gps,ip', 'Onboarding asks separately about GPS and IP correlation');
+    assert(disc.optional.every(o => o.default === 'deny'), 'Both device-derived methods default to DENY');
+    assert(disc.optional.every(o => !!o.why && !!o.data), 'Each optional method states why it is asked and what data is used');
+
+    // B. Consent requires a named human and is never inferred from silence
+    assert(loc.recordConsent({ tenantId: 't1', methods: { gps: true } }).ok === false, 'Consent cannot be recorded without a named identity');
+    const cRes = loc.recordConsent({ tenantId: 't1', methods: { gps: true }, grantedBy: 'ops@lobolaw.com' });
+    assert(cRes.ok === true && cRes.consent.methods.gps === true, 'A granted method is recorded as granted');
+    assert(cRes.consent.methods.ip === false, 'An unanswered method is recorded as DENIED, not granted');
+    assert(cRes.consent.grantedBy === 'ops@lobolaw.com' && !!cRes.consent.at, 'Consent records who granted it and when');
+
+    // C. Revocation is immediate
+    const revoked = loc.revokeConsent(cRes.consent, 'gps', { by: 'ops@lobolaw.com' });
+    assert(loc.hasConsent(revoked, 'gps') === false, 'A revoked method is immediately withdrawn');
+    assert(revoked.revoked.length === 1, 'The revocation is recorded');
+    assert(loc.hasConsent(cRes.consent, 'gps') === true, 'Revocation does not mutate the original consent record');
+
+    // D. Correlation refuses methods it was not granted
+    const noConsent = await loc.correlateLocation({ gps: { lat: 47.6, lng: -122.3 } });
+    assert(noConsent.region === null, 'GPS is NOT used without consent');
+    assert(noConsent.attempted.find(a => a.method === 'gps').reason === 'consent_not_granted', 'The refusal states that consent was not granted');
+
+    const withConsent = await loc.correlateLocation({ gps: { lat: 47.6, lng: -122.3 }, consent: cRes.consent });
+    assert(withConsent.region === 'WA' && withConsent.method === 'gps', 'GPS correlates the region once consent is recorded');
+    assert(withConsent.confidence === 'medium', 'A GPS-derived region is reported at medium confidence');
+
+    // E. The declared address outranks a device reading
+    const both = await loc.correlateLocation({ businessAddress: '900 Market St, Seattle, WA 98104', gps: { lat: 30.3, lng: -97.7 }, consent: cRes.consent });
+    assert(both.method === 'address' && both.confidence === 'high', 'The declared business address takes precedence over a device reading');
+
+    // F. IP: private ranges are never treated as a location; no resolver = no guess
+    assert(loc.isPrivateIp('192.168.1.10') === true && loc.isPrivateIp('10.0.0.4') === true, 'Private ranges are recognised');
+    assert(loc.isPrivateIp('127.0.0.1') === true && loc.isPrivateIp('100.64.0.1') === true, 'Loopback and CGNAT are recognised');
+    assert(loc.isPrivateIp('203.0.113.9') === false, 'A public IP is not treated as private');
+    const ipConsent = loc.recordConsent({ tenantId: 't1', methods: { ip: true }, grantedBy: 'ops@lobolaw.com' }).consent;
+    const privIp = await loc.resolveIpRegion('192.168.1.10');
+    assert(privIp.resolved === false && privIp.reason === 'private_or_reserved_ip', 'A private IP resolves to nothing, not a confident wrong answer');
+    const noResolver = await loc.correlateLocation({ ip: '203.0.113.9', consent: ipConsent });
+    assert(noResolver.region === null, 'Without a geo-IP resolver the system declines to guess a region');
+    const withResolver = await loc.correlateLocation({ ip: '203.0.113.9', consent: ipConsent, resolver: async () => ({ region: 'ny' }) });
+    assert(withResolver.region === 'NY' && withResolver.method === 'ip' && withResolver.confidence === 'low', 'An injected resolver correlates the region at LOW confidence');
+
+    // G. Registry wiring
+    const discTool = await registry42.invoke('get_location_disclosure', {}, { actor: 'agent' });
+    assert(discTool.ok === true && discTool.result.required.field === 'businessAddress', 'get_location_disclosure returns the onboarding questions');
+    const corrTool = await registry42.invoke('correlate_location', { businessAddress: '55 Bay St, Austin, TX 78701' }, { actor: 'agent' });
+    assert(corrTool.ok === true && corrTool.result.region === 'TX', 'correlate_location resolves the region through the registry');
+  } catch (e) {
+    assert(false, `Location consent/correlation tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 43: No read path is a side door into personal data ---
+  try {
+    const reapi43 = require('../lib/connectors/realestateapi');
+
+    // A. The detector itself is honest
+    assert(reapi43.containsPersonalContact({ owner: { phone: '555-0100' } }) === true, 'The detector finds an unredacted phone');
+    assert(reapi43.containsPersonalContact({ owner: { contact: { anything: 'x' } } }) === true, 'The detector finds an unredacted contact branch');
+    assert(reapi43.containsPersonalContact(reapi43.redactOwnerContact({ owner: { phone: '555-0100' } })) === false, 'A redacted payload passes the detector');
+    assert(reapi43.containsPersonalContact({ listingAgent: { name: 'R. Okafor' } }) === false, 'A licensed agent name is business data, not personal contact data');
+
+    // B. Whole contact-bearing subtrees are cut, not walked — a vendor field we
+    //    have never seen cannot slip through on an unanticipated shape.
+    const branch = reapi43.redactOwnerContact({ owner: { name: 'A. Owner', contact: { phone2: '555', novel_field: 'x' } } });
+    assert(typeof branch.owner.contact === 'string' && /redacted/.test(branch.owner.contact), 'A contact subtree is redacted wholesale');
+    assert(branch.owner.name === 'A. Owner', 'Non-contact business fields survive redaction');
+
+    // C. Mailing address is personal data for an absentee owner
+    const mail = reapi43.redactOwnerContact({ owner: { mailing_address: '12 Private Rd', mailingState: 'WA' } });
+    assert(/redacted/.test(mail.owner.mailing_address), 'Owner mailing address is redacted');
+
+    // D. THE INVARIANT: every read path, asserted rather than assumed
+    const reads = [
+      ['searchListings', await reapi43.searchListings({ city: 'Seattle', state: 'WA' })],
+      ['getListing', await reapi43.getListing({ listingId: 'L-88213' })],
+      ['searchProperties', await reapi43.searchProperties({ zip: '98122' })],
+      ['getProperty', await reapi43.getProperty({ id: 'P-5512090' })],
+      ['boardCoverage', await reapi43.boardCoverage({ state: 'WA' })]
+    ];
+    for (const [name, res] of reads) {
+      assert(reapi43.containsPersonalContact(res.data) === false, `${name} returns no personal contact data`);
+    }
+
+    // E. An unapproved skip trace returns none either
+    const denied = await reapi43.skipTrace({ address: '1420 Alder St' });
+    assert(reapi43.containsPersonalContact(denied) === false, 'A refused skip trace leaks nothing');
+  } catch (e) {
+    assert(false, `Personal-data boundary tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 44: Governed real-estate process map ---
+  try {
+    const bridge44 = require('../lib/process_map_bridge');
+    const { TaskModel: TM44 } = require('../lib/task_model');
+    const pth44 = require('path'); const os44 = require('os'); const fs44 = require('fs');
+
+    const map44 = bridge44.getMap('realestate_buyer_lead');
+    assert(!!map44 && map44.vertical === 'realestate', 'A governed real-estate map exists');
+    assert(bridge44.listMaps().some(m => m.key === 'realestate_buyer_lead'), 'It is listed among the governed maps');
+    assert(map44.steps.filter(s => s.type === 'hitl').length === 2, 'It carries two human checkpoints: shortlist review and owner contact');
+
+    // Board resolution must precede any listing search — MLS access is board-bound.
+    const boardStep = map44.steps.findIndex(s => s.capability === 'realestate_mls_board_coverage');
+    const searchStep = map44.steps.findIndex(s => s.capability === 'realestate_search_listings');
+    assert(boardStep >= 0 && searchStep > boardStep, 'The covering MLS board is resolved BEFORE any listing search');
+
+    const tf44 = pth44.join(os44.tmpdir(), `aiwx_pm44_${Date.now()}.json`);
+    const tm44 = new TM44({ file: tf44 });
+    const out44 = await bridge44.instantiate({ mapKey: 'realestate_buyer_lead', tenantId: 'rt1', actor: 'broker@cascaderealty.com', taskModel: tm44 });
+    assert(out44.tasks.length === 7, 'Instantiating the map creates a task per step');
+    assert(out44.hitlCheckpoints === 2, 'Both checkpoints become real governed gates');
+
+    const gates = out44.tasks.filter(t => t.type === 'hitl');
+    assert(gates.every(g => g.status === 'pending_approval'), 'Each checkpoint is born pending_approval');
+    const contactGate = out44.tasks.find(t => /contact owner/i.test(t.label));
+    const finalStep = out44.tasks[out44.tasks.length - 1];
+    assert(!!contactGate && contactGate.status === 'pending_approval', 'Contacting an owner is its own approval gate');
+    assert(finalStep.dependsOn.includes(contactGate.id), 'Nothing downstream of the owner-contact gate can run until it is approved');
+    try { fs44.unlinkSync(tf44); } catch (e) {}
+  } catch (e) {
+    assert(false, `Governed real-estate map tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

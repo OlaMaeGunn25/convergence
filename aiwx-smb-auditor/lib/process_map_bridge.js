@@ -46,6 +46,25 @@ const PROCESS_MAPS = {
       { id: 5, label: 'Book + confirm', type: 'agent', destructive: true }
     ]
   },
+  realestate_buyer_lead: {
+    key: 'realestate_buyer_lead',
+    title: 'Real Estate: Buyer Lead to Showing (Six Sigma Swimlane)',
+    type: 'swimlane',
+    vertical: 'realestate',
+    steps: [
+      { id: 1, label: 'Buyer enquiry received', type: 'system' },
+      // Region resolution comes first: MLS access is board-specific, so the
+      // brokerage's covering board must be known before any listing is searched.
+      { id: 2, label: 'Resolve covering MLS board for the buyer\'s region', type: 'agent', capability: 'realestate_mls_board_coverage' },
+      { id: 3, label: 'Search listings against buyer criteria', type: 'agent', capability: 'realestate_search_listings' },
+      { id: 4, label: 'Enrich shortlist with public property records', type: 'agent', capability: 'realestate_search_properties' },
+      { id: 5, label: 'HITL Broker Review of shortlist', type: 'hitl' },
+      // Contacting an owner is regulated, not routine: its own gate, and the
+      // underlying tool is on the compliance floor regardless of this map.
+      { id: 6, label: 'HITL approval to contact owner (compliance floor)', type: 'hitl' },
+      { id: 7, label: 'Schedule showing and record the engagement', type: 'agent', destructive: true }
+    ]
+  },
   client_intake_legal: {
     key: 'client_intake_legal',
     title: 'Legal: Client Intake to Matter (Six Sigma Swimlane)',

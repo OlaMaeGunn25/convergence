@@ -61,6 +61,8 @@ const { deploymentInfo } = require('./deployment');
 const integrationSeams = require('./integration_seams');
 const verticals = require('./verticals');
 const regionalSources = require('./regional_sources');
+const location = require('./location');
+const businessOnboarding = require('./business_onboarding');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -684,6 +686,11 @@ register({
     vertical: z.string(),
     selectedConnectors: z.array(z.string()).optional(),
     businessName: z.string().optional(),
+    // Required (LOC-01). Device-derived location is optional and consented.
+    businessAddress: z.string(),
+    locationConsent: z.object({ methods: z.object({ gps: z.boolean().optional(), ip: z.boolean().optional() }).optional(), grantedBy: z.string().optional() }).passthrough().optional(),
+    gps: z.object({ lat: z.number(), lng: z.number() }).optional(),
+    ip: z.string().optional(),
     businessProfile: z.object({ purpose: z.string().optional(), customers: z.string().optional(), databases: z.string().optional() }).passthrough().optional(),
     seedDocs: z.array(z.object({ ref: z.string().optional(), text: z.string() })).optional()
   }),
@@ -691,9 +698,47 @@ register({
   handler: (input, ctx) => installation.install({
     tenantId: input.tenantId, vertical: input.vertical,
     selectedConnectors: input.selectedConnectors || [],
-    businessName: input.businessName || null, businessProfile: input.businessProfile || {},
+    businessName: input.businessName || null, businessAddress: input.businessAddress,
+    locationConsent: input.locationConsent || null, gps: input.gps || null, ip: input.ip || null,
+    businessProfile: input.businessProfile || {},
     seedDocs: input.seedDocs || [], actor: ctx.actor || null
   })
+});
+
+register({
+  name: 'get_location_disclosure',
+  title: 'Onboarding — location questions to ask the entity',
+  description: 'The exact onboarding prompts for location: the REQUIRED business address, plus the per-method opt-in questions for GPS and IP correlation with the reason and the data used. Returned as data so every surface asks the identical question (LOC-01/02).',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: () => businessOnboarding.onboardingLocationQuestions()
+});
+
+register({
+  name: 'record_location_consent',
+  title: 'Onboarding — record the location-sharing decision',
+  description: 'Record the tenant\'s per-method decision on GPS and IP correlation. Requires a named company-domain identity. Absent means DENIED — consent is never inferred from silence, and a denied method is refused at correlation rather than quietly used.',
+  inputSchema: z.object({
+    tenantId: z.string(),
+    methods: z.object({ gps: z.boolean().optional(), ip: z.boolean().optional() }).optional(),
+    grantedBy: z.string()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => location.recordConsent(input)
+});
+
+register({
+  name: 'correlate_location',
+  title: 'Correlate the operating region',
+  description: 'Resolve the operating region from the declared business address, and from GPS/IP only where consent was recorded. Reports every method attempted and why it was or was not used, so a region read off the company letterhead is distinguishable from one guessed from an IP.',
+  inputSchema: z.object({
+    businessAddress: z.string().optional(),
+    gps: z.object({ lat: z.number(), lng: z.number() }).optional(),
+    ip: z.string().optional(),
+    consent: z.object({ methods: z.object({ gps: z.boolean().optional(), ip: z.boolean().optional() }).optional() }).passthrough().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => location.correlateLocation(input)
 });
 
 register({
