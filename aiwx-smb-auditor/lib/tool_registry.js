@@ -1288,7 +1288,7 @@ register({
   handler: (input, ctx) => ({ modules: featureModules.listModules(ctx) })
 });
 
-// --- Add-on: task_record (Scribe-style capture) ---
+// --- Add-on: task_record (step-by-step run capture) ---
 register({
   name: 'start_task_record',
   title: 'Start recording a task run',

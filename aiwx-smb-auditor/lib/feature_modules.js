@@ -21,7 +21,7 @@
 const MODULES = {
   task_record: {
     id: 'task_record',
-    name: 'Task Recording (Scribe-style)',
+    name: 'Task Recording',
     description: 'Captures every step an agent performs as it executes, then names, categorizes and saves the run as a reusable record.',
     defaultEnabled: false,
     dependsOn: [],

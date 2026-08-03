@@ -1,6 +1,6 @@
 /**
- * Task Record — Scribe-style capture of what an agent actually did (ADD-ON)
- * ========================================================================
+ * Task Record — capture of what an agent actually did (ADD-ON)
+ * ============================================================
  * A governed task used to execute and terminate: nothing captured the steps, gave
  * the run a human name, filed it under a category, or made it reusable. This
  * module records each step AS IT HAPPENS, then names + categorizes the run and

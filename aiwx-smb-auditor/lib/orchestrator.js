@@ -86,7 +86,7 @@ class Orchestrator {
   }
 
   /**
-   * Whether Scribe-style recording should run for this task. Entirely gated on the
+   * Whether step-by-step recording should run for this task. Entirely gated on the
    * `task_record` add-on, so an unlicensed tenant sees the original behaviour.
    */
   _recordingEnabled(task) {

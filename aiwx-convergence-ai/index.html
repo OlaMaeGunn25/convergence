@@ -267,7 +267,12 @@
                             </div>
                             
                             <div style="display:flex; flex-direction:column; gap:10px; margin-top:1.5rem;">
-                                <button class="btn btn-primary" onclick="triggerProcessAnimation()">
+                                <!-- Commits the selected map to the governed queue: every step becomes a
+                                     real task and every HITL checkpoint a real approval gate. -->
+                                <button class="btn btn-primary" id="governedRunBtn" onclick="runGovernedProcessMap(this)">
+                                    <i class="fa-solid fa-shield-halved"></i> Run as Governed Tasks
+                                </button>
+                                <button class="btn btn-secondary" onclick="triggerProcessAnimation()">
                                     <i class="fa-solid fa-play"></i> Simulate Live Agent Workflow
                                 </button>
                                 <button class="btn btn-secondary" onclick="exportBPMN()">

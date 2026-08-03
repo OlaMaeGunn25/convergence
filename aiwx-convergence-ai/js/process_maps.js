@@ -504,6 +504,39 @@ export async function instantiateGovernedProcessMap(templateKey) {
     }
 }
 
+/**
+ * Hub button handler: execute the currently-selected map for real.
+ *
+ * The other button on this panel simulates the pipeline; this one commits it to
+ * the governed queue. It respects the kill switch for the same reason the
+ * simulator does — an offline agent must not be handed new work — and locks the
+ * button while the gateway call is in flight so a double-click cannot create two
+ * task chains.
+ */
+export async function runGovernedProcessMap(btn = null) {
+    const select = document.getElementById('processMapSelect');
+    if (!select) return null;
+
+    if (STATE.killSwitchActive) {
+        logConsole('Cannot instantiate governed tasks. Agent is currently Offline (Kill Switch Active).', 'error');
+        return null;
+    }
+
+    const original = btn ? btn.innerHTML : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Instantiating Governed Tasks...';
+    }
+    try {
+        return await instantiateGovernedProcessMap(select.value);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+}
+
 export function runAgentProcessMap(templateKey, resume = false) {
     if (STATE.processTimer) clearInterval(STATE.processTimer);
     
