@@ -39,7 +39,10 @@ const ROLES = {
     title: 'Systems Configurator (System-State Eval/Config)',
     plane: PLANES.BUSINESS,
     duty: 'Comprehends each connected system’s full capabilities AND operational processes; binds capability manifests to operating agents; produces readiness.',
-    tools: ['list_connectors', 'match_integrations', 'get_connection_status', 'connect_system']
+    tools: ['list_connectors', 'match_integrations', 'get_connection_status', 'connect_system',
+      // Resolving which MLS board covers the tenant's geography is connection
+      // work, not listing work — it happens before anything is bound.
+      'realestate_mls_board_coverage', 'realestate_mls_connection_options']
   },
   knowledge_compilation: {
     title: 'Knowledge Compilation Agent',
@@ -57,7 +60,12 @@ const ROLES = {
     title: 'Operations Agent',
     plane: PLANES.BUSINESS,
     duty: 'Executes system tasks across connected systems (systems operations).',
-    tools: ['run_audit', 'clio_list_matters', 'clio_create_activity', 'clio_record_trust_transaction']
+    tools: ['run_audit', 'clio_list_matters', 'clio_create_activity', 'clio_record_trust_transaction',
+      'realestate_search_listings', 'realestate_get_listing',
+      'realestate_search_properties', 'realestate_get_property',
+      // Bound but not free: compliance-floor + requiresApproval, so holding the
+      // tool is not the same as being able to run it unattended.
+      'realestate_skip_trace']
   },
   admin_support: {
     title: 'Admin-Support Agent',

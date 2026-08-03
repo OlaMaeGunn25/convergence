@@ -9,11 +9,16 @@
  * / Bridge). Deterministic + offline (a live geocoder plugs in behind detectRegion).
  */
 
+const realEstateApi = require('./connectors/realestateapi');
+
 // Verticals with local/regional data dependencies.
 const VERTICAL_REGIONAL_SOURCES = {
   realestate: {
-    type: 'MLS', standard: 'RESO Web API', connectorId: 'reso_web_api', requiresRegion: true,
-    note: 'MLS access is region-specific — connect the tenant\'s local MLS via the RESO Web API or a RESO aggregator.'
+    type: 'MLS', standard: 'RESO Web API', connectorId: 'reso_web_api',
+    // One key, nationwide, with a live board-coverage lookup — the path that works
+    // before the tenant has negotiated a per-board data licence.
+    aggregatorConnectorId: 'realestateapi', requiresRegion: true,
+    note: 'MLS access is region-specific — connect the tenant\'s local MLS via the RESO Web API, a RESO aggregator, or the RealEstateAPI aggregate feed.'
   }
 };
 
@@ -61,6 +66,42 @@ function mlsForRegion(region) {
 }
 
 /**
+ * Resolve the MLS board(s) covering a region from live coverage data, falling
+ * back to the static table when the aggregate feed is unconfigured.
+ *
+ * The static MLS_BY_REGION table names ONE representative board per state, which
+ * is wrong in most states — Washington alone has several. This is the seam where
+ * that guess becomes an answer.
+ */
+async function boardsForRegionLive(region) {
+  const r = String(region || '').toUpperCase();
+  if (!r) return { region: null, boards: [], source: 'unresolved' };
+
+  const res = await realEstateApi.boardCoverage({ state: r, mode: 'boards' });
+  if (res && res.success && Array.isArray(res.data) && res.data.length) {
+    return {
+      region: r,
+      boards: res.data.map(b => ({
+        code: b.mls_board_code || b.code || null,
+        name: b.mls_board_name || b.name || null,
+        listingCount: b.listingCount ?? null
+      })),
+      source: res.simulated ? 'simulated' : 'live',
+      provenance: res.provenance || (res.simulated ? 'simulated' : 'live')
+    };
+  }
+
+  const fallback = mlsForRegion(r);
+  return {
+    region: r,
+    boards: fallback ? [{ code: null, name: fallback.mls, listingCount: null }] : [],
+    source: 'static_table',
+    provenance: 'static',
+    note: 'Live board coverage unavailable — showing the representative board from the static regional table.'
+  };
+}
+
+/**
  * Recommend the regional data sources to connect for a vertical + resolved region.
  * Sources are proposed for HITL approval before binding (REG-03).
  */
@@ -75,6 +116,20 @@ function recommendSources({ vertical, region = null, gps = null, address = null 
     name: mls.mls, region: det.region, accessMethod: mls.accessMethod,
     requiresApprovalToConnect: true
   }] : [];
+
+  // The aggregate feed is offered alongside the direct board feed whenever a
+  // region resolves. It needs one key instead of a per-board data licence, so it
+  // is usually what a tenant can actually connect on day one — but it is still a
+  // proposal, not a binding (REG-03).
+  if (det.region && spec.aggregatorConnectorId) {
+    sources.push({
+      type: spec.type, connectorId: spec.aggregatorConnectorId, provider: 'realestateapi',
+      name: 'RealEstateAPI aggregate MLS feed', region: det.region,
+      accessMethod: 'REST + MCP', aggregate: true,
+      requiresApprovalToConnect: true,
+      note: 'Nationwide aggregate feed. Board coverage for this region can be confirmed live via mls_board_coverage.'
+    });
+  }
   return {
     vertical: v, regional: true, standard: spec.standard,
     detectedRegion: det.region, regionSource: det.source, sources,
@@ -82,4 +137,4 @@ function recommendSources({ vertical, region = null, gps = null, address = null 
   };
 }
 
-module.exports = { detectRegion, mlsForRegion, recommendSources, VERTICAL_REGIONAL_SOURCES, MLS_BY_REGION, STATE_BBOX };
+module.exports = { detectRegion, mlsForRegion, boardsForRegionLive, recommendSources, VERTICAL_REGIONAL_SOURCES, MLS_BY_REGION, STATE_BBOX };

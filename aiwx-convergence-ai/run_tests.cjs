@@ -253,6 +253,7 @@ evalCode = evalCode.replace(/\bvar STATE\b/g, 'global.STATE');
 evalCode = evalCode.replace(/\bvar PROCESS_TEMPLATES\b/g, 'global.PROCESS_TEMPLATES');
 evalCode = evalCode.replace(/\bconst STATE\b/g, 'global.STATE');
 evalCode = evalCode.replace(/\bconst PROCESS_TEMPLATES\b/g, 'global.PROCESS_TEMPLATES');
+evalCode = evalCode.replace(/\bconst GOVERNED_MAP_KEYS\b/g, 'global.GOVERNED_MAP_KEYS');
 
 // Evaluate code in context
 eval(evalCode);
@@ -338,6 +339,19 @@ assert(PROCESS_TEMPLATES.p2p && PROCESS_TEMPLATES.voice && PROCESS_TEMPLATES.tra
 const travelMap = PROCESS_TEMPLATES.travel;
 assert(travelMap.nodes.length === 7, "Six Sigma Travel SIPOC Map architecture includes exactly 7 logical node states");
 assert(travelMap.nodes.some(n => n.type === 'hitl'), "Process workflow contains explicit safety human-in-the-loop (HITL) checkpoints");
+
+// Governed-map alignment: the dropdown must tell the truth about what the gateway
+// will actually execute. A governed key that names a nonexistent template is a
+// dead button; a hard-coded <option> list drifts from the templates silently.
+assert(GOVERNED_MAP_KEYS !== undefined, "Governed process-map key mapping is defined");
+const governedKeys = Object.keys(GOVERNED_MAP_KEYS);
+assert(governedKeys.length > 0, "At least one process map is wired to a governed gateway definition");
+assert(governedKeys.every(k => PROCESS_TEMPLATES[k]), "Every governed map key resolves to a real process template");
+
+const indexHtml = fs.readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+assert(/id="processMapSelect"[^>]*><\/select>/.test(indexHtml), "Process-map dropdown is built from the templates, not hard-coded in markup");
+assert(indexHtml.includes('id="governedRunBtn"'), "Operations hub exposes the governed-run control");
+assert(/onchange="syncGovernedRunButton\(\)"/.test(indexHtml), "Changing the selected map re-checks whether it can be run for real");
 
 // Test 5: HITL Event Dispatcher & State Transition Mappings
 console.log(`\n${CYAN}[5/5] HITL Queue Operations & Data Syncs...${RESET}`);

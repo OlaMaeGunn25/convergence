@@ -208,6 +208,20 @@ const CONNECTORS = [
     docs: 'https://bridgedataoutput.com'
   },
   {
+    // Aggregated alternative to the per-board feeds above: one key, nationwide,
+    // with a board-coverage lookup so the tenant's LOCAL board resolves from
+    // geography. Also exposes a vendor MCP server (see connectors/realestateapi).
+    id: 'realestateapi', name: 'RealEstateAPI (MLS & property records)', category: 'Real Estate MLS',
+    kind: 'api', auth: 'api_key', envKeys: ['REALESTATEAPI_KEY'],
+    vertical: ['Real Estate', 'realestate'],
+    matchSignals: ['realestateapi', 'real estate api', 'mls', 'listing', 'brokerage', 'broker', 'realtor', 'property data', 'comps', 'parcel'],
+    capabilities: ['search_listings', 'get_listing', 'mls_board_coverage', 'search_properties', 'get_property'],
+    // Skip trace resolves a person's phone/email — compliance floor, never routine.
+    destructiveCapabilities: ['skip_trace'],
+    status: 'available', region: true, mcp: true,
+    docs: 'https://developer.realestateapi.com'
+  },
+  {
     id: 'twilio', name: 'Twilio', category: 'Messaging & Voice',
     kind: 'api', auth: 'api_key', envKeys: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'],
     vertical: 'universal',

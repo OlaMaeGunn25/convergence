@@ -446,6 +446,82 @@ const GOVERNED_MAP_KEYS = {
     legal_deposition: 'client_intake_legal'
 };
 
+/** Can this template be committed to the governed queue, or is it a picture only? */
+export function isGovernedMap(templateKey) {
+    return Object.prototype.hasOwnProperty.call(GOVERNED_MAP_KEYS, templateKey);
+}
+
+/** Dropdown label: the template title minus its trailing notation suffix. */
+function shortLabel(title) {
+    return String(title).replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+/**
+ * Build the dropdown from PROCESS_TEMPLATES, split so the operator can see which
+ * maps the gateway will actually execute.
+ *
+ * This is also what makes the vertical switcher honest: it sets the select to a
+ * per-vertical key (realestate_lead, retail_order, …), and with only three options
+ * hard-coded in the markup every one of those assignments silently did nothing.
+ *
+ * `recorded_rental` is excluded — the Observer agent adds it once a recording has
+ * actually produced it.
+ */
+export function populateProcessMapSelect(selectedKey = null) {
+    const select = document.getElementById('processMapSelect');
+    if (!select) return;
+
+    const keys = Object.keys(PROCESS_TEMPLATES).filter(k => k !== 'recorded_rental');
+    const governed = keys.filter(isGovernedMap);
+    const visual = keys.filter(k => !isGovernedMap(k));
+
+    const group = (label, list) => {
+        if (!list.length) return '';
+        const opts = list.map(k => `<option value="${k}">${shortLabel(PROCESS_TEMPLATES[k].title)}</option>`).join('');
+        return `<optgroup label="${label}">${opts}</optgroup>`;
+    };
+
+    select.innerHTML =
+        group('Governed — executes for real', governed) +
+        group('Visual only — no governed definition yet', visual);
+
+    const want = selectedKey || STATE.activeProcessKey || governed[0] || keys[0];
+    if (want && select.querySelector(`option[value="${want}"]`)) select.value = want;
+    syncGovernedRunButton();
+}
+
+/** Append a template to the dropdown at runtime (used by the Observer agent). */
+export function addProcessMapOption(key, label) {
+    const select = document.getElementById('processMapSelect');
+    if (!select || select.querySelector(`option[value="${key}"]`)) return;
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = label;
+    const groups = select.querySelectorAll('optgroup');
+    (groups.length ? groups[groups.length - 1] : select).appendChild(opt);
+}
+
+/**
+ * Keep the governed-run button honest about the current selection: a map with no
+ * governed definition cannot be committed, so the button says so rather than
+ * failing after the click.
+ */
+export function syncGovernedRunButton() {
+    const select = document.getElementById('processMapSelect');
+    const btn = document.getElementById('governedRunBtn');
+    if (!select || !btn) return;
+
+    const ok = isGovernedMap(select.value);
+    btn.disabled = !ok;
+    btn.title = ok
+        ? 'Instantiate this map as governed tasks with real approval gates.'
+        : 'This map is visual-only — no governed definition exists for it yet.';
+    btn.innerHTML = ok
+        ? '<i class="fa-solid fa-shield-halved"></i> Run as Governed Tasks'
+        : '<i class="fa-solid fa-shield-halved"></i> Visual Only — Not Governed';
+    btn.style.opacity = ok ? '' : '0.55';
+}
+
 /**
  * Run a process map FOR REAL through the governed gateway.
  *

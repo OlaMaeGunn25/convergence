@@ -19,7 +19,12 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 
-const FLOOR_TOOLS = new Set(['clio_record_trust_transaction', 'gusto_run_payroll', 'gusto_terminate_employee']);
+const FLOOR_TOOLS = new Set([
+  'clio_record_trust_transaction', 'gusto_run_payroll', 'gusto_terminate_employee',
+  // Resolves a person's phone/email. Regulated contact data (TCPA / state DNC):
+  // no standard autonomy grant may delegate it.
+  'realestate_skip_trace'
+]);
 // Highest-risk actions: money movement, trust funds, protected health info, and
 // payroll/compensation (moves employee money + exposes compensation data).
 const FLOOR_PATTERN = /trust|iolta|refund|payment|payout|transfer|wire|phi|payroll|compensation|salary|terminate/i;

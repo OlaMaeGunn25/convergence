@@ -9,7 +9,7 @@ initErrorBoundary();
 import { STATE, saveLocalState, updateState, seedDemoData } from './js/state.js';
 import { logConsole, injectLayout } from './js/components.js';
 import { verifyActivationToken, verifyAdminSession, safeBtoa, safeAtob, parseAndVerifyToken } from './js/auth.js';
-import { PROCESS_TEMPLATES, renderProcessMap, runAgentProcessMap, instantiateGovernedProcessMap, runGovernedProcessMap } from './js/process_maps.js';
+import { PROCESS_TEMPLATES, renderProcessMap, runAgentProcessMap, instantiateGovernedProcessMap, runGovernedProcessMap, populateProcessMapSelect, syncGovernedRunButton, addProcessMapOption, isGovernedMap } from './js/process_maps.js';
 import { updateAgentBadgeState, toggleMinimizeBadge, dismissBadge, restoreBadge, toggleKillSwitch, injectBadge } from './js/agent_badge.js';
 import { renderHITLQueue, approveTask, rejectTask, reverseTask, promptRevision, analyzeAndAutoCorrect, renderReversalHistory, updateConnectionBadge, openAiComposeModal, closeAiComposeModal, applyAiDraft, initTaskStream } from './js/hitl_queue.js';
 import { changeReportFilters, printReport } from './js/reporting.js';
@@ -43,6 +43,9 @@ Object.assign(window, {
     // governed task and each HITL checkpoint an actual approval gate.
     instantiateGovernedProcessMap,
     runGovernedProcessMap,
+    populateProcessMapSelect,
+    syncGovernedRunButton,
+    isGovernedMap,
     renderProcessMap,
     updateAgentBadgeState,
     toggleMinimizeBadge,
@@ -211,6 +214,7 @@ function superAdminSwitchVertical(val) {
     const mapSelect = document.getElementById('processMapSelect');
     if (mapSelect) {
         mapSelect.value = mapKey;
+        syncGovernedRunButton();
     }
     renderProcessMap(mapKey);
     startTelemetryLogRunner();
@@ -610,15 +614,12 @@ function toggleWorkflowRecorder() {
             }
             logConsole("[OBSERVER] Recording finished. Synthesized Six Sigma Process Map successfully!", "success");
             
-            // Add custom vertical to dropdown dynamically
+            // Add the synthesized map to the dropdown. It lands under "visual only" —
+            // an observed workflow has no governed definition on the gateway.
+            addProcessMapOption('recorded_rental', 'Recorded Event Rental Flow');
             const select = document.getElementById('processMapSelect');
-            if (select && !select.querySelector('option[value="recorded_rental"]')) {
-                const opt = document.createElement('option');
-                opt.value = 'recorded_rental';
-                opt.textContent = 'Recorded Event Rental Flow';
-                select.appendChild(opt);
-                select.value = 'recorded_rental';
-            }
+            if (select) select.value = 'recorded_rental';
+            syncGovernedRunButton();
             renderProcessMap('recorded_rental');
         }
     }
@@ -627,6 +628,9 @@ function toggleWorkflowRecorder() {
 
 // Bootloader event bindings
 document.addEventListener('DOMContentLoaded', () => {
+    // Build the process-map dropdown before anything tries to set its value.
+    populateProcessMapSelect();
+
     // If already verified previously, auto unlock (for direct local developer ease)
     const token = localStorage.getItem('aiwx_active_token');
     if (token) {

@@ -1969,6 +1969,97 @@ async function runTests() {
     assert(false, `Orchestrator auto-recording tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 41: RealEstateAPI MLS connector + regional board binding ---
+  try {
+    const reapi = require('../lib/connectors/realestateapi');
+    const catalog41 = require('../lib/connectors/catalog');
+    const regional41 = require('../lib/regional_sources');
+    const registry41 = require('../lib/tool_registry');
+    const { isComplianceFloor } = require('../lib/autonomy');
+
+    // A. Catalog registration
+    const c41 = catalog41.get('realestateapi');
+    assert(!!c41 && c41.category === 'Real Estate MLS', 'RealEstateAPI is in the connector catalog under Real Estate MLS');
+    assert(c41.destructiveCapabilities.includes('skip_trace'), 'Skip trace is marked destructive on the connector');
+    assert(c41.mcp === true, 'The connector advertises an MCP surface');
+
+    // B. A geography is mandatory — no unbounded sweeps
+    const noGeo = await reapi.searchListings({ bedrooms: 3 });
+    assert(noGeo.success === false && /geography is required/i.test(noGeo.error), 'An MLS search without a geography is refused');
+    const noGeoProp = await reapi.searchProperties({ size: 10 });
+    assert(noGeoProp.success === false, 'A property search without a geography is refused');
+
+    // C. Reads degrade to a labeled simulated dataset
+    const listings = await reapi.searchListings({ city: 'Seattle', state: 'WA' });
+    assert(listings.success === true && listings.simulated === true, 'MLS search degrades to a labeled simulated dataset when unconfigured');
+    assert(listings.provenance === 'simulated', 'The simulated result carries simulated provenance');
+    assert(!!listings.license && listings.license.licensed === true, 'Listing results carry the MLS licence obligation');
+
+    const detail = await reapi.getListing({ listingId: 'L-88213' });
+    assert(detail.success === true && detail.data.listingId === 'L-88213', 'Listing detail resolves the requested listing');
+    assert((await reapi.getListing({})).success === false, 'Listing detail requires listingId or mlsNumber');
+
+    // D. Personal contact data never rides along on an ordinary read
+    const redacted = reapi.redactOwnerContact({ name: 'A. Owner', phone: '555-0100', email: 'a@example.com', nested: { mobile: '555-0111', city: 'Seattle' } });
+    assert(/redacted/.test(redacted.phone) && /redacted/.test(redacted.email), 'Owner phone and email are redacted');
+    assert(/redacted/.test(redacted.nested.mobile) && redacted.nested.city === 'Seattle', 'Redaction is recursive and leaves business fields intact');
+
+    // E. Skip trace is on the compliance floor
+    assert(isComplianceFloor('realestate_skip_trace') === true, 'Skip trace is a compliance-floor action (regulated contact data)');
+    const st1 = await reapi.skipTrace({ address: '1420 Alder St' });
+    assert(st1.success === false && st1.requiresApproval === true, 'Skip trace refuses without explicit approval');
+    const st2 = await reapi.skipTrace({ address: '1420 Alder St', approved: true });
+    assert(st2.success === false && /purpose/i.test(st2.error), 'An approved skip trace still requires a stated purpose');
+    const st3 = await reapi.skipTrace({ address: '1420 Alder St', approved: true, purpose: 'Listing appointment follow-up requested by owner' });
+    assert(st3.success === true && st3.purpose === 'Listing appointment follow-up requested by owner', 'The stated purpose is recorded with the result');
+    assert(/DNC/i.test(st3.compliance), 'The skip-trace result carries the DNC/consent obligation');
+
+    // F. Board coverage resolves the LOCAL board from geography
+    const boards = await reapi.boardCoverage({ state: 'WA' });
+    assert(boards.success === true && boards.data.some(b => b.mls_board_code === 'NWMLS'), 'Board coverage returns the boards for a state');
+    assert((await reapi.boardCoverage({ state: 'WA', mode: 'bogus' })).success === false, 'An invalid coverage mode is refused');
+    assert((await reapi.boardCoverage({})).success === false, 'Board coverage requires a state');
+
+    const live = await regional41.boardsForRegionLive('WA');
+    assert(live.region === 'WA' && live.boards.length > 0, 'Regional binding resolves boards for the detected region');
+    assert(live.source === 'simulated' || live.source === 'live' || live.source === 'static_table', 'The board resolution states its source');
+
+    // G. The aggregate feed is offered alongside the direct per-board feed
+    const rec41 = regional41.recommendSources({ vertical: 'realestate', region: 'WA' });
+    assert(rec41.sources.some(s => s.connectorId === 'reso_web_api'), 'The direct per-board RESO feed is still proposed');
+    const agg = rec41.sources.find(s => s.connectorId === 'realestateapi');
+    assert(!!agg && agg.aggregate === true, 'The aggregate feed is proposed alongside it');
+    assert(agg.requiresApprovalToConnect === true, 'The aggregate feed is a proposal, not a binding (REG-03)');
+
+    // H. MCP surface is described without ever embedding the key
+    const mcp41 = reapi.mcpConfig();
+    assert(mcp41.transport === 'sse' && /mcp\.realestateapi\.com/.test(mcp41.url), 'The MCP surface is described with its SSE endpoint');
+    assert(mcp41.secretRef === 'REALESTATEAPI_KEY' && !JSON.stringify(mcp41).includes(process.env.REALESTATEAPI_KEY || ' '), 'The MCP config references the secret rather than embedding it');
+
+    // I. Registry wiring
+    const gated41 = await registry41.invoke('realestate_skip_trace', { address: '1420 Alder St', purpose: 'x' }, { actor: 'agent' });
+    assert(gated41.ok === false && gated41.status === 'requires_approval', 'realestate_skip_trace is approval-gated by the registry');
+    const okRead41 = await registry41.invoke('realestate_search_listings', { zip: '98122' }, { actor: 'agent' });
+    assert(okRead41.ok === true && okRead41.result.simulated === true, 'realestate_search_listings reads through the registry');
+    const opts41 = await registry41.invoke('realestate_mls_connection_options', { address: '1420 Alder St, Seattle, WA 98122' }, { actor: 'agent' });
+    assert(opts41.ok === true && opts41.result.detectedRegion === 'WA', 'Connection options detect the region from a postal address');
+    assert(opts41.result.boards && opts41.result.boards.boards.length > 0, 'Connection options include resolved board coverage');
+
+    // J. Role bindings — an unbound tool is unreachable by every agent
+    const roster41 = require('../lib/agent_roster');
+    assert(roster41.roleAllowsTool('operations', 'realestate_search_listings') === true, 'The Operations agent is bound to the MLS listing tools');
+    assert(roster41.roleAllowsTool('systems_configurator', 'realestate_mls_connection_options') === true, 'The Systems Configurator resolves MLS connection options');
+    assert(roster41.roleAllowsTool('systems_configurator', 'realestate_skip_trace') === false, 'The Systems Configurator cannot skip trace (least privilege)');
+    assert(roster41.roleAllowsTool('delivery', 'realestate_search_listings') === false, 'Unrelated roles are not bound to MLS tools');
+
+    // K. Listing events route by risk
+    assert(reapi.mapListingEventToTask({ event_type: 'listing.price_changed' }).status === 'proposed', 'A price-change event maps to a proposed task');
+    assert(reapi.mapListingEventToTask({ event_type: 'listing.sold' }).status === 'pending_approval', 'A sold event requires approval');
+    assert(reapi.mapListingEventToTask({ event_type: 'listing.wat' }).status === 'pending_approval', 'An unrecognized MLS event fails closed to approval');
+  } catch (e) {
+    assert(false, `RealEstateAPI MLS connector tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

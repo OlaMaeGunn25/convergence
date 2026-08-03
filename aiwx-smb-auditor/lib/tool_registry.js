@@ -53,6 +53,7 @@ const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
 const gusto = require('./connectors/gusto');
+const realEstateApi = require('./connectors/realestateapi');
 const upskilling = require('./upskilling');
 const { UpskillingEnrollment } = require('./upskilling');
 const { HitlOnboarding } = require('./hitl_onboarding');
@@ -1101,6 +1102,94 @@ register({
   inputSchema: z.object({ payrollId: z.string(), companyId: z.string().optional() }),
   annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
   handler: (input, ctx) => gusto.runPayroll(Object.assign({}, input, { approved: ctx.approved === true }))
+});
+
+// --- Real Estate: MLS, property records & parcel data (RealEstateAPI) ---
+register({
+  name: 'realestate_search_listings',
+  title: 'MLS — search listings',
+  description: 'Search MLS listings for a bounded geography (MLS board, ZIP, city+state, county+state, or a radius around an address/point). A geography is required — an unbounded sweep is refused. Owner contact fields are redacted; results carry the board\'s licence obligation.',
+  inputSchema: z.object({
+    mlsBoardCode: z.string().optional(), city: z.string().optional(), state: z.string().optional(),
+    county: z.string().optional(), zip: z.string().optional(), address: z.string().optional(),
+    latitude: z.number().optional(), longitude: z.number().optional(), radius: z.number().optional(),
+    status: z.string().optional(), listingPriceMin: z.number().optional(), listingPriceMax: z.number().optional(),
+    bedrooms: z.number().optional(), bathrooms: z.number().optional(), daysOnMarketMax: z.number().optional(),
+    size: z.number().optional(), resultIndex: z.number().optional(), includePhotos: z.boolean().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => realEstateApi.searchListings(input)
+});
+
+register({
+  name: 'realestate_get_listing',
+  title: 'MLS — listing detail',
+  description: 'Full detail for one MLS listing by listingId or mlsNumber, including agent/office, media and public-record enrichment. Owner contact fields are redacted; the result carries the board\'s licence obligation.',
+  inputSchema: z.object({ listingId: z.string().optional(), mlsNumber: z.string().optional(), mlsBoardCode: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => realEstateApi.getListing(input)
+});
+
+register({
+  name: 'realestate_mls_board_coverage',
+  title: 'MLS — board coverage for a region',
+  description: 'Which MLS board(s), ZIPs, counties or cities are covered in a state. This is how a brokerage\'s LOCAL board is resolved from its geography before a regional MLS connection is proposed for approval (REG-01/02).',
+  inputSchema: z.object({
+    state: z.string(), mode: z.enum(['boards', 'zips', 'counties', 'cities']).optional(),
+    groupByState: z.boolean().optional(), showAll: z.boolean().optional(),
+    size: z.number().optional(), cursor: z.string().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => realEstateApi.boardCoverage(input)
+});
+
+register({
+  name: 'realestate_search_properties',
+  title: 'Property records — search',
+  description: 'Search public property records for a bounded geography (assessment, valuation, sale history, ownership status flags). A geography is required. Owner contact fields are redacted.',
+  inputSchema: z.object({
+    city: z.string().optional(), state: z.string().optional(), county: z.string().optional(),
+    zip: z.string().optional(), address: z.string().optional(),
+    latitude: z.number().optional(), longitude: z.number().optional(), radius: z.number().optional(),
+    size: z.number().optional(), resultIndex: z.number().optional(), count: z.boolean().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => realEstateApi.searchProperties(input)
+});
+
+register({
+  name: 'realestate_get_property',
+  title: 'Property records — detail',
+  description: 'Single public property record by id, address, or apn+fips. Owner contact fields are redacted.',
+  inputSchema: z.object({ id: z.string().optional(), address: z.string().optional(), apn: z.string().optional(), fips: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => realEstateApi.getProperty(input)
+});
+
+register({
+  name: 'realestate_skip_trace',
+  title: 'Property owner — skip trace',
+  description: 'Resolve a property owner\'s personal phone and email. REGULATED CONTACT DATA (TCPA / state DNC) — COMPLIANCE FLOOR: requires explicit human approval, cannot be delegated by a standard autonomy grant, and requires a stated purpose that is recorded with the result. DNC and litigator flags are returned, not stripped.',
+  inputSchema: z.object({
+    address: z.string().optional(), city: z.string().optional(), state: z.string().optional(), zip: z.string().optional(),
+    firstName: z.string().optional(), lastName: z.string().optional(), mailAddress: z.string().optional(),
+    purpose: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => realEstateApi.skipTrace(Object.assign({}, input, { approved: ctx.approved === true }))
+});
+
+register({
+  name: 'realestate_mls_connection_options',
+  title: 'MLS — connection options for a region',
+  description: 'Resolve the tenant\'s region (explicit, address, or GPS) and return the MLS connection options to propose for approval: the direct per-board RESO feed and the aggregate feed, plus live board coverage where available. Proposals only — binding still requires HITL approval (REG-03).',
+  inputSchema: z.object({ region: z.string().optional(), address: z.string().optional(), gps: z.object({ lat: z.number(), lng: z.number() }).optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: async (input) => {
+    const rec = regionalSources.recommendSources({ vertical: 'realestate', region: input.region, address: input.address, gps: input.gps });
+    const boards = rec.detectedRegion ? await regionalSources.boardsForRegionLive(rec.detectedRegion) : null;
+    return Object.assign({}, rec, { boards, mcp: realEstateApi.mcpConfig() });
+  }
 });
 
 register({

@@ -259,11 +259,9 @@
                             
                             <div class="form-group">
                                 <label class="form-label">Administrative Flow Architecture</label>
-                                <select id="processMapSelect" class="form-select">
-                                    <option value="p2p">Procure-to-Pay Invoice Processing</option>
-                                    <option value="voice">Inbound Customer Phone Routing</option>
-                                    <option value="travel">Logistics: Corporate Travel Booking</option>
-                                </select>
+                                <!-- Options are built from PROCESS_TEMPLATES at init and grouped by
+                                     whether the gateway can actually execute the map. -->
+                                <select id="processMapSelect" class="form-select" onchange="syncGovernedRunButton()"></select>
                             </div>
                             
                             <div style="display:flex; flex-direction:column; gap:10px; margin-top:1.5rem;">
