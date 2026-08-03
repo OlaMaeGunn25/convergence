@@ -1824,6 +1824,84 @@ async function runTests() {
     assert(false, `Prompt-injection defence tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 39: Add-on modules — task record, playbooks, process-map bridge ---
+  try {
+    const os = require('os'); const fsx = require('fs'); const pth = require('path');
+    const modules = require('../lib/feature_modules');
+    const { TaskRecordStore, inferName, inferCategory } = require('../lib/task_record');
+    const { PlaybookLibrary } = require('../lib/playbook_library');
+    const bridge = require('../lib/process_map_bridge');
+    const { TaskModel } = require('../lib/task_model');
+    const reg = require('../lib/tool_registry');
+
+    // A. MODULARITY: add-ons are OFF by default and gated at the registry
+    assert(modules.isEnabled('task_record', {}) === false, 'Add-ons are disabled by default (licensable)');
+    assert(modules.isEnabled('task_record', { modules: ['task_record'] }) === true, 'A tenant licence enables an add-on');
+    assert(modules.isEnabled('playbook_library', { modules: ['playbook_library'] }) === false, 'A dependent add-on stays off without its dependency (task_record)');
+    assert(modules.isEnabled('playbook_library', { modules: ['task_record', 'playbook_library'] }) === true, 'Enabling the dependency unlocks the dependent add-on');
+    assert(modules.isEnabled('task_record', { modules: '*' }) === true, 'Wildcard licence enables everything');
+    assert(modules.moduleForTool('run_audit') === null, 'Core tools belong to no module (always available)');
+    const denied = await reg.invoke('list_task_records', {}, {});
+    assert(denied.ok === false && denied.status === 'module_disabled', 'An unlicensed add-on tool is refused at the registry gate');
+    const allowed = await reg.invoke('list_task_records', {}, { modules: ['task_record'] });
+    assert(allowed.ok === true, 'The same tool works once the add-on is licensed');
+
+    // B. TASK RECORD: capture steps, then auto-name + auto-categorize
+    const rf = pth.join(os.tmpdir(), `aiwx_rec_${Date.now()}.json`);
+    const recs = new TaskRecordStore({ file: rf });
+    await recs.start({ taskId: 'tk1', tenantId: 'adn', taskType: 'clio.matter.create', agentId: 'agent_ops' });
+    await recs.recordStep({ taskId: 'tk1', tool: 'list_contacts', system: 'Clio', summary: 'Found the client' });
+    await recs.recordStep({ taskId: 'tk1', tool: 'create_matter', system: 'Clio', summary: 'Opened the matter' });
+    const done = await recs.finalize({ taskId: 'tk1', status: 'completed', outcome: 'Matter 00123 opened' });
+    assert(done.steps.length === 2 && done.steps[0].n === 1, 'Every step is captured in order as it executes');
+    assert(done.name && /list contacts/i.test(done.name) && /\+1 step/.test(done.name), 'The run is AUTO-NAMED from what was actually done');
+    assert(done.category === 'Legal Operations', 'The run is AUTO-CATEGORIZED from the capabilities used');
+    assert(inferCategory('run_payroll') === 'Finance & Billing' && inferCategory('nothing') === 'General Operations', 'Category inference is deterministic with a sane default');
+    let closed = false; try { await recs.recordStep({ taskId: 'tk1', tool: 'x' }); } catch (e) { closed = /completed/.test(e.message); }
+    assert(closed, 'A finalized record is closed to further steps (append-only procedure log)');
+
+    // C. PLAYBOOK: promote a record, then IMPROVE it run over run
+    const pf = pth.join(os.tmpdir(), `aiwx_pb_${Date.now()}.json`);
+    const lib = new PlaybookLibrary({ file: pf });
+    let rejected = false;
+    try { await lib.saveFromRecord({ taskId: 'x', status: 'recording' }); } catch (e) { rejected = /completed/.test(e.message); }
+    assert(rejected, 'Only a COMPLETED record can become a playbook');
+    const pb = await lib.saveFromRecord(done, { ownerAgentId: 'agent_ops' });
+    assert(pb.version === 1 && pb.steps.length === 2 && pb.name === done.name && pb.category === done.category, 'A playbook is created v1, named + categorized from the record');
+    const v2 = await lib.improve({ playbookId: pb.id, reason: 'hitl_correction', note: 'Run the conflict check first', hitlId: 'h1', steps: [{ n: 1, tool: 'list_matters' }, { n: 2, tool: 'list_contacts' }, { n: 3, tool: 'create_matter' }] });
+    assert(v2.version === 2 && v2.steps.length === 3, 'Improving the playbook creates a NEW VERSION with revised steps');
+    assert(v2.revisions[0].reason === 'hitl_correction' && v2.revisions[0].weight === 'high', 'A HITL correction is recorded and weighted highest');
+    const v3 = await lib.improve({ playbookId: pb.id, reason: 'step_failure', succeeded: false });
+    assert(v3.version === 3 && v3.runCount === 3 && v3.successCount === 2 && lib.successRate(v3) === 67, 'Run/success counts + success rate track reliability across runs');
+    assert((await lib.findForTask({ tenantId: 'adn', taskType: 'clio.matter.create' })).id === pb.id, 'An existing proven playbook is found before rebuilding from scratch');
+    try { fsx.unlinkSync(rf); fsx.unlinkSync(pf); } catch (e) {}
+
+    // D. PROCESS-MAP BRIDGE: a drawn HITL checkpoint becomes a REAL governed gate
+    const maps = bridge.listMaps();
+    assert(maps.length >= 3 && maps.every(m => m.hitlCheckpoints >= 1), 'Six Sigma maps are available and each has a HITL checkpoint');
+    assert(maps.some(m => m.type === 'sipoc') && maps.some(m => m.type === 'swimlane'), 'Both SIPOC and swimlane map types exist');
+    const tmf = pth.join(os.tmpdir(), `aiwx_pm_${Date.now()}.json`);
+    const tm = new TaskModel({ file: tmf });
+    const inst = await bridge.instantiate({ mapKey: 'client_intake_legal', tenantId: 'adn', actor: 'op', taskModel: tm });
+    assert(inst.tasks.length === 4, 'Each map step becomes a governed task');
+    const hitlTask = inst.tasks.find(t => t.type === 'hitl');
+    assert(hitlTask && hitlTask.status === 'pending_approval', 'The HITL checkpoint IS a real governed approval gate (pending_approval), not a drawing');
+    const afterHitl = inst.tasks.find(t => t.stepId === 4);
+    assert(afterHitl.dependsOn.includes(hitlTask.id), 'Downstream steps are BLOCKED behind the human checkpoint by a dependency edge');
+    assert(inst.tasks[1].dependsOn.length === 1, 'Steps are dependency-chained so the map cannot run out of order');
+    try { fsx.unlinkSync(tmf); } catch (e) {}
+
+    // E. Tools registered + module catalog
+    ['start_task_record', 'record_task_step', 'finalize_task_record', 'save_playbook', 'improve_playbook', 'list_process_maps', 'instantiate_process_map', 'list_feature_modules']
+      .forEach(t => assert(reg.has(t), `Tool ${t} is registered`));
+    const cat = await reg.invoke('list_feature_modules', {}, {});
+    assert(cat.ok && cat.result.modules.length === 3 && cat.result.modules.every(m => m.enabled === false), 'The add-on catalog lists all modules as disabled for an unlicensed tenant');
+    const pmOk = await reg.invoke('list_process_maps', {}, { modules: ['process_mapping'] });
+    assert(pmOk.ok === true && pmOk.result.maps.length >= 3, 'Process-mapping add-on works when licensed');
+  } catch (e) {
+    assert(false, `Add-on modules (task record / playbooks / process maps) tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

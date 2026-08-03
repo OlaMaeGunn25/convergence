@@ -45,6 +45,10 @@ const { ChatSession } = require('./hitl_chat');
 const { reengineerPrompt } = require('./graph_of_thought');
 const precommit = require('./precommit');
 const injectionGuard = require('./injection_guard');
+const featureModules = require('./feature_modules');
+const { TaskRecordStore } = require('./task_record');
+const { PlaybookLibrary } = require('./playbook_library');
+const processMapBridge = require('./process_map_bridge');
 const compliance = require('./compliance');
 const { ComplianceReporting } = require('./compliance_reporting');
 const { HumanCompanion } = require('./human_companion');
@@ -65,6 +69,8 @@ const attributionLog = new AttributionLog();
 const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
 // Upskilling enrolment (human-care plane) + HITL onboarding must be constructed
 // BEFORE Installation, which onboards HITLs at install time.
+const taskRecords = new TaskRecordStore();
+const playbooks = new PlaybookLibrary();
 const upskillingEnrollment = new UpskillingEnrollment();
 const hitlOnboarding = new HitlOnboarding({ hitlRegistry, enrollment: upskillingEnrollment });
 const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase, hitlOnboarding });
@@ -134,6 +140,14 @@ async function invoke(name, input = {}, ctx = {}) {
   const parsed = tool.inputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: 'Input validation failed.', issues: parsed.error.issues.map(i => ({ path: i.path.join('.'), message: i.message })) };
+  }
+
+  // Add-on gate: a tool belonging to a feature module that is not enabled for
+  // this tenant is refused, so knowing a tool name is not enough to use an
+  // unlicensed add-on. Core tools are unaffected.
+  const moduleAccess = featureModules.checkToolAccess(name, ctx);
+  if (!moduleAccess.ok) {
+    return { ok: false, status: 'module_disabled', module: moduleAccess.moduleId, error: moduleAccess.reason };
   }
 
   // CTL-01 (absolute authority): an agent may never self-approve past a human
@@ -1261,6 +1275,150 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: () => ({ verticals: verticals.list() })
+});
+
+// ── ADD-ON MODULES (gated by lib/feature_modules.js — disabled by default) ────
+
+register({
+  name: 'list_feature_modules',
+  title: 'List optional add-on modules',
+  description: 'The catalog of licensable add-on modules and whether each is enabled for this tenant. Core capabilities are always on and are not listed here.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => ({ modules: featureModules.listModules(ctx) })
+});
+
+// --- Add-on: task_record (Scribe-style capture) ---
+register({
+  name: 'start_task_record',
+  title: 'Start recording a task run',
+  description: 'ADD-ON (task_record). Begin capturing the steps an agent performs for a task, so the run can be named, categorized and saved.',
+  inputSchema: z.object({ taskId: z.string(), tenantId: z.string().optional(), taskType: z.string().optional(), name: z.string().optional(), category: z.string().optional(), agentId: z.string().optional(), hitlId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => taskRecords.start({ ...input, tenantId: input.tenantId || ctx.tenantId || null, agentId: input.agentId || ctx.agentId || null }).then(record => ({ record }))
+});
+
+register({
+  name: 'record_task_step',
+  title: 'Record a step as it executes',
+  description: 'ADD-ON (task_record). Append a step (tool, system, summary, outcome) to the run log — append-only, so a finished record reads as a step-by-step procedure.',
+  inputSchema: z.object({ taskId: z.string(), tool: z.string(), summary: z.string().optional(), system: z.string().optional(), outcome: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => taskRecords.recordStep({ ...input, actor: ctx.actor || null, agentId: ctx.agentId || null }).then(step => ({ step }))
+});
+
+register({
+  name: 'finalize_task_record',
+  title: 'Finalize + auto-name/categorize a task record',
+  description: 'ADD-ON (task_record). Close the run and, unless supplied, AUTO-NAME and AUTO-CATEGORIZE it from what was actually done.',
+  inputSchema: z.object({ taskId: z.string(), status: z.enum(['completed', 'failed', 'abandoned']).optional(), outcome: z.string().optional(), name: z.string().optional(), category: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => taskRecords.finalize(input).then(record => ({ record }))
+});
+
+register({
+  name: 'get_task_record',
+  title: 'Get a task record',
+  description: 'ADD-ON (task_record). Fetch the recorded procedure for a task.',
+  inputSchema: z.object({ taskId: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => taskRecords.getByTask(input.taskId).then(record => ({ record }))
+});
+
+register({
+  name: 'list_task_records',
+  title: 'List task records',
+  description: 'ADD-ON (task_record). List recorded runs, optionally by category or status.',
+  inputSchema: z.object({ tenantId: z.string().optional(), category: z.string().optional(), status: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => taskRecords.list({ tenantId: input.tenantId || ctx.tenantId || undefined, category: input.category, status: input.status }).then(records => ({ records }))
+});
+
+// --- Add-on: playbook_library (reuse + the agent improvement loop) ---
+register({
+  name: 'save_playbook',
+  title: 'Promote a task record into a playbook',
+  description: 'ADD-ON (playbook_library). Turn a COMPLETED task record into a named, categorized, versioned playbook the agent can reuse and improve.',
+  inputSchema: z.object({ taskId: z.string(), ownerAgentId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: async (input, ctx) => {
+    const record = await taskRecords.getByTask(input.taskId);
+    if (!record) return { ok: false, error: `No task record for ${input.taskId}.` };
+    const playbook = await playbooks.saveFromRecord(record, { ownerAgentId: input.ownerAgentId || ctx.agentId || null });
+    return { ok: true, playbook };
+  }
+});
+
+register({
+  name: 'improve_playbook',
+  title: 'Improve a playbook (agent learning loop)',
+  description: 'ADD-ON (playbook_library). The assigned agent revises the procedure from what actually happened. Every revision creates a NEW VERSION recording WHY it changed — a HITL correction is weighted highest — so procedure drift stays auditable.',
+  inputSchema: z.object({
+    playbookId: z.string(),
+    reason: z.enum(['hitl_correction', 'step_failure', 'course_correction', 'optimization', 'manual']),
+    note: z.string().optional(),
+    steps: z.array(z.object({ n: z.number().optional(), tool: z.string(), system: z.string().optional(), summary: z.string().optional() })).optional(),
+    hitlId: z.string().optional(),
+    succeeded: z.boolean().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => playbooks.improve({ ...input, agentId: ctx.agentId || null }).then(playbook => ({ playbook }))
+});
+
+register({
+  name: 'list_playbooks',
+  title: 'List playbooks',
+  description: 'ADD-ON (playbook_library). The reusable procedure library, optionally filtered by category.',
+  inputSchema: z.object({ tenantId: z.string().optional(), category: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => playbooks.list({ tenantId: input.tenantId || ctx.tenantId || undefined, category: input.category })
+    .then(list => ({ playbooks: list.map(p => Object.assign({}, p, { successRate: playbooks.successRate(p) })) }))
+});
+
+register({
+  name: 'get_playbook',
+  title: 'Get a playbook',
+  description: 'ADD-ON (playbook_library). Fetch a playbook with its version history and success rate.',
+  inputSchema: z.object({ id: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => playbooks.get(input.id).then(playbook => ({ playbook, successRate: playbooks.successRate(playbook) }))
+});
+
+register({
+  name: 'find_playbook_for_task',
+  title: 'Find an existing playbook for a task',
+  description: 'ADD-ON (playbook_library). Before running work from scratch, check whether a proven procedure already exists.',
+  inputSchema: z.object({ tenantId: z.string().optional(), taskType: z.string().optional(), category: z.string().optional() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input, ctx) => playbooks.findForTask({ tenantId: input.tenantId || ctx.tenantId || null, taskType: input.taskType || null, category: input.category || null }).then(playbook => ({ playbook }))
+});
+
+// --- Add-on: process_mapping (maps that emit REAL governed gates) ---
+register({
+  name: 'list_process_maps',
+  title: 'List Six Sigma process maps',
+  description: 'ADD-ON (process_mapping). Available Six Sigma swimlane / SIPOC maps and how many HITL checkpoints each contains.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, openWorld: false },
+  handler: () => ({ maps: processMapBridge.listMaps() })
+});
+
+register({
+  name: 'get_process_map',
+  title: 'Get a process map',
+  description: 'ADD-ON (process_mapping). The full step list for a map, including which steps are HITL checkpoints.',
+  inputSchema: z.object({ key: z.string() }),
+  annotations: { readOnly: true, openWorld: false },
+  handler: (input) => ({ map: processMapBridge.getMap(input.key) })
+});
+
+register({
+  name: 'instantiate_process_map',
+  title: 'Run a process map as governed tasks',
+  description: 'ADD-ON (process_mapping). Instantiate a map as a governed, dependency-chained task sequence. A HITL checkpoint is created directly in pending_approval — the checkpoint drawn on the map IS the approval gate, and every downstream step is blocked behind it.',
+  inputSchema: z.object({ mapKey: z.string(), tenantId: z.string().optional() }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input, ctx) => processMapBridge.instantiate({ mapKey: input.mapKey, tenantId: input.tenantId || ctx.tenantId || null, actor: ctx.actor || null, taskModel })
 });
 
 module.exports = { register, has, get, list, invoke, describeSchema, _registry: registry };
