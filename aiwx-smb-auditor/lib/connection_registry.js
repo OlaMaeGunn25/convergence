@@ -25,14 +25,23 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 const catalog = require('./connectors/catalog');
+const preconditions = require('./preconditions');
 
-const STATES = ['not_connected', 'configuring', 'connected', 'error', 'disconnected'];
+// `preconditions_pending` is a first-class state, not a flavour of not_connected.
+// Some systems — Epic most obviously — cannot be connected on demand: the tenant
+// must clear out-of-band steps (agreements, vendor registration, per-organisation
+// enablement) that no amount of correct code satisfies. Making that visible means
+// an operator sees "waiting on the health system" rather than a connection that
+// merely appears never to succeed.
+const STATES = ['not_connected', 'preconditions_pending', 'configuring', 'connected', 'error', 'disconnected'];
 const VALID_TRANSITIONS = {
-  not_connected: ['configuring'],
+  not_connected: ['preconditions_pending', 'configuring'],
+  // Forward once preconditions clear; back to not_connected if the tenant abandons it.
+  preconditions_pending: ['configuring', 'not_connected'],
   configuring: ['connected', 'error', 'disconnected'],
   connected: ['disconnected', 'error', 'configuring'],
   error: ['configuring', 'disconnected'],
-  disconnected: ['configuring']
+  disconnected: ['configuring', 'preconditions_pending']
 };
 
 function canTransition(from, to) {
@@ -140,7 +149,7 @@ class ConnectionRegistry {
    *          do out-of-band when credentials are not yet present. Secrets are
    *          NEVER accepted here.
    */
-  async build(connectorId, { tenantId = null, actor = null, config = {} } = {}) {
+  async build(connectorId, { tenantId = null, actor = null, config = {}, tenant = {}, attestations = [] } = {}) {
     const connector = catalog.get(connectorId);
     if (!connector) throw new Error(`Unknown connector "${connectorId}".`);
 
@@ -162,6 +171,31 @@ class ConnectionRegistry {
     conn.config = Object.assign({}, conn.config, config);
     conn.actor = actor || conn.actor;
     conn.updatedAt = now;
+
+    // PRE: a connector with declared preconditions cannot proceed toward
+    // `connected` until the blocking ones are satisfied. Without this the
+    // preconditions would be documentation rather than a control — the builder
+    // would happily mark Epic connected the moment env vars appeared, skipping
+    // the agreement, the vendor registration and the per-organisation
+    // enablement that actually grant the access.
+    if (Array.isArray(connector.preconditions) && connector.preconditions.length) {
+      const evaluation = preconditions.evaluate({
+        connectorId, preconditions: connector.preconditions, tenant, attestations
+      });
+      const gated = preconditions.gate(evaluation);
+      if (!gated.ok) {
+        conn.status = canTransition(conn.status, 'preconditions_pending') ? 'preconditions_pending' : conn.status;
+        conn.health = 'preconditions_unmet';
+        conn.lastError = gated.reason;
+        const saved = await this._persist(conn);
+        return {
+          connection: saved || conn,
+          authAction: null,
+          preconditions: evaluation,
+          blocked: gated
+        };
+      }
+    }
 
     if (!canTransition(conn.status, 'configuring')) {
       // Already connected/configuring — treat build as an idempotent re-check.

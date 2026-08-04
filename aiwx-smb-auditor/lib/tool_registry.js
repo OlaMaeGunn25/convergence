@@ -64,6 +64,8 @@ const regionalSources = require('./regional_sources');
 const location = require('./location');
 const businessOnboarding = require('./business_onboarding');
 const versionInfo = require('./version');
+const preconditions = require('./preconditions');
+const epic = require('./connectors/epic');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -1421,6 +1423,85 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => ({ modules: featureModules.listModules(ctx) })
+});
+
+// --- Connection preconditions (PRE) ---
+register({
+  name: 'get_connection_preconditions',
+  title: 'What must be true before a system can be connected',
+  description: 'The ordered prerequisites for a connector — tenant, vertical, compliance, vendor and technical — with each one\'s current state and the single next action. Systems whose access is granted out-of-band (Epic most notably) cannot be connected on demand, and this says exactly what stands in the way.',
+  inputSchema: z.object({
+    connectorId: z.string(),
+    tenant: z.object({ vertical: z.string().optional(), businessAddress: z.string().optional() }).passthrough().optional(),
+    attestations: z.array(z.object({ connectorId: z.string(), preconditionId: z.string(), attestedBy: z.string(), reference: z.string().optional(), at: z.string().optional() })).optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => {
+    const conn = catalog.get(input.connectorId);
+    if (!conn) return { error: `Unknown connector "${input.connectorId}".` };
+    return preconditions.evaluate({
+      connectorId: input.connectorId,
+      preconditions: conn.preconditions || [],
+      tenant: input.tenant || {},
+      attestations: input.attestations || []
+    });
+  }
+});
+
+register({
+  name: 'attest_precondition',
+  title: 'Attest that a connection precondition is satisfied',
+  description: 'Record a named human\'s attestation that an out-of-band prerequisite is met — an executed agreement, a vendor registration, a per-organisation enablement. Requires a company-domain identity and records who attested, when, and against what reference, because that is the evidence an auditor asks for later.',
+  inputSchema: z.object({
+    tenantId: z.string(), connectorId: z.string(), preconditionId: z.string(),
+    attestedBy: z.string(), reference: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: (input) => preconditions.recordAttestation(input)
+});
+
+// --- Epic (EHR) — pre-connection ---
+register({
+  name: 'epic_list_organizations',
+  title: 'Epic — health organisations configured',
+  description: 'The health organisations this deployment holds Epic credentials for. Epic issues credentials per organisation rather than once, so a tenant operating across several health systems appears here several times. Returns no key material.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: () => ({ fhirVersion: epic.FHIR_VERSION, organizations: epic.listOrganizations(), descriptor: epic.connectionDescriptor() })
+});
+
+register({
+  name: 'epic_list_appointments',
+  title: 'Epic — appointments',
+  description: 'Appointments for a named health organisation. Every read requires a stated purpose, which is recorded with the result (minimum-necessary standard). Direct patient identifiers are redacted unless includePhi is set, which itself requires justification.',
+  inputSchema: z.object({
+    orgId: z.string(), date: z.string().optional(), practitionerId: z.string().optional(),
+    purpose: z.string().optional(), includePhi: z.boolean().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => epic.listAppointments(input)
+});
+
+register({
+  name: 'epic_list_practitioners',
+  title: 'Epic — practitioners',
+  description: 'Practitioners at a named health organisation. Requires a stated purpose, recorded with the result.',
+  inputSchema: z.object({ orgId: z.string(), purpose: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: true },
+  handler: (input) => epic.listPractitioners(input)
+});
+
+register({
+  name: 'epic_schedule_appointment',
+  title: 'Epic — schedule an appointment',
+  description: 'Write an appointment into a health system\'s record of care. COMPLIANCE FLOOR: requires explicit human approval, cannot be delegated by a standard autonomy grant, and requires a stated purpose. The connector re-checks the approval independently of the registry gate.',
+  inputSchema: z.object({
+    orgId: z.string(), patientRef: z.string(), practitionerRef: z.string().optional(),
+    start: z.string(), end: z.string().optional(), serviceType: z.string().optional(),
+    purpose: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: true, requiresApproval: true, openWorld: true },
+  handler: (input, ctx) => epic.scheduleAppointment(Object.assign({}, input, { approved: ctx.approved === true }))
 });
 
 register({

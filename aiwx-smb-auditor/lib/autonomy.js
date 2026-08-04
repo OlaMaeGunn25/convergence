@@ -23,7 +23,10 @@ const FLOOR_TOOLS = new Set([
   'clio_record_trust_transaction', 'gusto_run_payroll', 'gusto_terminate_employee',
   // Resolves a person's phone/email. Regulated contact data (TCPA / state DNC):
   // no standard autonomy grant may delegate it.
-  'realestate_skip_trace'
+  'realestate_skip_trace',
+  // Writing into a health system's record of care. Clinical consequence for a
+  // real person, so no standard grant may delegate it.
+  'epic_schedule_appointment'
 ]);
 // Highest-risk actions: money movement, trust funds, protected health info, and
 // payroll/compensation (moves employee money + exposes compensation data).

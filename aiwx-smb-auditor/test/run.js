@@ -2264,6 +2264,136 @@ async function runTests() {
     assert(false, `Product versioning tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 46: Connection preconditions + Epic pre-connection (PRE) ---
+  try {
+    const pre = require('../lib/preconditions');
+    const epic46 = require('../lib/connectors/epic');
+    const catalog46 = require('../lib/connectors/catalog');
+    const registry46 = require('../lib/tool_registry');
+    const roster46 = require('../lib/agent_roster');
+    const { isComplianceFloor } = require('../lib/autonomy');
+    const { ConnectionRegistry: CR46 } = require('../lib/connection_registry');
+    const pth46 = require('path'); const os46 = require('os'); const fs46 = require('fs');
+
+    // A. Epic is catalogued as PRE-CONNECTION, not available
+    const e = catalog46.get('epic');
+    assert(!!e && e.status === 'preconnection', 'Epic is catalogued as pre-connection, not available');
+    assert(e.perOrganizationCredentials === true, 'Epic is marked as requiring per-organisation credentials');
+    assert(Array.isArray(e.preconditions) && e.preconditions.length >= 6, 'Epic declares its preconditions');
+    assert(e.preconditions.filter(p => p.blocking !== false).length >= 6, 'Most Epic preconditions are blocking');
+
+    // B. Nothing is met on a fresh non-medical tenant, and the vertical blocks first
+    const fresh = pre.evaluate({ connectorId: 'epic', preconditions: e.preconditions, tenant: { vertical: 'legal' }, attestations: [], env: {} });
+    assert(fresh.ready === false, 'Epic is not connectable before its preconditions are met');
+    assert(fresh.nextAction && fresh.nextAction.id === 'vertical_medical', 'The first blocker is the vertical, and it is named');
+    assert(fresh.blockers.length >= 6, 'All blocking preconditions are reported, not just the first');
+
+    // C. Automatic checks actually check
+    const medical = pre.evaluate({ connectorId: 'epic', preconditions: e.preconditions, tenant: { vertical: 'medical' }, attestations: [], env: {} });
+    assert(medical.met.some(m => m.id === 'vertical_medical' && m.state === 'verified'), 'A medical tenant satisfies the vertical precondition automatically');
+    assert(medical.blockers.some(b => b.id === 'credentials_present'), 'Missing credentials remain a blocker');
+    const withEnv = pre.evaluate({ connectorId: 'epic', preconditions: e.preconditions, tenant: { vertical: 'medical' }, attestations: [], env: { EPIC_PRIVATE_KEY: 'k', EPIC_ORGANIZATIONS: '{}' } });
+    assert(withEnv.met.some(m => m.id === 'credentials_present' && m.state === 'verified'), 'Configured credentials satisfy the technical precondition');
+
+    // D. Attestations require a named human and carry evidence
+    assert(pre.recordAttestation({ tenantId: 't', connectorId: 'epic', preconditionId: 'baa_executed' }).ok === false, 'An attestation without an identity is refused');
+    assert(pre.recordAttestation({ tenantId: 't', connectorId: 'epic', preconditionId: 'baa_executed', attestedBy: 'compliance@clinic.com' }).ok === true, 'A named human may attest');
+    const att = pre.recordAttestation({ tenantId: 't', connectorId: 'epic', preconditionId: 'baa_executed', attestedBy: 'compliance@clinic.com', reference: 'BAA-2026-114' }).attestation;
+    assert(att.reference === 'BAA-2026-114' && !!att.at, 'The attestation records its reference and timestamp');
+
+    const attested = pre.evaluate({ connectorId: 'epic', preconditions: e.preconditions, tenant: { vertical: 'medical' }, attestations: [att], env: {} });
+    const baa = attested.met.find(m => m.id === 'baa_executed');
+    assert(!!baa && baa.state === 'attested' && baa.evidence.attestedBy === 'compliance@clinic.com', 'An attested precondition carries its evidence');
+
+    // E. Fully satisfied -> ready, and the gate opens
+    const allAtts = e.preconditions.filter(p => p.verification === 'attestation')
+      .map(p => pre.recordAttestation({ tenantId: 't', connectorId: 'epic', preconditionId: p.id, attestedBy: 'compliance@clinic.com', reference: 'ref' }).attestation);
+    const done = pre.evaluate({ connectorId: 'epic', preconditions: e.preconditions, tenant: { vertical: 'medical' }, attestations: allAtts, env: { EPIC_PRIVATE_KEY: 'k', EPIC_ORGANIZATIONS: '{}' } });
+    assert(done.ready === true && done.blockers.length === 0, 'Epic becomes connectable once every blocking precondition is satisfied');
+    assert(pre.gate(done).ok === true, 'The gate opens when preconditions are ready');
+    const blocked = pre.gate(fresh);
+    assert(blocked.ok === false && blocked.status === 'preconditions_unmet' && /vertical/i.test(blocked.reason), 'The gate refusal names the specific blocker');
+
+    // F. preconditions_pending is a real connection state
+    const cf46 = pth46.join(os46.tmpdir(), `aiwx_conn46_${Date.now()}.json`);
+    const { canTransition: ct46 } = require('../lib/connection_registry');
+    assert(ct46('not_connected', 'preconditions_pending') === true, 'A connection can enter preconditions_pending');
+    assert(ct46('preconditions_pending', 'configuring') === true, 'It moves forward to configuring once cleared');
+    assert(ct46('preconditions_pending', 'not_connected') === true, 'It can be abandoned back to not_connected');
+    assert(ct46('preconditions_pending', 'connected') === false, 'It can NEVER jump straight to connected');
+
+    // The builder must REFUSE, not merely warn. Without this the preconditions
+    // would be documentation rather than a control.
+    const cr46 = new CR46({ file: cf46 });
+    const blockedBuild = await cr46.build('epic', { tenantId: 't1', actor: 'ops@clinic.com', tenant: { vertical: 'medical' }, attestations: [] });
+    assert(blockedBuild.blocked && blockedBuild.blocked.ok === false, 'Building Epic is refused while preconditions are unmet');
+    assert(blockedBuild.connection.status === 'preconditions_pending', 'The connection lands in preconditions_pending, not configuring');
+    assert(blockedBuild.connection.health === 'preconditions_unmet', 'Its health states why');
+    assert(blockedBuild.preconditions && blockedBuild.preconditions.nextAction, 'The refusal carries the next action to take');
+
+    // Attestations alone are not enough — the technical precondition is checked
+    // against the real environment, so a tenant that has signed everything but
+    // configured nothing is still correctly blocked.
+    const attestedOnly = await cr46.build('epic', { tenantId: 't3', actor: 'ops@clinic.com', tenant: { vertical: 'medical' }, attestations: allAtts });
+    assert(attestedOnly.blocked && attestedOnly.blocked.blockerId === 'credentials_present', 'Attestations alone do not unblock: credentials are still checked for real');
+
+    process.env.EPIC_PRIVATE_KEY = 'test-key';
+    process.env.EPIC_ORGANIZATIONS = '{"mercy":{"baseUrl":"https://example.invalid/api/FHIR/R4","clientId":"cid"}}';
+    try {
+      const okBuild = await cr46.build('epic', { tenantId: 't2', actor: 'ops@clinic.com', tenant: { vertical: 'medical' }, attestations: allAtts });
+      assert(!okBuild.blocked, 'With every precondition satisfied, the build proceeds');
+      assert(okBuild.connection.status !== 'preconditions_pending', 'The connection leaves preconditions_pending');
+    } finally {
+      delete process.env.EPIC_PRIVATE_KEY;
+      delete process.env.EPIC_ORGANIZATIONS;
+    }
+
+    // A connector with no declared preconditions is unaffected.
+    const plain = await cr46.build('slack', { tenantId: 't1', actor: 'ops@clinic.com' });
+    assert(!plain.blocked, 'Connectors without preconditions are unaffected by the gate');
+    try { fs46.unlinkSync(cf46); } catch (er) {}
+
+    // G. PHI never rides along on an ordinary read
+    assert(epic46.containsPhi({ birthDate: '1980-01-01' }) === true, 'The PHI detector finds an unredacted identifier');
+    assert(epic46.containsPhi(epic46.redactPhi({ birthDate: '1980-01-01' })) === false, 'A redacted payload passes the detector');
+    const appts = await epic46.listAppointments({ orgId: 'mercy', purpose: 'Daily schedule preparation' });
+    assert(appts.success === true && appts.simulated === true, 'Epic reads degrade to a labelled simulated dataset');
+    assert(epic46.containsPhi(appts.data) === false, 'Appointment reads carry no unredacted PHI');
+    assert(appts.purpose === 'Daily schedule preparation' && appts.minimumNecessary === true, 'The stated purpose and minimisation posture are recorded');
+
+    // H. Purpose and organisation are both mandatory
+    assert((await epic46.listAppointments({ orgId: 'mercy' })).success === false, 'A read without a stated purpose is refused');
+    assert((await epic46.listAppointments({ purpose: 'x' })).success === false, 'A read without an organisation is refused — credentials are per organisation');
+
+    // I. Writes are on the compliance floor
+    assert(isComplianceFloor('epic_schedule_appointment') === true, 'Writing to the record of care is a compliance-floor action');
+    const w1 = await epic46.scheduleAppointment({ orgId: 'mercy', patientRef: 'Patient/1', start: '2026-08-05T14:00:00Z' });
+    assert(w1.success === false && w1.requiresApproval === true, 'An appointment write refuses without approval');
+    const w2 = await epic46.scheduleAppointment({ orgId: 'mercy', patientRef: 'Patient/1', start: '2026-08-05T14:00:00Z', approved: true });
+    assert(w2.success === false && /purpose/i.test(w2.error), 'An approved write still requires a stated purpose');
+
+    // J. No key material escapes through the descriptor
+    const desc = epic46.connectionDescriptor();
+    assert(desc.secretRef === 'EPIC_PRIVATE_KEY' && desc.perOrganizationCredentials === true, 'The descriptor references the secret rather than embedding it');
+    assert(!JSON.stringify(desc).includes('BEGIN'), 'The descriptor carries no key material');
+
+    // K. Events fail closed
+    assert(epic46.mapEventToTask({ event_type: 'appointment.noshow' }).status === 'proposed', 'A no-show event maps to a proposed task');
+    assert(epic46.mapEventToTask({ event_type: 'order.result_available' }).status === 'pending_approval', 'A clinical result requires review');
+    assert(epic46.mapEventToTask({ event_type: 'unknown.thing' }).status === 'pending_approval', 'An unrecognised Epic event fails closed to approval');
+
+    // L. Registry + role wiring
+    const gated46 = await registry46.invoke('epic_schedule_appointment', { orgId: 'm', patientRef: 'Patient/1', start: 's', purpose: 'p' }, { actor: 'agent' });
+    assert(gated46.ok === false && gated46.status === 'requires_approval', 'epic_schedule_appointment is approval-gated by the registry');
+    const preTool = await registry46.invoke('get_connection_preconditions', { connectorId: 'epic', tenant: { vertical: 'legal' } }, { actor: 'agent' });
+    assert(preTool.ok === true && preTool.result.ready === false && !!preTool.result.nextAction, 'get_connection_preconditions reports the next action through the registry');
+    assert(roster46.roleAllowsTool('operations', 'epic_list_appointments') === true, 'The Operations agent is bound to the Epic reads');
+    assert(roster46.roleAllowsTool('systems_configurator', 'get_connection_preconditions') === true, 'The Systems Configurator evaluates preconditions');
+    assert(roster46.roleAllowsTool('systems_configurator', 'epic_schedule_appointment') === false, 'The Systems Configurator cannot write to the record of care');
+  } catch (e) {
+    assert(false, `Preconditions / Epic tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

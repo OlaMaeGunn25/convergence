@@ -42,7 +42,10 @@ const ROLES = {
     tools: ['list_connectors', 'match_integrations', 'get_connection_status', 'connect_system',
       // Resolving which MLS board covers the tenant's geography is connection
       // work, not listing work — it happens before anything is bound.
-      'realestate_mls_board_coverage', 'realestate_mls_connection_options']
+      'realestate_mls_board_coverage', 'realestate_mls_connection_options',
+      // Preconditions are connection work: establishing what must be true before
+      // a system can be bound at all.
+      'get_connection_preconditions', 'epic_list_organizations']
   },
   knowledge_compilation: {
     title: 'Knowledge Compilation Agent',
@@ -65,7 +68,10 @@ const ROLES = {
       'realestate_search_properties', 'realestate_get_property',
       // Bound but not free: compliance-floor + requiresApproval, so holding the
       // tool is not the same as being able to run it unattended.
-      'realestate_skip_trace']
+      'realestate_skip_trace',
+      'epic_list_appointments', 'epic_list_practitioners',
+      // Bound but approval-gated and on the compliance floor.
+      'epic_schedule_appointment']
   },
   admin_support: {
     title: 'Admin-Support Agent',

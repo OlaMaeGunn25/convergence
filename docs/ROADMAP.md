@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.9.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.10.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,28 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.10.0 — 2026-08-04
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+- **Connection preconditions (PRE).** Declarative prerequisites — tenant,
+  vertical, compliance, vendor, technical — that gate a connection before it can
+  be built. Automatic checks are verified; out-of-band steps are attested by a
+  named human with a reference and timestamp. The connection builder refuses
+  while any blocking precondition is unmet, so preconditions are a control rather
+  than documentation.
+- **New connection state `preconditions_pending`**, so an operator sees "waiting
+  on the health system" rather than a connection that never succeeds.
+- **Epic (EHR) connector — pre-connection.** FHIR R4, backend OAuth2 JWT
+  assertion, multi-organisation from the outset because Epic issues credentials
+  per health system. Every read requires a stated purpose and redacts direct
+  identifiers by default; writes to the record of care are on the compliance
+  floor. Eight declared preconditions.
+- Operational versioning: `/health` reports the version, `/api/version` allows a
+  deployment to assert its own version (409 on mismatch), `get_version` over MCP,
+  hub shows hub-vs-gateway versions, CI stamps build provenance.
+- 21 connectors, 123 governed tools. Gateway 695/695, hub 61/61.
 
 ## v0.9.0 — 2026-08-03
 
@@ -57,7 +79,7 @@ automating around a business and automating inside it.
 
 | Vertical | Target system | Kind | Access notes |
 |---|---|---|---|
-| Medical & Healthcare | **Epic** | EHR — system of record | Standards-based FHIR access. Requires registration with Epic's developer programme **and** per-organisation authorisation from each health system, plus a signed BAA. Not a single-key integration. |
+| Medical & Healthcare | **Epic** | EHR — system of record | **Now PRE-CONNECTION, shipped in v0.10.0** — see [EPIC_INTEGRATION.md](EPIC_INTEGRATION.md). Connector built; access requires Epic Vendor Services registration, security review, a signed BAA and per-organisation enablement. Not a single-key integration. |
 | Hospitality & Leisure | **Oracle OPERA** | PMS | Cloud REST APIs via Oracle's hospitality integration platform; property-level entitlement required. |
 | Hospitality & Leisure | **Cloudbeds** | PMS / booking engine | Public API with a partner/marketplace registration path. |
 | Hospitality & Leisure | **Quore** | Hotel operations — housekeeping, maintenance, work orders | Complements a PMS rather than replacing it; covers the operational surface the PMS does not. |

@@ -208,6 +208,66 @@ const CONNECTORS = [
     docs: 'https://bridgedataoutput.com'
   },
   {
+    // System of record for the medical vertical. Status is PRE-CONNECTION, not
+    // "available": the API is straightforward, but access is granted by each
+    // health organisation rather than by a vendor key, so a tenant must clear
+    // several out-of-band steps first. Those are declared, not implied.
+    id: 'epic', name: 'Epic (EHR)', category: 'Healthcare EHR',
+    kind: 'fhir', auth: 'oauth2_jwt_assertion',
+    envKeys: ['EPIC_PRIVATE_KEY', 'EPIC_ORGANIZATIONS'],
+    vertical: ['Medical & Healthcare', 'medical'],
+    matchSignals: ['epic', 'mychart', 'hyperspace', 'ehr', 'emr', 'health system', 'clinic', 'practice', 'fhir'],
+    capabilities: ['list_appointments', 'list_practitioners'],
+    // Writing into a health system's record of care is compliance-floor work.
+    destructiveCapabilities: ['schedule_appointment'],
+    status: 'preconnection', perOrganizationCredentials: true,
+    docs: 'https://fhir.epic.com',
+    preconditions: [
+      {
+        id: 'vertical_medical', scope: 'vertical', verification: 'automatic', blocking: true,
+        requiresVertical: 'medical',
+        label: 'Tenant is installed on the Medical & Healthcare vertical',
+        detail: 'Epic carries the HIPAA compliance profile, which is attached by the vertical. The vertical is locked at install and cannot be changed afterwards.'
+      },
+      {
+        id: 'baa_executed', scope: 'compliance', verification: 'attestation', blocking: true,
+        label: 'Business Associate Agreement executed',
+        detail: 'A BAA must be in place between the covered entity and every party processing PHI on its behalf. Attest with the agreement reference.'
+      },
+      {
+        id: 'vendor_services_account', scope: 'vendor', verification: 'attestation', blocking: true,
+        label: 'Epic Vendor Services account established',
+        detail: 'Epic\'s developer programme. Note that App Orchard is retired — advice referring to it is out of date.'
+      },
+      {
+        id: 'app_registered', scope: 'vendor', verification: 'attestation', blocking: true,
+        label: 'Application registered and client IDs issued',
+        detail: 'Register the app in the Connection Hub with the exact FHIR resources and scopes it will request, and upload the public key. Production and non-production client IDs are issued separately.'
+      },
+      {
+        id: 'security_review', scope: 'vendor', verification: 'attestation', blocking: true,
+        label: 'Epic security review passed',
+        detail: 'Verifies SMART on FHIR, OAuth 2.0 and US Core conformance. Sandbox success is necessary but not sufficient.'
+      },
+      {
+        id: 'org_enabled', scope: 'vendor', verification: 'attestation', blocking: true,
+        label: 'Each health organisation has enabled the app',
+        detail: 'Access is granted per organisation, not once. A tenant operating across three health systems clears this three times and holds three sets of credentials.'
+      },
+      {
+        id: 'credentials_present', scope: 'technical', verification: 'automatic', blocking: true,
+        requiresEnv: ['EPIC_PRIVATE_KEY', 'EPIC_ORGANIZATIONS'],
+        label: 'Signing key and organisation map are configured',
+        detail: 'The private key is resolved from the secret store; the organisation map names each health system\'s FHIR base URL and client ID.'
+      },
+      {
+        id: 'minimum_necessary_scopes', scope: 'compliance', verification: 'attestation', blocking: false,
+        label: 'Requested scopes reviewed against minimum necessary',
+        detail: 'Advisory. Requesting more FHIR scopes than the workflows need is the most common way an integration becomes hard to justify at audit.'
+      }
+    ]
+  },
+  {
     // Aggregated alternative to the per-board feeds above: one key, nationwide,
     // with a board-coverage lookup so the tenant's LOCAL board resolves from
     // geography. Also exposes a vendor MCP server (see connectors/realestateapi).
