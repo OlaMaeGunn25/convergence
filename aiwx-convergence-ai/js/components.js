@@ -4,6 +4,33 @@
 */
 
 import { STATE } from './state.js';
+import { PRODUCT_VERSION, versionLabel, fetchGatewayVersion } from './version.js';
+
+/**
+ * Show the running version in the sidebar.
+ *
+ * The hub and the gateway deploy separately, so it asks the gateway what IT is
+ * running and shows both when they differ. A version mismatch between the two is
+ * a real operational condition and the operator should be able to see it without
+ * opening a console — silently showing only the hub's number would hide it.
+ */
+export async function renderVersionBadge() {
+    const el = document.getElementById('hubVersionBadge');
+    if (!el) return;
+    el.textContent = versionLabel();
+
+    const endpoint = STATE.tenantConfig && STATE.tenantConfig.apiEndpoint;
+    const gateway = await fetchGatewayVersion(endpoint);
+    if (!gateway) return;
+
+    if (gateway.version === PRODUCT_VERSION) {
+        el.textContent = `${versionLabel()} · gateway matched`;
+    } else {
+        el.textContent = `hub ${versionLabel()} · gateway v${gateway.version}`;
+        el.style.color = 'var(--warning-color, #f59e0b)';
+        el.title = 'The hub and the gateway are running different versions.';
+    }
+}
 
 export function logConsole(message, type = 'info') {
     const term = document.getElementById('logTerminal');
@@ -28,6 +55,9 @@ export function injectLayout(switchTabCallback) {
                 <div>
                     <div class="brand-name" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-align: center;">CONVERGENCE-Ai Client</div>
                     <div style="font-size: 0.65rem; color: var(--secondary-color); font-weight: 700; letter-spacing: 0.05em; text-align: center; text-transform: uppercase; margin-top: 2px;">A Cloud Native AI Automation Hub</div>
+                    <!-- Filled by renderVersionBadge(): hub version, plus the gateway's
+                         own version when they differ, since the two deploy separately. -->
+                    <div id="hubVersionBadge" style="font-size: 0.6rem; color: var(--text-muted); text-align: center; margin-top: 6px; font-variant-numeric: tabular-nums;"></div>
                 </div>
             </div>
             

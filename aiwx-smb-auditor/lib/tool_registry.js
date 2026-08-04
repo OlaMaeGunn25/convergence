@@ -63,6 +63,7 @@ const verticals = require('./verticals');
 const regionalSources = require('./regional_sources');
 const location = require('./location');
 const businessOnboarding = require('./business_onboarding');
+const versionInfo = require('./version');
 
 const taskModel = new TaskModel();
 const connectionRegistry = new ConnectionRegistry();
@@ -1420,6 +1421,19 @@ register({
   inputSchema: z.object({}),
   annotations: { readOnly: true, openWorld: false },
   handler: (input, ctx) => ({ modules: featureModules.listModules(ctx) })
+});
+
+register({
+  name: 'get_version',
+  title: 'Product version and build info',
+  description: 'The running product version plus build metadata (commit, build time, node version, uptime). Read-only and carries no tenant data. Pass `expected` to have the instance assert its own version, so a release can be verified rather than assumed.',
+  inputSchema: z.object({ expected: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => {
+    const info = versionInfo.buildInfo();
+    if (input && input.expected) info.check = versionInfo.matches(input.expected);
+    return info;
+  }
 });
 
 // --- Add-on: task_record (step-by-step run capture) ---

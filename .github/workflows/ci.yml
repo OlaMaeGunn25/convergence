@@ -50,6 +50,11 @@ jobs:
           push: false
           load: true
           tags: convergence-ai:ci
+          # Stamp build provenance so a running container can report which commit
+          # it was built from, not merely which version it claims to be.
+          build-args: |
+            AIWX_BUILD_SHA=${{ github.sha }}
+            AIWX_BUILD_TIME=${{ github.event.repository.updated_at }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -93,6 +98,29 @@ jobs:
             docker logs convergence-smoke
             exit 1
           fi
+
+          # The image must report the version the repo declares. /api/version is
+          # unauthenticated by design and returns 409 on a mismatch, so this is a
+          # single call that proves the built artifact is the version we think it is.
+          EXPECTED=$(node -p "require('./aiwx-smb-auditor/package.json').version")
+          echo "--- /api/version (expecting $EXPECTED) ---"
+          if ! curl -fsS "http://localhost:3003/api/version?expected=$EXPECTED"; then
+            echo "::error::Image does not report version $EXPECTED"
+            curl -sS "http://localhost:3003/api/version" || true
+            docker logs convergence-smoke
+            exit 1
+          fi
+          echo ""
+
+          # Build provenance must be stamped, or a deployed container cannot say
+          # which commit produced it.
+          SHA=$(curl -fsS "http://localhost:3003/api/version" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).commit||''))")
+          if [ -z "$SHA" ]; then
+            echo "::error::Build commit was not stamped into the image"
+            exit 1
+          fi
+          echo "built from commit: $SHA"
 
           # Chromium must be present for the Puppeteer/audit path.
           docker exec convergence-smoke /usr/bin/chromium --version

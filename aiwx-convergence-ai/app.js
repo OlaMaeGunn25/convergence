@@ -7,7 +7,7 @@ import { initErrorBoundary } from './js/error_boundary.js';
 initErrorBoundary();
 
 import { STATE, saveLocalState, updateState, seedDemoData } from './js/state.js';
-import { logConsole, injectLayout } from './js/components.js';
+import { logConsole, injectLayout, renderVersionBadge } from './js/components.js';
 import { verifyActivationToken, verifyAdminSession, safeBtoa, safeAtob, parseAndVerifyToken } from './js/auth.js';
 import { PROCESS_TEMPLATES, renderProcessMap, runAgentProcessMap, instantiateGovernedProcessMap, runGovernedProcessMap, populateProcessMapSelect, syncGovernedRunButton, addProcessMapOption, isGovernedMap } from './js/process_maps.js';
 import { updateAgentBadgeState, toggleMinimizeBadge, dismissBadge, restoreBadge, toggleKillSwitch, injectBadge } from './js/agent_badge.js';
@@ -276,6 +276,8 @@ async function verifyActivation() {
         
         // Initialize layout and badge widgets
         injectLayout(switchMainTab);
+        // Best-effort: the badge must never block layout if the gateway is down.
+        renderVersionBadge().catch(() => {});
         
         applyBranding(result.config);
         switchMainTab('dashboard');

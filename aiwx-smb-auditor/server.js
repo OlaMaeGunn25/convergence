@@ -1849,6 +1849,9 @@ app.post('/api/export-crm', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
+    // A health check that does not say what it is running tells you the box is
+    // up, not that the right thing is up.
+    version: require('./lib/version').version(),
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     env: process.env.NODE_ENV || 'development',
@@ -1856,6 +1859,22 @@ app.get('/health', (req, res) => {
     ga4: !!process.env.GA4_PROPERTY_ID,
     deployment: require('./lib/deployment').deploymentInfo()
   });
+});
+
+/**
+ * Version endpoint. Unauthenticated by design — it is the check you run against a
+ * deployment before you have credentials for it, and it exposes nothing sensitive.
+ * Pass ?expected=0.9.0 to have the instance assert its own version, so a release
+ * can be verified rather than assumed.
+ */
+app.get('/api/version', (req, res) => {
+  const v = require('./lib/version');
+  const body = v.buildInfo();
+  if (req.query.expected) {
+    const check = v.matches(req.query.expected);
+    return res.status(check.ok ? 200 : 409).json(Object.assign(body, { check }));
+  }
+  res.json(body);
 });
 
 // Fallback all unspecified routes to index.html (SPA routing pattern)

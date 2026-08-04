@@ -2203,6 +2203,67 @@ async function runTests() {
     assert(false, `Governed real-estate map tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 45: Product versioning (VER) ---
+  try {
+    const versionLib = require('../lib/version');
+    const registry45 = require('../lib/tool_registry');
+    const fs45 = require('fs');
+    const pth45 = require('path');
+
+    const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
+    const running = versionLib.version();
+    assert(SEMVER.test(running), `The running version is valid semver (${running})`);
+
+    // A. ONE source of truth. These four must agree or the release is lying about
+    //    itself somewhere — which is the drift that prompted versioning.
+    const gatewayPkg = require('../package.json').version;
+    assert(gatewayPkg === running, 'lib/version reports the gateway package version');
+
+    const hubPkgPath = pth45.join(__dirname, '..', '..', 'aiwx-convergence-ai', 'package.json');
+    if (fs45.existsSync(hubPkgPath)) {
+      const hubPkg = JSON.parse(fs45.readFileSync(hubPkgPath, 'utf8')).version;
+      assert(hubPkg === running, `The hub package version matches the gateway (${hubPkg} === ${running})`);
+    }
+
+    // The hub cannot read package.json at runtime, so it carries a constant.
+    // That duplication is only safe because this assertion exists.
+    const hubVerPath = pth45.join(__dirname, '..', '..', 'aiwx-convergence-ai', 'js', 'version.js');
+    if (fs45.existsSync(hubVerPath)) {
+      const hv = fs45.readFileSync(hubVerPath, 'utf8').match(/PRODUCT_VERSION\s*=\s*'([^']+)'/);
+      assert(!!hv, 'The hub declares PRODUCT_VERSION');
+      assert(hv && hv[1] === running, `The hub version constant matches the gateway (${hv && hv[1]} === ${running})`);
+    }
+
+    const roadmapPath = pth45.join(__dirname, '..', '..', 'docs', 'ROADMAP.md');
+    if (fs45.existsSync(roadmapPath)) {
+      const roadmap = fs45.readFileSync(roadmapPath, 'utf8');
+      const m = roadmap.match(/\*\*Current version:\s*v(\d+\.\d+\.\d+[^*\s]*)\*\*/);
+      assert(!!m, 'ROADMAP.md declares a current version');
+      assert(m && m[1] === running, `ROADMAP.md agrees with the running version (${m && m[1]} === ${running})`);
+      assert(roadmap.includes(`## v${running}`), 'ROADMAP.md has a release-history entry for the running version');
+    }
+
+    // B. Build info is honest about what it does not know
+    const info = versionLib.buildInfo();
+    assert(info.product === 'CONVERGENCE-Ai' && info.version === running, 'buildInfo reports the product and version');
+    assert(info.commit === null || typeof info.commit === 'string', 'An uninjected build commit is reported as null, not guessed');
+    assert(typeof info.uptimeSeconds === 'number' && !!info.startedAt, 'buildInfo reports uptime and start time');
+    assert(!JSON.stringify(info).toLowerCase().includes('key'), 'buildInfo carries no credential-shaped field');
+
+    // C. Self-assertion — a release can be verified, not assumed
+    assert(versionLib.matches(running).ok === true, 'An instance confirms a matching expected version');
+    const bad = versionLib.matches('99.99.99');
+    assert(bad.ok === false && bad.actual === running, 'A mismatched expected version is reported with the actual');
+
+    // D. Registry wiring
+    const vTool = await registry45.invoke('get_version', {}, { actor: 'agent' });
+    assert(vTool.ok === true && vTool.result.version === running, 'get_version reports the running version through the registry');
+    const vCheck = await registry45.invoke('get_version', { expected: '0.0.1' }, { actor: 'agent' });
+    assert(vCheck.result.check.ok === false, 'get_version asserts against an expected version');
+  } catch (e) {
+    assert(false, `Product versioning tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

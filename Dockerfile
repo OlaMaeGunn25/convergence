@@ -85,6 +85,14 @@ RUN groupadd -r convergence && useradd -r -g convergence -G audio,video converge
 
 USER convergence
 
+# Build provenance. Passed by CI (--build-arg AIWX_BUILD_SHA=$GITHUB_SHA), absent
+# for a local build — in which case /api/version reports null rather than guessing.
+# Declared LAST so a changed commit does not invalidate the layer cache above it.
+ARG AIWX_BUILD_SHA=""
+ARG AIWX_BUILD_TIME=""
+ENV AIWX_BUILD_SHA=$AIWX_BUILD_SHA
+ENV AIWX_BUILD_TIME=$AIWX_BUILD_TIME
+
 EXPOSE 3003
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
