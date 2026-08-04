@@ -14,7 +14,7 @@
 
 export const PRODUCT_VERSION = '0.10.0';
 
-/** Short label for the UI, e.g. "v0.9.0". */
+/** Short label for the UI, e.g. "v0.10.0". */
 export function versionLabel() {
     return `v${PRODUCT_VERSION}`;
 }
