@@ -33,7 +33,11 @@ const ROLES = {
     title: 'Onboarding Agent',
     plane: PLANES.BUSINESS,
     duty: 'Coordinates all pre-conditions (connections, credentials, scope approvals, disclosures); onboards/trains/offboards HITL users; hands off to the Systems Configurator.',
-    tools: ['list_connectors', 'get_connection_status', 'provision_roster']
+    // The Onboarding Agent is the entry point for connecting enterprise systems:
+    // it runs the interview, detects the system from its parameters, offers the
+    // mode choice (api / mcp / auto), and triggers the governed build.
+    tools: ['list_connectors', 'get_connection_status', 'provision_roster',
+      'get_connection_interview', 'detect_system', 'get_connection_modes', 'connect_system']
   },
   systems_configurator: {
     title: 'Systems Configurator (System-State Eval/Config)',
@@ -45,7 +49,11 @@ const ROLES = {
       'realestate_mls_board_coverage', 'realestate_mls_connection_options',
       // Preconditions are connection work: establishing what must be true before
       // a system can be bound at all.
-      'get_connection_preconditions', 'epic_list_organizations']
+      'get_connection_preconditions', 'epic_list_organizations',
+      'get_connection_interview', 'detect_system', 'get_connection_modes',
+      // The explicit handoff to the Onboarding Agent: scour findings become
+      // connection.proposal tasks rather than a verbal convention.
+      'handoff_connection_candidates']
   },
   knowledge_compilation: {
     title: 'Knowledge Compilation Agent',

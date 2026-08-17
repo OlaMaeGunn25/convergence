@@ -2460,6 +2460,144 @@ async function runTests() {
     assert(false, `Compliance coverage tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 48: Dual-mode connections (API / MCP / auto) (DMC) ---
+  try {
+    const modes48 = require('../lib/connection_modes');
+    const { McpBootstrapper } = require('../lib/mcp_bootstrapper');
+    const { DualModeClient } = require('../lib/dual_mode_client');
+    const { ConnectionRegistry: CR48 } = require('../lib/connection_registry');
+    const roster48 = require('../lib/agent_roster');
+    const registry48 = require('../lib/tool_registry');
+    const pth48 = require('path'); const os48 = require('os'); const fs48 = require('fs');
+
+    // A. The interview: three mode options, auto recommended, refs never values
+    const iv = modes48.connectionInterview('clio');
+    const modeStep = iv.steps.find(s => s.id === 'mode');
+    assert(modeStep.options.length === 3, 'The interview offers exactly three connection choices');
+    assert(modeStep.options.find(o => o.value === 'auto').recommended === true, 'Auto-Detect & Upgrade to MCP is marked recommended');
+    const paramStep = iv.steps.find(s => s.id === 'parameters');
+    assert(/never accepts? a credential value/i.test(paramStep.note) || /NOT/i.test(paramStep.how), 'The interview asks for secret REFERENCES, not values');
+    assert(paramStep.secretRefsNeeded.length > 0, 'The interview names the env keys the system needs');
+
+    // B. Detection ties to catalog signals (the spec's auto-detection test)
+    const det = modes48.detectSystem({ technologies: ['shopify'] });
+    assert(det.detected === true && det.systemType === 'shopify', 'Technology signals detect the correct system');
+    const detDom = modes48.detectSystem({ domain: 'files.mycompany.gusto.com' });
+    assert(detDom.detected === true && detDom.systemType === 'gusto', 'A domain detects the system via its match signals');
+    assert(modes48.detectSystem({ domain: 'nothing-known.example' }).detected === false, 'An unknown domain is not force-matched');
+
+    // C. Modes are honest per connector
+    assert(modes48.modesFor('realestateapi').includes('mcp'), 'A connector with an MCP surface offers mcp');
+    assert(modes48.modesFor('slack').join(',') === 'api', 'A connector without one offers only api');
+    const mc = modes48.mcpConfigFor('realestateapi');
+    assert(mc && mc.transport === 'sse' && !JSON.stringify(mc).includes(process.env.REALESTATEAPI_KEY || ' '), 'The MCP descriptor carries refs, never values');
+
+    // D. Spec normalization fails closed on raw secrets
+    const rawSecret = modes48.normalizeSpec({ systemType: 'clio', params: { api_key: 'sk-live-123' } });
+    assert(rawSecret.ok === false && /secret store/i.test(rawSecret.error), 'A raw credential-shaped param is refused with redirection to the secret store');
+    assert(modes48.normalizeSpec({ systemType: 'slack', connectionMode: 'mcp' }).status === 'mcp_unsupported', 'Strict mcp on a non-MCP connector is refused at normalization');
+    const okSpec = modes48.normalizeSpec({ systemType: 'realestateapi', connectionMode: 'auto', params: { region: 'WA' } });
+    assert(okSpec.ok === true && okSpec.spec.credentialRefs.includes('REALESTATEAPI_KEY'), 'A valid spec carries the connector\'s credential refs by name');
+
+    // E. REAL stdio round-trip against a fake MCP server, with env-ref injection
+    const FAKE = "process.stdin.setEncoding('utf8');let b='';process.stdin.on('data',d=>{b+=d;let i;while((i=b.indexOf('\\n'))>=0){const l=b.slice(0,i);b=b.slice(i+1);if(!l.trim())continue;const m=JSON.parse(l);if(m.method==='initialize')process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result:{serverInfo:{name:'fake-mcp'}}})+'\\n');else if(m.method==='tools/call')process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result:{echo:m.params.arguments,secretPresent:!!process.env.FAKE_MCP_SECRET}})+'\\n');}});";
+    process.env.FAKE_MCP_SECRET = 'test-secret-value';
+    const boot = new McpBootstrapper({ handshakeTimeoutMs: 8000, callTimeoutMs: 8000, logger: () => {} });
+    try {
+      const started = await boot.start({ id: 'fake1', transport: 'stdio', command: process.execPath, args: ['-e', FAKE], envRefs: ['FAKE_MCP_SECRET'] });
+      assert(started.serverInfo && started.serverInfo.name === 'fake-mcp', 'The stdio handshake completes against a live server');
+      const out = await boot.callTool('fake1', 'ping', { a: 1 });
+      assert(out.echo && out.echo.a === 1, 'A tool call round-trips over stdio JSON-RPC');
+      assert(out.secretPresent === true, 'Credentials are injected into the child by env REF');
+      assert(!JSON.stringify(started).includes('test-secret-value'), 'No credential value appears in the start result');
+
+      // F. Missing refs are reported by NAME, never guessed
+      let refErr = null;
+      try { await boot.start({ transport: 'stdio', command: process.execPath, args: ['-e', FAKE], envRefs: ['NO_SUCH_REF_XYZ'] }); }
+      catch (e) { refErr = e.message; }
+      assert(refErr && refErr.includes('NO_SUCH_REF_XYZ') && !refErr.includes('test-secret'), 'A missing credential ref fails by name only');
+
+      // G. THE SPEC'S DEAD-SERVER TEST: a server that dies never hangs the flow
+      let deadErr = null;
+      try { await boot.start({ transport: 'stdio', command: process.execPath, args: ['-e', 'process.exit(1)'], envRefs: [], handshakeTimeoutMs: 3000 }); }
+      catch (e) { deadErr = e.message; }
+      assert(deadErr && /handshake failed/i.test(deadErr), 'A dead MCP server fails the bounded handshake instead of hanging');
+
+      // H. DualModeClient: the full mode matrix
+      const logs = [];
+      const apiAdapter = { ping: async (input) => ({ viaApi: true, input }) };
+
+      const autoClient = new DualModeClient({ connectorId: 'fake', mode: 'auto', mcp: { bootstrapper: boot, serverId: 'fake1' }, apiAdapter, logger: m => logs.push(m) });
+      const viaMcp = await autoClient.execute('ping', { q: 2 });
+      assert(viaMcp.transport === 'mcp' && viaMcp.result.echo.q === 2, 'Auto mode routes over MCP while the server is live');
+
+      await boot.stop('fake1');
+      const fell = await autoClient.execute('ping', { q: 3 });
+      assert(fell.transport === 'api' && fell.fallback === true && fell.result.viaApi === true, 'Auto mode falls back to the native API when the MCP server goes offline');
+      assert(logs.some(l => /falling back to native API/i.test(l)), 'The fallback is logged, not silent');
+      assert(autoClient.status().fallbacks === 1 && autoClient.status().lastTransport === 'api', 'The client records which transport actually served');
+
+      const strict = new DualModeClient({ connectorId: 'fake', mode: 'mcp', mcp: { bootstrapper: boot, serverId: 'fake1' }, apiAdapter });
+      let strictErr = null;
+      try { await strict.execute('ping', {}); } catch (e) { strictErr = e.message; }
+      assert(strictErr && /MCP execution failed/.test(strictErr), 'Strict mcp mode surfaces the failure rather than degrading');
+      assert(strict.status().apiCalls === 0, 'Strict mcp mode never touches the API adapter');
+
+      const apiOnly = new DualModeClient({ connectorId: 'fake', mode: 'api', mcp: { bootstrapper: boot, serverId: 'fake1' }, apiAdapter });
+      const direct = await apiOnly.execute('ping', { q: 4 });
+      assert(direct.transport === 'api' && !direct.fallback, 'API mode goes straight to the native client');
+      assert(apiOnly.status().mcpCalls === 0, 'API mode never attempts MCP');
+
+      // I. Cleanup: nothing left running (the spec's resource-leak requirement)
+      const s2 = await boot.start({ id: 'fake2', transport: 'stdio', command: process.execPath, args: ['-e', FAKE], envRefs: [] });
+      assert(boot.isRunning(s2.id) === true, 'A second server starts');
+      await boot.stopAll();
+      assert(boot.listRunning().length === 0, 'stopAll leaves no MCP processes behind');
+    } finally {
+      boot.dispose();
+      delete process.env.FAKE_MCP_SECRET;
+    }
+
+    // J. The connection builder resolves mode and reports the REAL transport
+    const cf48 = pth48.join(os48.tmpdir(), `aiwx_dmc_${Date.now()}.json`);
+    const cr48 = new CR48({ file: cf48 }); // no bootstrapper on purpose
+    const unsupported = await cr48.build('slack', { tenantId: 't1', connectionMode: 'mcp' });
+    assert(unsupported.modeError && unsupported.modeError.status === 'mcp_unsupported', 'Strict mcp against a non-MCP connector refuses before any state moves');
+
+    process.env.SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || 'x';
+    const viaApi48 = await cr48.build('slack', { tenantId: 't1', connectionMode: 'api' });
+    assert(viaApi48.connection.transport === 'api' && /native API/.test(viaApi48.message || ''), 'API mode reports connection via the native API');
+
+    process.env.REALESTATEAPI_KEY = process.env.REALESTATEAPI_KEY || 'x';
+    const auto48 = await cr48.build('realestateapi', { tenantId: 't1', connectionMode: 'auto' });
+    assert(auto48.connection.transport === 'api' && /fell back|not configured/i.test(auto48.message || ''), 'Auto without an MCP runtime falls back to the API and says why');
+    const strict48 = await cr48.build('realestateapi', { tenantId: 't2', connectionMode: 'mcp' });
+    assert(strict48.connection.status === 'error' && /does not fall back/i.test(strict48.message || ''), 'Strict mcp without a runtime errors instead of degrading');
+    try { fs48.unlinkSync(cf48); } catch (er) {}
+
+    // K. Onboarding Agent drives it; every vertical's roster inherits it
+    assert(roster48.roleAllowsTool('onboarding', 'get_connection_interview') === true, 'The Onboarding Agent runs the connection interview');
+    assert(roster48.roleAllowsTool('onboarding', 'detect_system') === true, 'The Onboarding Agent detects systems from parameters');
+    assert(roster48.roleAllowsTool('onboarding', 'connect_system') === true, 'The Onboarding Agent triggers the governed build');
+    assert(roster48.roleAllowsTool('delivery', 'connect_system') === false, 'Unrelated roles still cannot connect systems');
+    const ivTool = await registry48.invoke('get_connection_interview', { systemType: 'gusto' }, { actor: 'agent' });
+    assert(ivTool.ok === true && ivTool.result.steps.length === 4, 'The interview is served through the registry');
+    const dTool = await registry48.invoke('detect_system', { technologies: ['clio'] }, { actor: 'agent' });
+    assert(dTool.ok === true && dTool.result.systemType === 'clio', 'Detection is served through the registry');
+
+    // L. The Configurator → Onboarding handoff is an OBJECT, not a convention
+    const ho = await registry48.invoke('handoff_connection_candidates', { technologies: [{ name: 'shopify' }], tenantId: 'ho1' }, { actor: 'systems_configurator' });
+    assert(ho.ok === true && ho.result.proposals.length > 0, 'Scour findings become connection.proposal tasks');
+    const hoTask = (await registry48.invoke('get_task', { id: ho.result.proposals[0].id }, { actor: 'agent' })).result;
+    assert(hoTask.type === 'connection.proposal' && hoTask.status === 'proposed', 'Each proposal is a governed task born proposed');
+    assert(hoTask.payload.assignedRole === 'onboarding', 'The proposal is addressed to the Onboarding Agent');
+    assert(!!hoTask.payload.recommendedMode, 'The proposal carries the recommended connection mode');
+    assert(roster48.roleAllowsTool('systems_configurator', 'handoff_connection_candidates') === true, 'The Systems Configurator issues the handoff');
+    assert(roster48.roleAllowsTool('onboarding', 'handoff_connection_candidates') === false, 'The Onboarding Agent receives proposals; it does not issue them to itself');
+  } catch (e) {
+    assert(false, `Dual-mode connection tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

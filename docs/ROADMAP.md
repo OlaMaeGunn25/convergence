@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.11.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.12.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,33 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.12.0 — 2026-08-16
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+- **Dual-mode connection framework (DMC).** Every enterprise connection now
+  declares a mode: `api` (native REST/GraphQL client), `mcp` (strict — fails
+  rather than degrading), or `auto` (MCP first, seamless fallback to the native
+  API, with the fallback logged and the result naming which transport actually
+  served). Transport never changes governance: both paths enter through the same
+  approval, compliance-floor and autonomy gates.
+- **MCP bootstrapper**: on-demand server lifecycle — stdio children spawned with
+  credentials injected by env REFERENCE (values never appear in specs, logs or
+  results), SSE endpoints verified by bounded handshake (default 10s), every
+  server tracked, `stopAll()` + a process-exit hook so a dying session cannot
+  leak child processes. SSE tool routing is a declared seam that auto-mode falls
+  back through honestly.
+- **Onboarding Agent is the entry point**: a connection interview served as data
+  (system → parameters → mode choice, with "Auto-Detect & Upgrade to MCP"
+  recommended), system detection from domain/endpoint/technology signals via the
+  same catalog matchSignals that drive integration proposals.
+- **Explicit Configurator → Onboarding handoff**: scour findings become
+  `connection.proposal` tasks addressed to the Onboarding Agent — a queryable
+  object with provenance, not a verbal convention.
+- Credentials remain references end-to-end; the interview asks for secret NAMES,
+  never values, preserving the no-credentials-over-HTTP invariant.
+- 127 governed tools. Gateway 803/803, hub 61/61.
 
 ## v0.11.0 — 2026-08-04
 

@@ -26,6 +26,7 @@ const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./s
 const jsonFile = require('./stores/json_file');
 const catalog = require('./connectors/catalog');
 const preconditions = require('./preconditions');
+const connectionModes = require('./connection_modes');
 
 // `preconditions_pending` is a first-class state, not a flavour of not_connected.
 // Some systems — Epic most obviously — cannot be connected on demand: the tenant
@@ -76,6 +77,10 @@ class ConnectionRegistry {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
     this.file = options.file || path.join(__dirname, '..', 'config', 'connections.json');
+    // DMC: optional MCP runtime. Absent (tests, minimal deployments) means MCP
+    // is treated as unavailable — 'auto' falls back to the API and says why,
+    // 'mcp' errors. Never a silent pretend-success.
+    this.mcpBootstrapper = options.mcpBootstrapper || null;
   }
 
   async list({ tenantId } = {}) {
@@ -149,9 +154,29 @@ class ConnectionRegistry {
    *          do out-of-band when credentials are not yet present. Secrets are
    *          NEVER accepted here.
    */
-  async build(connectorId, { tenantId = null, actor = null, config = {}, tenant = {}, attestations = [] } = {}) {
+  async build(connectorId, { tenantId = null, actor = null, config = {}, tenant = {}, attestations = [], connectionMode = 'api' } = {}) {
     const connector = catalog.get(connectorId);
     if (!connector) throw new Error(`Unknown connector "${connectorId}".`);
+
+    // DMC: validate the requested mode against what the connector can honestly
+    // offer, BEFORE any state moves. Strict 'mcp' against a connector with no
+    // MCP surface is a refusal, not a quiet downgrade — the operator chose
+    // strictness on purpose.
+    const availableModes = connectionModes.modesFor(connectorId);
+    if (!connectionModes.MODES.includes(connectionMode)) {
+      throw new Error(`connectionMode must be one of ${connectionModes.MODES.join('|')}.`);
+    }
+    if (connectionMode === 'mcp' && !availableModes.includes('mcp')) {
+      const existing0 = await this.get(connectorId, tenantId);
+      return {
+        connection: existing0 || null,
+        authAction: null,
+        modeError: {
+          status: 'mcp_unsupported',
+          reason: `"${connector.name}" has no MCP surface. Available modes: ${availableModes.join(', ')}. Use 'api', or 'auto' if an MCP surface is added later.`
+        }
+      };
+    }
 
     // Reject any attempt to pass secret-looking values through the builder.
     const suspect = Object.keys(config || {}).find(k => /secret|token|password|api[_-]?key/i.test(k));
@@ -216,6 +241,54 @@ class ConnectionRegistry {
         : connector.auth === 'api_key'
           ? { type: 'api_key', message: `Set ${connector.name} credentials as env vars: ${connector.envKeys.join(', ')}. Do not send them to this API.` }
           : { type: 'none', message: `${connector.name} needs no credentials.` };
+    }
+
+    // DMC: resolve which transport actually serves this connection, and say so.
+    // "It connected" and "it connected over the path you chose" are different
+    // facts, and the onboarding feedback names the real one.
+    conn.connectionMode = connectionMode;
+    if (conn.status === 'connected') {
+      let transport = 'api';
+      let message = `Connected to ${connector.name} via native API.`;
+
+      if ((connectionMode === 'mcp' || connectionMode === 'auto') && availableModes.includes('mcp')) {
+        const mcpConfig = connectionModes.mcpConfigFor(connectorId);
+        if (this.mcpBootstrapper && mcpConfig) {
+          try {
+            const started = await this.mcpBootstrapper.start(Object.assign({ id: `${connectorId}_${tenantId || 'default'}` }, mcpConfig));
+            transport = 'mcp';
+            conn.mcpServerId = started.id;
+            message = `Successfully connected via MCP server '${started.id}'.`;
+          } catch (e) {
+            if (connectionMode === 'mcp') {
+              conn.status = 'error';
+              conn.health = 'mcp_handshake_failed';
+              conn.lastError = e.message;
+              conn.transport = null;
+              const savedErr = await this._persist(conn);
+              return {
+                connection: savedErr || conn, authAction,
+                message: `MCP connection failed: ${e.message}. Mode 'mcp' does not fall back — retry, or reconnect with 'auto'.`
+              };
+            }
+            message = `MCP connection failed (${e.message}); fell back to ${connector.name} native API.`;
+          }
+        } else if (connectionMode === 'mcp') {
+          conn.status = 'error';
+          conn.health = 'mcp_unavailable';
+          conn.lastError = 'No MCP bootstrapper or server descriptor is configured.';
+          const savedErr = await this._persist(conn);
+          return {
+            connection: savedErr || conn, authAction,
+            message: 'MCP connection failed: no MCP runtime is configured. Mode \'mcp\' does not fall back.'
+          };
+        } else {
+          message = `MCP runtime not configured; fell back to ${connector.name} native API.`;
+        }
+      }
+      conn.transport = transport;
+      const saved = await this._persist(conn);
+      return { connection: saved || conn, authAction, message };
     }
 
     const saved = await this._persist(conn);

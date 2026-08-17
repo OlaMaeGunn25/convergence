@@ -68,7 +68,12 @@ const preconditions = require('./preconditions');
 const epic = require('./connectors/epic');
 
 const taskModel = new TaskModel();
-const connectionRegistry = new ConnectionRegistry();
+const { McpBootstrapper } = require('./mcp_bootstrapper');
+const connectionModes = require('./connection_modes');
+// One MCP runtime for the gateway: dynamic servers started here are tracked and
+// torn down on process exit, so a dying session cannot leak child processes.
+const mcpBootstrapper = new McpBootstrapper({ logger: msg => console.log(msg) });
+const connectionRegistry = new ConnectionRegistry({ mcpBootstrapper });
 const agentRegistry = new AgentRegistry();
 const hitlRegistry = new HitlRegistry();
 const attributionLog = new AttributionLog();
@@ -367,13 +372,90 @@ register({
   inputSchema: z.object({
     connectorId: z.string(),
     tenantId: z.string().optional(),
-    config: z.record(z.any()).optional()
+    config: z.record(z.any()).optional(),
+    // DMC: 'auto' tries the MCP server first and falls back to the native API;
+    // 'mcp' is strict and fails rather than degrading; 'api' bypasses MCP.
+    connectionMode: z.enum(['mcp', 'api', 'auto']).optional()
   }),
   annotations: { readOnly: false, destructive: false, requiresApproval: true, openWorld: true },
   handler: (input, ctx) => connectionRegistry.build(input.connectorId, {
     tenantId: input.tenantId || ctx.tenantId || null,
     actor: ctx.actor || null,
-    config: input.config || {}
+    config: input.config || {},
+    connectionMode: input.connectionMode || 'api'
+  })
+});
+
+// --- Dual-mode connection framework (DMC) ---
+register({
+  name: 'handoff_connection_candidates',
+  title: 'Systems Configurator → Onboarding Agent handoff',
+  description: 'The explicit handoff between the agent that scours a connected/installed environment and the agent that walks the human through connecting what was found. Runs detection over the scour output (technologies, domain), then creates ONE governed task per signal-grounded candidate — type connection.proposal, born proposed, addressed to the Onboarding Agent — so the handoff is a queryable object with provenance, not a verbal convention. Nothing is connected here (invariant I1); the Onboarding Agent picks each proposal up, runs the interview and triggers the approval-gated build.',
+  inputSchema: z.object({
+    technologies: z.array(z.object({ name: z.string(), category: z.string().optional() })).optional(),
+    domain: z.string().optional(),
+    vertical: z.string().optional(),
+    tenantId: z.string().optional()
+  }),
+  annotations: { readOnly: false, destructive: false, openWorld: false },
+  handler: async (input, ctx) => {
+    const det = connectionModes.detectSystem({ domain: input.domain || '', technologies: (input.technologies || []).map(t => t.name) });
+    const tasks = [];
+    for (const cand of det.candidates) {
+      const t = await taskModel.create({
+        type: 'connection.proposal',
+        payload: {
+          source: 'systems_configurator_scour',
+          assignedRole: 'onboarding',
+          connectorId: cand.connectorId, name: cand.name, category: cand.category,
+          readiness: cand.readiness, matchedOn: cand.matchedOn,
+          availableModes: connectionModes.modesFor(cand.connectorId),
+          recommendedMode: connectionModes.modesFor(cand.connectorId).includes('auto') ? 'auto' : 'api',
+          nextStep: 'get_connection_interview → connect_system (HITL-approved)'
+        },
+        tenantId: input.tenantId || ctx.tenantId || null,
+        actor: ctx.agentId || ctx.actor || 'systems_configurator',
+        provenance: { source: 'handoff_connection_candidates', domain: input.domain || null }
+      });
+      tasks.push({ id: t.id, connectorId: cand.connectorId, status: t.status });
+    }
+    return { detected: det.detected, candidates: det.candidates.length, proposals: tasks };
+  }
+});
+
+register({
+  name: 'get_connection_interview',
+  title: 'Onboarding — the connection setup interview',
+  description: 'The exact questions the Onboarding Agent walks a user through to connect an enterprise system: which system, its non-secret parameters, the secret REFERENCES needed (values are never accepted over the API), and the connection-mode choice — API, MCP, or Auto-Detect & Upgrade to MCP (recommended). Returned as data so every surface asks the identical questions.',
+  inputSchema: z.object({ systemType: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => connectionModes.connectionInterview(input.systemType || null)
+});
+
+register({
+  name: 'detect_system',
+  title: 'Onboarding — detect the system from connection parameters',
+  description: 'Identify which catalog system a domain, endpoint or set of technology signals points at, using the same match signals that drive integration proposals — detection and proposal cannot disagree about what a signal means.',
+  inputSchema: z.object({
+    domain: z.string().optional(), endpoint: z.string().optional(),
+    technologies: z.array(z.string()).optional(), metadata: z.record(z.any()).optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => connectionModes.detectSystem(input)
+});
+
+register({
+  name: 'get_connection_modes',
+  title: 'Which connection modes a system honestly offers',
+  description: 'Available modes (api always; mcp/auto where the connector has an MCP surface) plus the MCP server descriptor when one exists. The descriptor carries credential REFERENCES, never values, so it is safe to display to the approving human.',
+  inputSchema: z.object({ connectorId: z.string() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => ({
+    connectorId: input.connectorId,
+    modes: connectionModes.modesFor(input.connectorId),
+    recommended: connectionModes.modesFor(input.connectorId).includes('auto') ? 'auto' : 'api',
+    mcpConfig: connectionModes.mcpConfigFor(input.connectorId),
+    running: mcpBootstrapper.listRunning().filter(s => s.id.startsWith(`${input.connectorId}_`))
   })
 });
 

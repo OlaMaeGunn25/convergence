@@ -4,7 +4,7 @@ Release history for CONVERGENCE-Ai lives in **[docs/ROADMAP.md](docs/ROADMAP.md)
 alongside the roadmap, so that what shipped and what is coming are read together
 rather than in two files that disagree.
 
-**Current version: v0.11.0**
+**Current version: v0.12.0**
 
 ## Where the version is written
 
