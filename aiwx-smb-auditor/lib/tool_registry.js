@@ -454,6 +454,9 @@ register({
     connectorId: input.connectorId,
     modes: connectionModes.modesFor(input.connectorId),
     recommended: connectionModes.modesFor(input.connectorId).includes('auto') ? 'auto' : 'api',
+    // The MCP priority ladder in attempt order: the system's own MCP server,
+    // then the spun-up API→MCP wrapper. The raw API is the floor, not a rung.
+    mcpLadder: connectionModes.mcpLadderFor(input.connectorId).map(r => ({ tier: r.tier, transport: r.transport })),
     mcpConfig: connectionModes.mcpConfigFor(input.connectorId),
     running: mcpBootstrapper.listRunning().filter(s => s.id.startsWith(`${input.connectorId}_`))
   })

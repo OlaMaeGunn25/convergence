@@ -2598,6 +2598,85 @@ async function runTests() {
     assert(false, `Dual-mode connection tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 49: MCP priority ladder — vendor MCP → API→MCP wrapper → API floor ---
+  try {
+    const modes49 = require('../lib/connection_modes');
+    const { McpBootstrapper: MB49 } = require('../lib/mcp_bootstrapper');
+    const { WRAPPABLE } = require('../lib/mcp_api_wrapper');
+    const { ConnectionRegistry: CR49 } = require('../lib/connection_registry');
+    const registry49 = require('../lib/tool_registry');
+    const pth49 = require('path'); const os49 = require('os'); const fs49 = require('fs');
+
+    // A. Ladder order: the system's own MCP server outranks the wrapper
+    const ladderRE = modes49.mcpLadderFor('realestateapi');
+    assert(ladderRE.length === 2, 'A connector with a vendor MCP surface has a two-rung ladder');
+    assert(ladderRE[0].tier === 'vendor_mcp' && ladderRE[1].tier === 'api_wrapper_mcp', 'The system\'s own MCP server is tier 1; the spun-up wrapper is tier 2');
+    const ladderClio = modes49.mcpLadderFor('clio');
+    assert(ladderClio.length === 1 && ladderClio[0].tier === 'api_wrapper_mcp', 'A connector with no vendor MCP still gets an MCP surface via the wrapper');
+    assert(modes49.mcpLadderFor('slack').length === 0, 'A non-wrappable connector without vendor MCP has no ladder — api only');
+    assert(modes49.modesFor('clio').includes('mcp'), 'The wrapper rung makes mcp an honest mode for wrapped connectors');
+    assert(WRAPPABLE.includes('gusto') && WRAPPABLE.includes('epic'), 'The systems of record are wrappable');
+
+    // B. The wrapper is REAL: spin it up and round-trip a native call over MCP
+    const boot49 = new MB49({ handshakeTimeoutMs: 9000, callTimeoutMs: 9000, logger: () => {} });
+    try {
+      const rung = ladderClio[0];
+      const started = await boot49.start(Object.assign({ id: 'wrap_clio' }, rung));
+      assert(started.serverInfo && /aiwx-api-wrapper-clio/.test(started.serverInfo.name), 'The API→MCP wrapper handshakes as a real MCP server');
+      const out = await boot49.callTool('wrap_clio', 'list_matters', { limit: 2 });
+      assert(out.structuredContent && out.structuredContent.simulated === true, 'A wrapper tool call round-trips to the native connector (labelled simulated when uncredentialed)');
+      const bad = await boot49.callTool('wrap_clio', 'no_such_tool', {}).then(() => null, e => e.message);
+      assert(bad && /Unknown tool/.test(bad), 'An unknown tool on the wrapper errors instead of guessing');
+      await boot49.stopAll();
+      assert(boot49.listRunning().length === 0, 'Wrapper processes are cleaned up');
+    } finally { boot49.dispose(); }
+
+    // C. Priority in practice: vendor rung fails → connection lands on tier 2,
+    //    and the feedback says how far down the ladder it landed.
+    const realBoot49 = new MB49({ handshakeTimeoutMs: 9000, logger: () => {} });
+    const stubBoot = {
+      start: async cfg => {
+        if (cfg.transport === 'sse') throw new Error('vendor endpoint unreachable');
+        return realBoot49.start(cfg);
+      },
+      isRunning: id => realBoot49.isRunning(id),
+      listRunning: () => realBoot49.listRunning()
+    };
+    const cf49 = pth49.join(os49.tmpdir(), `aiwx_ladder_${Date.now()}.json`);
+    const cr49 = new CR49({ file: cf49, mcpBootstrapper: stubBoot });
+    process.env.REALESTATEAPI_KEY = process.env.REALESTATEAPI_KEY || 'x';
+    try {
+      const res = await cr49.build('realestateapi', { tenantId: 'lad1', connectionMode: 'auto' });
+      assert(res.connection.transport === 'mcp', 'Auto mode still lands on MCP when only the vendor rung fails');
+      assert(res.connection.mcpTier === 'api_wrapper_mcp', 'The connection records that it is served by the wrapper tier');
+      assert(/System MCP server unavailable/.test(res.message) && /API→MCP wrapper/.test(res.message), 'The feedback names the failed rung and the one that served');
+
+      // Strict mcp is satisfied by ANY rung — it demands the protocol, not a tier.
+      // (Creds must be present first: a credential-less connection honestly stays
+      // at pending_credentials and never reaches mode resolution at all.)
+      const clioKeys = (require('../lib/connectors/catalog').get('clio').envKeys || []);
+      const setKeys = clioKeys.filter(k => !process.env[k]);
+      setKeys.forEach(k => { process.env[k] = 'x'; });
+      try {
+        const strict = await cr49.build('clio', { tenantId: 'lad2', connectionMode: 'mcp' });
+        assert(strict.connection.transport === 'mcp' && strict.connection.mcpTier === 'api_wrapper_mcp', 'Strict mcp succeeds via the wrapper when no vendor server exists');
+      } finally {
+        setKeys.forEach(k => { delete process.env[k]; });
+      }
+    } finally {
+      await realBoot49.stopAll();
+      realBoot49.dispose();
+      try { fs49.unlinkSync(cf49); } catch (er) {}
+    }
+
+    // D. The ladder is visible to the Onboarding Agent
+    const modesTool = await registry49.invoke('get_connection_modes', { connectorId: 'realestateapi' }, { actor: 'agent' });
+    assert(modesTool.ok === true && modesTool.result.mcpLadder.length === 2, 'get_connection_modes exposes the ladder');
+    assert(modesTool.result.mcpLadder[0].tier === 'vendor_mcp', 'The exposed ladder shows vendor MCP as the priority protocol');
+  } catch (e) {
+    assert(false, `MCP priority ladder tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

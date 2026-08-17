@@ -252,26 +252,44 @@ class ConnectionRegistry {
       let message = `Connected to ${connector.name} via native API.`;
 
       if ((connectionMode === 'mcp' || connectionMode === 'auto') && availableModes.includes('mcp')) {
-        const mcpConfig = connectionModes.mcpConfigFor(connectorId);
-        if (this.mcpBootstrapper && mcpConfig) {
-          try {
-            const started = await this.mcpBootstrapper.start(Object.assign({ id: `${connectorId}_${tenantId || 'default'}` }, mcpConfig));
-            transport = 'mcp';
-            conn.mcpServerId = started.id;
-            message = `Successfully connected via MCP server '${started.id}'.`;
-          } catch (e) {
+        // DMC priority ladder: the system's own MCP server first, the spun-up
+        // API→MCP wrapper second, and only then — auto mode only — the raw
+        // native API as the floor. Each rung's failure is carried into the
+        // feedback so the operator can see how far down the ladder they landed.
+        const ladder = connectionModes.mcpLadderFor(connectorId);
+        if (this.mcpBootstrapper && ladder.length) {
+          const failures = [];
+          for (const rung of ladder) {
+            try {
+              const started = await this.mcpBootstrapper.start(
+                Object.assign({ id: `${connectorId}_${tenantId || 'default'}_${rung.tier}` }, rung)
+              );
+              transport = 'mcp';
+              conn.mcpServerId = started.id;
+              conn.mcpTier = rung.tier;
+              message = rung.tier === 'vendor_mcp'
+                ? `Successfully connected via the system's MCP server '${started.id}'.`
+                : failures.length
+                  ? `System MCP server unavailable (${failures[0]}); connected via spun-up API→MCP wrapper '${started.id}'.`
+                  : `Successfully connected via spun-up API→MCP wrapper '${started.id}'.`;
+              break;
+            } catch (e) {
+              failures.push(`${rung.tier}: ${e.message}`);
+            }
+          }
+          if (transport !== 'mcp') {
             if (connectionMode === 'mcp') {
               conn.status = 'error';
               conn.health = 'mcp_handshake_failed';
-              conn.lastError = e.message;
+              conn.lastError = failures.join(' | ');
               conn.transport = null;
               const savedErr = await this._persist(conn);
               return {
                 connection: savedErr || conn, authAction,
-                message: `MCP connection failed: ${e.message}. Mode 'mcp' does not fall back — retry, or reconnect with 'auto'.`
+                message: `MCP connection failed on every rung (${failures.join(' | ')}). Mode 'mcp' does not fall back — retry, or reconnect with 'auto'.`
               };
             }
-            message = `MCP connection failed (${e.message}); fell back to ${connector.name} native API.`;
+            message = `MCP connection failed (${failures.join(' | ')}); fell back to ${connector.name} native API.`;
           }
         } else if (connectionMode === 'mcp') {
           conn.status = 'error';

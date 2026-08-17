@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.12.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.12.1** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,25 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.12.1 — 2026-08-16
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+Completes the dual-mode framework with the MCP **priority ladder**:
+
+1. **vendor_mcp** — the connected system's OWN MCP server. The system speaking
+   its native protocol contract outranks anything we stand up ourselves.
+2. **api_wrapper_mcp** — a spun-up local MCP server (`lib/mcp_api_wrapper.js`)
+   wrapping the connector's native API over stdio JSON-RPC, so agents stay in
+   one protocol even when the vendor publishes no MCP surface. Real, not
+   declarative: Clio, Gusto, Epic and RealEstateAPI are wrappable today.
+3. The raw native API adapter is the fallback FLOOR beneath the ladder (auto
+   mode only) — deliberately not a rung.
+
+Strict `mcp` mode is satisfied by any rung — it demands the protocol, not a
+tier. Feedback names how far down the ladder a connection landed. Gateway
+819/819, hub 61/61.
 
 ## v0.12.0 — 2026-08-16
 

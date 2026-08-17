@@ -36,12 +36,50 @@ const MCP_DESCRIPTORS = {
   realestateapi: () => require('./connectors/realestateapi').mcpConfig()
 };
 
-/** Which modes a connector can honestly offer. Every connector has an API path. */
+const path = require('path');
+const { WRAPPABLE } = require('./mcp_api_wrapper');
+
+/**
+ * Which modes a connector can honestly offer. Every connector has an API path;
+ * MCP is offered when EITHER rung of the MCP ladder exists — the system's own
+ * server, or a spun-up wrapper around its native API.
+ */
 function modesFor(connectorId) {
   const c = catalog.get(connectorId);
   if (!c) return [];
-  const hasMcp = !!(c.mcp || MCP_DESCRIPTORS[connectorId]);
+  const hasMcp = !!(c.mcp || MCP_DESCRIPTORS[connectorId] || WRAPPABLE.includes(connectorId));
   return hasMcp ? ['api', 'mcp', 'auto'] : ['api'];
+}
+
+/**
+ * The MCP priority ladder, in the order it is attempted (DMC):
+ *
+ *   1. vendor_mcp      — the connected system's OWN MCP server. It is the
+ *                        system speaking its native protocol contract, so it
+ *                        outranks anything we stand up ourselves.
+ *   2. api_wrapper_mcp — a spun-up local MCP server wrapping the connector's
+ *                        native API, so agents stay in one protocol even when
+ *                        the vendor publishes no MCP surface.
+ *
+ * The raw native API adapter is deliberately NOT on this ladder: it is the
+ * fallback FLOOR beneath it (auto mode only), not a peer protocol.
+ */
+function mcpLadderFor(connectorId) {
+  const ladder = [];
+  const vendor = mcpConfigFor(connectorId);
+  if (vendor) ladder.push(Object.assign({ tier: 'vendor_mcp' }, vendor));
+  if (WRAPPABLE.includes(connectorId)) {
+    ladder.push({
+      tier: 'api_wrapper_mcp',
+      transport: 'stdio',
+      command: process.execPath,
+      args: [path.join(__dirname, 'mcp_api_wrapper.js'), connectorId],
+      // No required refs: the wrapper inherits the gateway env, and the
+      // connector modules degrade to labelled simulated data when unconfigured.
+      envRefs: []
+    });
+  }
+  return ladder;
 }
 
 /** The MCP server descriptor for a connector, when it has one. Refs only. */
@@ -187,4 +225,4 @@ function connectionInterview(systemType = null) {
   };
 }
 
-module.exports = { MODES, TRANSPORTS, modesFor, mcpConfigFor, detectSystem, normalizeSpec, connectionInterview };
+module.exports = { MODES, TRANSPORTS, modesFor, mcpConfigFor, mcpLadderFor, detectSystem, normalizeSpec, connectionInterview };
