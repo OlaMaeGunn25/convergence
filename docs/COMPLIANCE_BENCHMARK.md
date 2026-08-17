@@ -1,4 +1,8 @@
-# Compliance Benchmark — Vanta vs CONVERGENCE-Ai
+# Compliance Benchmark — CONVERGENCE-Ai vs the Compliance-Automation Category
+
+Benchmarked against the leading compliance-automation platform in the category.
+The vendor is deliberately unnamed here; the catalogue below is the standard set
+that category covers, and the framework names themselves are public standards.
 
 ## The comparison is not like-for-like, and that matters
 
@@ -6,7 +10,7 @@ Before any gap list is useful, the two things being compared have to be named
 correctly, because they solve different problems and a naive gap list would send
 engineering effort in the wrong direction.
 
-| | Vanta | CONVERGENCE-Ai |
+| | Compliance-automation platform | CONVERGENCE-Ai |
 |---|---|---|
 | Subject | **The organisation** | **The tenant's individual actions** |
 | Question answered | "Is this company certifiable against framework X?" | "Is this specific action lawful for this business right now?" |
@@ -14,15 +18,16 @@ engineering effort in the wrong direction.
 | Output | A certification or attestation | A verdict: pass / flag / block, plus evidence |
 | Timing | Continuous, periodic audits | Synchronous, before the commit boundary |
 
-Vanta answers *are we allowed to operate*. Convergence answers *is this email,
-this refund, this record write allowed*. **Neither replaces the other**, and
-Convergence should not attempt to become Vanta — that is elaborated in §6.
+The category answers *are we allowed to operate*. Convergence answers *is this
+email, this refund, this record write allowed*. **Neither replaces the other**,
+and Convergence should not attempt to become a compliance-automation platform —
+elaborated in §6.
 
 ---
 
-## 1. Vanta's framework catalogue (38)
+## 1. The benchmark catalogue (38 frameworks)
 
-From Vanta's advanced-frameworks listing, grouped.
+Grouped as the category covers them.
 
 **Core security & attestation**
 SOC 2 · ISO 27001 · NIST CSF 2.0 · CIS v8.1 · MVSP · AWS FTR · Cyber Essentials ·
@@ -46,7 +51,7 @@ ISO 42001 · NIST AI RMF · EU AI Act
 
 **Cloud, continuity, quality, sector**
 ISO 27017 · ISO 22301 · ISO 9001 · TISAX (automotive) · NIS 2 (EU) ·
-Microsoft SSPA · Custom Frameworks
+Microsoft SSPA · Custom frameworks
 
 ---
 
@@ -98,8 +103,8 @@ contributes nothing on 57% of the vertical catalogue.
 Convergence is an AI system that assists and executes consequential decisions,
 including HR-adjacent ones via the Human Companion. It aligns to **none** of
 ISO 42001, NIST AI RMF or the EU AI Act, and does not screen against the emerging
-US state AI-employment laws. This is elaborated in §5 because it is the highest
-risk item on this page.
+US state AI-employment laws. Elaborated in §5 because it is the highest risk item
+on this page.
 
 ---
 
@@ -109,7 +114,8 @@ Split by which of the two questions each framework answers.
 
 ### 3a. Frameworks about AiWorXmiths as a vendor (buy, don't build)
 
-Prospects will ask for these in security review. They are Vanta's actual product.
+Prospects will ask for these in security review. They are the benchmark
+category's actual product.
 
 | Framework | Status | Why it matters here |
 |---|---|---|
@@ -124,7 +130,8 @@ Prospects will ask for these in security review. They are Vanta's actual product
 
 ### 3b. Frameworks Convergence should SCREEN tenant actions against (build)
 
-This is the half Vanta does **not** do, and where the product differentiates.
+This is the half the compliance-automation category does **not** do, and where
+the product differentiates.
 
 | Framework | Screening today | Gap |
 |---|---|---|
@@ -164,7 +171,7 @@ What each vertical's regulations actually are, against what is implemented.
 
 **Cross-cutting, applies to all 14:** US state privacy · TCPA/DNC on any outbound
 contact · CAN-SPAM on any email · ADA/WCAG on customer-facing output · employment
-law through the Gusto/HR surface (FLSA, state wage rules).
+law through the HR surface (FLSA, state wage rules).
 
 ---
 
@@ -241,14 +248,16 @@ than for completeness. Sequence by exposure:
 
 ### Phase 4 — Vendor posture (buy)
 
-**Do not build this.** Purchase Vanta or an equivalent for AiWorXmiths' own
-SOC 2 Type II, then ISO 27001, then ISO 42001. Rebuilding continuous control
-monitoring would consume the roadmap and produce a worse version of a mature
-product, while the screening corpus — which nobody else builds — went unwritten.
+**Do not build this.** Purchase a compliance-automation platform for
+AiWorXmiths' own SOC 2 Type II, then ISO 27001, then ISO 42001. Rebuilding
+continuous control monitoring would consume the roadmap and produce a worse
+version of a mature product, while the screening corpus — which nobody else
+builds — went unwritten.
 
 ### What this positions against
 
-After Phases 0–3, the honest claim is *"Vanta certifies your company; we screen
-your agents' actions in real time against the regulations of your industry."*
-That is a complementary story rather than a competitive one, and it is defensible
-because it is true. Claiming to replace Vanta would not be.
+After Phases 0–3, the honest claim is *"compliance-automation platforms certify
+your company; we screen your agents' actions in real time against the regulations
+of your industry."* That is a complementary story rather than a competitive one,
+and it is defensible because it is true. Claiming to replace the category would
+not be.
