@@ -1,6 +1,6 @@
 {
   "name": "convergence-ai-hub",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "CONVERGENCE-Ai™: A Cloud-Native AI Automation Hub",
   "type": "module",
   "scripts": {

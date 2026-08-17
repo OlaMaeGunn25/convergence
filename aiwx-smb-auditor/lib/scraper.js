@@ -593,7 +593,7 @@ async function scrapeDomain(inputDomain, apiKey) {
     const htmlContent = mainPage.html || '';
     const markdownContent = mainPage.markdown || '';
     
-    // ── Tech Detection via 120+ signature engine (BuiltWith parity) ──────────
+    // ── Tech Detection via 120+ signature engine (20 categories) ──────────
     const cookieHeader = (mainPage.headers && mainPage.headers['set-cookie']) ? mainPage.headers['set-cookie'].join(' ') : '';
     const responseHeaders = mainPage.headers || {};
     let detectedTech = detectTechnologies(htmlContent, responseHeaders, cookieHeader, '');

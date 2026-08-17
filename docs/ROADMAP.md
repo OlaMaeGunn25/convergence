@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.10.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.11.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,26 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.11.0 — 2026-08-04
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+- **Compliance coverage closed across all 14 verticals.** Education declared a
+  FERPA badge with no rules behind it — a control that appears present is worse
+  than one that is absent. Fixed, and a drift guard now asserts every declared
+  profile has rules, verified by removing the corpus and watching the suite fail.
+- **Universal corpus**: TCPA, state DNC, CAN-SPAM, US state privacy and ADA/WCAG
+  attach to every vertical, because the exposure comes from the action rather
+  than the industry. Real-estate skip trace and every SMS/voice path are now
+  screened — previously the widest live exposure.
+- **Consequential-decision classification**: actions touching employment, credit,
+  housing, education access or healthcare are recognised and never pass silently.
+  Prerequisite for EU AI Act, Colorado AI Act and NYC Local Law 144.
+- Benchmark vendor names scrubbed repo-wide in favour of the capabilities they
+  stood for. Detection signatures, cited data sources and training content left
+  intact — scrubbing those would have broken detection and destroyed provenance.
+- Gateway 758/758, hub 61/61.
 
 ## v0.10.0 — 2026-08-04
 

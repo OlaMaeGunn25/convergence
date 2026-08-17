@@ -25,7 +25,7 @@ This document tracks all features, compliance checkpoints, and development progr
   - **Word Doc (.docx) Exporter:** Direct, client-side, styled `.doc`/`.docx` generator mimicking corporate templates (complete with headers, metrics tables, and SWOT breakdowns).
 
 ### 4. 🚀 Competitive Positioning & Monetization
-- [x] **[REQ-04.1] Public Product Page (`public/product.html`):** Showcase the Audit Engine’s unique advantages over BuiltWith, SecurityScorecard, and manual consulting.
+- [x] **[REQ-04.1] Public Product Page (`public/product.html`):** Showcase the Audit Engine’s capabilities against manual consulting: 120+ technology signatures across 20 categories, security-posture scoring, and workforce planning.
 - [x] **[REQ-04.2] Pricing Tier Calculator:** Interactive sliders representing subscription models (Consultant, Agency, Enterprise Unlimited).
 - [x] **[REQ-04.3] Competitive Analysis Matrix:** Detailed, side-by-side technical evaluation highlighting why our solution is superior.
 
@@ -50,7 +50,7 @@ This document tracks all features, compliance checkpoints, and development progr
 | **REQ-03.2** | Exporters | PDF & DOCX export functions | `[x] Active` | Blob & Print layout test (Verified) |
 | **REQ-04.1** | Product Page | Interactive product & sales page | `[x] Active` | Visual design review (Verified) |
 | **REQ-04.2** | Product Page | Interactive pricing calculator | `[x] Active` | JS slider verification (Verified) |
-| **REQ-04.3** | Product Page | Competitive analysis grid | `[x] Active` | Content check against BuiltWith (Verified) |
+| **REQ-04.3** | Product Page | Competitive analysis grid | `[x] Active` | Content check against technology-lookup capability coverage (Verified) |
 | **REQ-05.1** | Testing Suite | Verification script automation | `[x] Active` | CLI command execution (31/31 passed) |
 
 ---

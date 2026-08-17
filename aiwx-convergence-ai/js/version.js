@@ -12,7 +12,7 @@
    Source of truth is docs/ROADMAP.md; bump all four together.
 */
 
-export const PRODUCT_VERSION = '0.10.0';
+export const PRODUCT_VERSION = '0.11.0';
 
 /** Short label for the UI, e.g. "v0.10.0". */
 export function versionLabel() {

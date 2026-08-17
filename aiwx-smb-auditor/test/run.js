@@ -2394,6 +2394,72 @@ async function runTests() {
     assert(false, `Preconditions / Epic tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 47: Compliance coverage across all 14 verticals (CMP) ---
+  try {
+    const comp47 = require('../lib/compliance');
+    const { VERTICALS: V47 } = require('../lib/verticals');
+    const registry47 = require('../lib/tool_registry');
+
+    // A. THE DRIFT GUARD. Education shipped a FERPA badge with no rules behind
+    //    it — a control that appears present is worse than one that is absent.
+    //    Every vertical declaring a compliance profile must have rules.
+    for (const v of V47) {
+      if (!(v.compliance || []).length) continue;
+      const res = comp47.regulatorySearch({ vertical: v.id });
+      const own = (comp47.REG_CORPUS[v.id] || []);
+      assert(own.length > 0, `Declared compliance profile for "${v.id}" has rules behind it`);
+      assert(res.rules.length > 0, `regulatorySearch returns rules for "${v.id}"`);
+    }
+
+    // B. EVERY vertical now returns rules, declared profile or not.
+    for (const v of V47) {
+      const res = comp47.regulatorySearch({ vertical: v.id });
+      assert(res.rules.length > 0, `Vertical "${v.id}" is no longer a compliance blind spot`);
+    }
+    assert(V47.length === 14, 'All 14 verticals were checked');
+
+    // C. Education specifically — the original finding
+    const edu = comp47.regulatorySearch({ vertical: 'education' });
+    assert(edu.rules.some(r => /FERPA/.test(r.code)), 'Education now screens against FERPA, as its profile claims');
+    assert(edu.rules.some(r => /COPPA/.test(r.code)), 'Education screens against COPPA for under-13 data');
+    const eduVerdict = comp47.validate({ vertical: 'education', capability: 'send_email' });
+    assert(eduVerdict.citations.length > 0, 'An education action now produces citations rather than a silent pass');
+
+    // D. Universal rules attach regardless of vertical
+    for (const v of ['construction', 'logistics', 'nonprofit', 'events']) {
+      const r = comp47.regulatorySearch({ vertical: v, capability: 'send_sms' });
+      assert(r.rules.some(x => x.code === 'TCPA'), `TCPA attaches to outbound SMS in "${v}"`);
+    }
+    const noSms = comp47.regulatorySearch({ vertical: 'retail', capability: 'list_invoices' });
+    assert(!noSms.rules.some(x => x.code === 'TCPA'), 'TCPA does NOT attach to an action that sends nothing');
+
+    // E. The live exposure named in the benchmark: skip trace now screens
+    const skip = comp47.validate({ vertical: 'realestate', capability: 'realestate_skip_trace' });
+    assert(skip.citations.some(c => c.code === 'TCPA'), 'Skip trace is screened against TCPA');
+    assert(skip.citations.some(c => c.code === 'State-DNC'), 'Skip trace is screened against state do-not-call');
+    assert(skip.verdict === 'flag', 'Skip trace does not pass silently');
+
+    // F. Consequential-decision classification (AI-governance finding)
+    const hire = comp47.classifyDecision({ capability: 'terminate_employee' });
+    assert(hire.consequential === true && hire.domains.includes('employment'), 'Termination is classified as a consequential employment decision');
+    assert(hire.obligations.some(o => /Local Law 144|notice/i.test(o)), 'The classification names the notice obligation');
+    const benign = comp47.classifyDecision({ capability: 'list_invoices' });
+    assert(benign.consequential === false && benign.domains.length === 0, 'An ordinary action is not misclassified as consequential');
+    for (const [cap, dom] of [['loan_underwriting', 'credit'], ['lease_approval', 'housing'], ['admission_review', 'education'], ['clinical_decision_support', 'healthcare']]) {
+      assert(comp47.classifyDecision({ capability: cap }).domains.includes(dom), `"${cap}" is classified under ${dom}`);
+    }
+
+    // G. A consequential action never passes silently, even with no sector rule
+    const conseq = comp47.validate({ vertical: 'tech', capability: 'candidate_screening' });
+    assert(conseq.verdict === 'flag' && conseq.decision.consequential === true, 'A consequential decision is flagged even where no sector rule matched');
+
+    // H. Registry wiring still works end to end
+    const vres = await registry47.invoke('validate_compliance', { vertical: 'construction', capability: 'send_sms' }, { actor: 'agent' });
+    assert(vres.ok === true && vres.result.citations.some(c => c.code === 'OSHA-1926'), 'Construction screens against OSHA through the registry');
+  } catch (e) {
+    assert(false, `Compliance coverage tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

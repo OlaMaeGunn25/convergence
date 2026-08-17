@@ -15,16 +15,16 @@ const VERTICALS = [
   { id: 'legal', name: 'Legal Services', compliance: ['IOLTA', 'ABA-Model-1.15'] },
   { id: 'realestate', name: 'Real Estate', compliance: ['Fair-Housing-Act'], regionalSources: 'MLS (RESO Web API)' },
   { id: 'retail', name: 'Retail & E-commerce', compliance: ['PCI-DSS'] },
-  { id: 'hospitality', name: 'Hospitality & Leisure', compliance: [] },
+  { id: 'hospitality', name: 'Hospitality & Leisure', compliance: ['ADA-Title-III', 'Alcohol-Licensing', 'FDA-Food-Code'] },
   { id: 'finance', name: 'Financial & Bookkeeping', compliance: ['GLBA-Safeguards', 'PCI-DSS'] },
-  { id: 'construction', name: 'Construction & Contracting', compliance: [] },
-  { id: 'logistics', name: 'Logistics & Supply Chain', compliance: [] },
-  { id: 'education', name: 'Education & Tutoring', compliance: ['FERPA'] },
-  { id: 'tech', name: 'SaaS & Tech Startups', compliance: [] },
-  { id: 'professional', name: 'Professional Services', compliance: [] },
-  { id: 'nonprofit', name: 'Non-Profit Organizations', compliance: [] },
-  { id: 'events', name: 'Event Planning & Management', compliance: [] },
-  { id: 'event_rental', name: 'Event Rental & Equipment', compliance: [] }
+  { id: 'construction', name: 'Construction & Contracting', compliance: ['OSHA-1926', 'Contractor-Licensing', 'Davis-Bacon', 'Mechanics-Lien', 'EPA-RRP'] },
+  { id: 'logistics', name: 'Logistics & Supply Chain', compliance: ['FMCSA-HOS', '49-CFR-Hazmat', 'Carmack', 'CBP-Customs'] },
+  { id: 'education', name: 'Education & Tutoring', compliance: ['FERPA-99.30', 'FERPA-99.31', 'COPPA', 'SOPIPA-like'] },
+  { id: 'tech', name: 'SaaS & Tech Startups', compliance: ['State-Privacy', 'DMCA', 'WCAG-ADA'] },
+  { id: 'professional', name: 'Professional Services', compliance: ['Professional-Licensing', 'FTC-Act-5', 'Client-Confidentiality'] },
+  { id: 'nonprofit', name: 'Non-Profit Organizations', compliance: ['Charitable-Solicitation', 'IRC-501c3', 'IRS-Form-990', 'Substantiation-170f'] },
+  { id: 'events', name: 'Event Planning & Management', compliance: ['ADA-Title-III', 'BOTS-Act', 'Alcohol-Licensing', 'Liability-Waiver'] },
+  { id: 'event_rental', name: 'Event Rental & Equipment', compliance: ['CPSC-Product-Safety', 'Amusement-Device', 'Rental-Deposit', 'ADA-Title-III'] }
 ];
 
 const byId = new Map(VERTICALS.map(v => [v.id, v]));

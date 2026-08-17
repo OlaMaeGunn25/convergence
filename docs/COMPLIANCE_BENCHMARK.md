@@ -57,9 +57,12 @@ Microsoft SSPA · Custom frameworks
 
 ## 2. What CONVERGENCE-Ai actually has today
 
-Two layers, and they disagree with each other — which is the first finding.
+> **Updated for v0.11.0.** The state below is what was found at v0.10.0; the
+> findings that followed have been actioned and are marked CLOSED. Current state:
+> **all 14 verticals** declare a profile and have rules behind it, plus a
+> universal corpus that attaches to every vertical.
 
-**Declared** (`lib/verticals.js`, attached at install, 6 of 14 verticals):
+**Declared at v0.10.0** (`lib/verticals.js`, 6 of 14 verticals):
 
 | Vertical | Declared profile |
 |---|---|
@@ -70,7 +73,7 @@ Two layers, and they disagree with each other — which is the first finding.
 | Financial | GLBA-Safeguards, PCI-DSS |
 | Education | FERPA |
 
-**Implemented** (`lib/compliance.js` `REG_CORPUS`, 10 rules across 5 verticals):
+**Implemented at v0.10.0** (`lib/compliance.js` `REG_CORPUS`, 10 rules across 5 verticals):
 
 | Vertical | Rules |
 |---|---|
@@ -80,31 +83,48 @@ Two layers, and they disagree with each other — which is the first finding.
 | Retail | FTC-Act-5, PCI-DSS |
 | Real Estate | Fair-Housing-Act |
 
-### Finding 1 — Education is declared but unimplemented
+### Finding 1 — Education is declared but unimplemented — **CLOSED v0.11.0**
 
 `education` carries FERPA in its vertical profile, but `REG_CORPUS` has no
 `education` key. `regulatorySearch({ vertical: 'education' })` returns **zero
 rules**, and `validate()` produces **no citations**. A school-sector tenant
 therefore installs with a compliance badge and no screening behind it.
 
-This is the worst failure mode available: not an absent control, but a control
-that appears present. **Fix first, before adding anything new.**
+This was the worst failure mode available: not an absent control, but a control
+that appears present.
 
-### Finding 2 — Eight verticals declare nothing at all
+**Closed.** FERPA 99.30/99.31, COPPA and a state student-privacy rule are
+implemented, and a test now asserts that *every* vertical declaring a compliance
+profile has rules behind it. Verified by removing the education corpus and
+confirming the suite fails.
+
+### Finding 2 — Eight verticals declare nothing at all — **CLOSED v0.11.0**
 
 Hospitality · Construction · Logistics · SaaS/Tech · Professional Services ·
 Non-Profit · Events · Event Rental.
 
-`validate()` for these returns pass with no citations, so the compliance agent
-contributes nothing on 57% of the vertical catalogue.
+`validate()` for these returned pass with no citations, so the compliance agent
+contributed nothing on 57% of the vertical catalogue.
 
-### Finding 3 — No AI-governance alignment whatsoever
+**Closed.** All eight now carry sector rules, and a universal corpus (TCPA,
+state DNC, CAN-SPAM, state privacy, ADA/WCAG) attaches to every vertical
+regardless of sector — because the exposure comes from the action, not the
+industry. All 14 verticals now return citations.
+
+### Finding 3 — No AI-governance alignment — **PARTIALLY CLOSED v0.11.0**
 
 Convergence is an AI system that assists and executes consequential decisions,
 including HR-adjacent ones via the Human Companion. It aligns to **none** of
-ISO 42001, NIST AI RMF or the EU AI Act, and does not screen against the emerging
-US state AI-employment laws. Elaborated in §5 because it is the highest risk item
-on this page.
+ISO 42001, NIST AI RMF or the EU AI Act.
+
+**Partially closed.** `classifyDecision()` now recognises actions that constitute
+consequential decisions about a person — employment, credit, housing, education
+access, healthcare — and such an action never passes silently, even where no
+sector rule matched. That is the prerequisite for every regime in §5: you cannot
+satisfy an obligation you cannot detect you are in scope of.
+
+Still open: formal ISO 42001 / NIST AI RMF control mapping, EU AI Act risk
+classification per workflow, and the per-tenant transparency statement.
 
 ---
 
@@ -138,19 +158,23 @@ the product differentiates.
 | HIPAA | Partial — 2 rules | No HITECH breach notification, no 42 CFR Part 2, no state medical-privacy overlay |
 | PCI DSS | Label only | No cardholder-data handling rules at the action level |
 | GLBA | Label only | No Safeguards Rule specifics |
-| FERPA | **Declared, absent** | See Finding 1 |
-| US state privacy (19+) | ❌ none | Applies to nearly every vertical; the single widest gap |
+| FERPA | ✅ 99.30, 99.31 + COPPA + state student privacy | Closed v0.11.0 |
+| US state privacy (19+) | ✅ universal baseline rule | Per-state variation still to come |
 | GDPR | ❌ none | Blocks EU tenants entirely |
-| TCPA / state DNC | ❌ none | **Already exposed** — real-estate skip trace and every SMS/voice workflow |
-| CAN-SPAM | ❌ none | Every email-sending workflow across all 14 verticals |
-| ADA / WCAG | ❌ none | Any customer-facing output |
-| EU AI Act, Colorado AI Act, NYC LL144 | ❌ none | See §5 |
+| TCPA / state DNC | ✅ universal, gates SMS/voice/skip trace | Closed v0.11.0 — skip trace now flags, never passes silently |
+| CAN-SPAM | ✅ universal, gates email and campaign sends | Closed v0.11.0 |
+| ADA / WCAG | ✅ universal on customer-facing output | Closed v0.11.0 |
+| EU AI Act, Colorado AI Act, NYC LL144 | ⚠️ consequential-decision detection shipped | Formal mapping and risk classification still open — see §5 |
 
 ---
 
 ## 4. Per-vertical gap register
 
 What each vertical's regulations actually are, against what is implemented.
+
+> **v0.11.0:** the "none" entries below are closed — every vertical now has
+> sector rules plus the universal corpus. The "Missing" column is now the
+> *remaining depth* to add, not a blind spot.
 
 | # | Vertical | Implemented | Missing (priority order) |
 |---|---|---|---|

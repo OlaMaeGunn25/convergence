@@ -19,7 +19,7 @@ function assert(condition, msg) {
   if (!condition) throw new Error(msg || 'Assertion failed');
 }
 
-console.log('\n=== Tech Classifier — BuiltWith Parity Tests ===\n');
+console.log('\n=== Tech Classifier — Signature Detection Tests (120+ signatures) ===\n');
 
 // ── detectTechnologies ─────────────────────────────────────────────────────
 console.log('detectTechnologies():');

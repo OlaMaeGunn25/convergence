@@ -1,5 +1,5 @@
 /**
- * Tech Classifier — BuiltWith-Parity Technology Detection Engine
+ * Tech Classifier — Technology Detection Engine (120+ signatures, 20 categories)
  * 120+ signatures across 20 categories, multi-vector detection.
  * Vectors: HTML source, HTTP response headers, cookie names, DNS CNAME patterns.
  */

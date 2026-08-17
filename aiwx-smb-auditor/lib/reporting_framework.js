@@ -125,7 +125,7 @@ function generateMethodologyDisclosure(auditMeta, reliabilityReport) {
       description: 'Real-time Firecrawl API crawl of the target domain. HTML source, HTTP response headers, cookies, and CNAME records are analyzed against a 120+ signature database to identify technology stack components with high precision.',
       dataPoints: breakdown[DATA_SOURCE.LIVE_CRAWL].count,
       avgConfidence: breakdown[DATA_SOURCE.LIVE_CRAWL].avgConfidence,
-      standard: 'BuiltWith Technology Lookup Parity (120+ signatures across 20 categories)'
+      standard: 'Technology lookup across 120+ signatures in 20 categories'
     });
   }
 
