@@ -67,30 +67,34 @@ const versionInfo = require('./version');
 const preconditions = require('./preconditions');
 const epic = require('./connectors/epic');
 
-const taskModel = new TaskModel();
-const { McpBootstrapper } = require('./mcp_bootstrapper');
 const connectionModes = require('./connection_modes');
-// One MCP runtime for the gateway: dynamic servers started here are tracked and
-// torn down on process exit, so a dying session cannot leak child processes.
-const mcpBootstrapper = new McpBootstrapper({ logger: msg => console.log(msg) });
-const connectionRegistry = new ConnectionRegistry({ mcpBootstrapper });
-const agentRegistry = new AgentRegistry();
-const hitlRegistry = new HitlRegistry();
-const attributionLog = new AttributionLog();
-const knowledgeBase = new KnowledgeBase({ embedder: createEmbedder(), reranker: createReranker() });
-// Upskilling enrolment (human-care plane) + HITL onboarding must be constructed
-// BEFORE Installation, which onboards HITLs at install time.
-const taskRecords = new TaskRecordStore();
-const playbooks = new PlaybookLibrary();
-const upskillingEnrollment = new UpskillingEnrollment();
-const hitlOnboarding = new HitlOnboarding({ hitlRegistry, enrollment: upskillingEnrollment });
-const installation = new Installation({ agentRegistry, connectionRegistry, knowledgeBase, hitlOnboarding });
-const attestationLog = new AttestationLog();
-const telemetry = new TelemetryStream();
-const autonomy = new AutonomyGrants();
-const chatSession = new ChatSession({ connectionRegistry, taskModel, attributionLog, knowledgeBase });
-const complianceReporting = new ComplianceReporting();
-const humanCompanion = new HumanCompanion({ hrSystem: gusto, enrollment: upskillingEnrollment });
+const container = require('./container');
+
+// Service instances come from the composition root (lib/container.js). This file
+// is a CATALOGUE of tool definitions; deciding what those tools run against is a
+// separate concern, and keeping the wiring here meant requiring the catalogue
+// booted the entire application graph. Destructured so every handler below reads
+// exactly as it did before.
+const {
+  mcpBootstrapper,
+  taskModel,
+  connectionRegistry,
+  agentRegistry,
+  hitlRegistry,
+  attributionLog,
+  knowledgeBase,
+  taskRecords,
+  playbooks,
+  upskillingEnrollment,
+  hitlOnboarding,
+  installation,
+  attestationLog,
+  telemetry,
+  autonomy,
+  chatSession,
+  complianceReporting,
+  humanCompanion
+} = container.getDefault();
 
 const registry = new Map();
 

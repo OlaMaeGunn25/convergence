@@ -19,6 +19,7 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 const roster = require('./agent_roster');
+const { stateFile } = require('./paths');
 
 const STATES = ['provisioned', 'configuring', 'training', 'ready', 'active', 'paused', 'shutdown'];
 const TERMINAL = new Set(['shutdown']);
@@ -67,7 +68,7 @@ function rowToAgent(row) {
 class AgentRegistry {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'agents.json');
+    this.file = options.file || stateFile('agents.json');
   }
 
   /** Provision a single agent for a role (defaults to `provisioned`). */

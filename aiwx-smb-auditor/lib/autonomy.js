@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const FLOOR_TOOLS = new Set([
   'clio_record_trust_transaction', 'gusto_run_payroll', 'gusto_terminate_employee',
@@ -50,7 +51,7 @@ function rowToGrant(row) {
 class AutonomyGrants {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'autonomy_grants.json');
+    this.file = options.file || stateFile('autonomy_grants.json');
   }
 
   /** Grant autonomy. Must be authorized by a HITL (hitlId). */

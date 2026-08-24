@@ -39,12 +39,35 @@ class DualModeClient {
     this.mcp = mcp;
     this.apiAdapter = apiAdapter || {};
     this.log = logger || (() => {});
-    this.stats = { mcpCalls: 0, apiCalls: 0, fallbacks: 0, lastTransport: null, lastFallbackReason: null };
+    this.stats = {
+      mcpCalls: 0,
+      apiCalls: 0,
+      // Counts only genuine DEGRADATIONS: MCP was configured for this connector
+      // and failed. It deliberately does NOT count connectors that never had an
+      // MCP surface — conflating "MCP broke" with "MCP never existed" made the
+      // metric meaningless for the majority of the catalogue.
+      fallbacks: 0,
+      lastTransport: null,
+      lastFallbackReason: null
+    };
   }
 
+  /**
+   * Is an MCP route even configured for this connector? Distinct from
+   * `_mcpLive()`: "no MCP was ever wired up" is a different condition from
+   * "the MCP server we wired up is down", and only the second is a degradation.
+   */
+  _mcpConfigured() {
+    return !!(this.mcp && this.mcp.bootstrapper && this.mcp.serverId);
+  }
+
+  _mcpLive() {
+    return this._mcpConfigured() && this.mcp.bootstrapper.isRunning(this.mcp.serverId);
+  }
+
+  /** Retained for callers/tests that assert on availability. */
   _mcpAvailable() {
-    return !!(this.mcp && this.mcp.bootstrapper && this.mcp.serverId &&
-      this.mcp.bootstrapper.isRunning(this.mcp.serverId));
+    return this._mcpLive();
   }
 
   async _viaApi(capability, input) {
@@ -58,7 +81,7 @@ class DualModeClient {
   }
 
   async _viaMcp(capability, input) {
-    if (!this._mcpAvailable()) throw new Error('MCP server is not running.');
+    if (!this._mcpLive()) throw new Error('MCP server is not running.');
     const res = await this.mcp.bootstrapper.callTool(this.mcp.serverId, capability, input);
     this.stats.mcpCalls++;
     this.stats.lastTransport = 'mcp';
@@ -71,6 +94,18 @@ class DualModeClient {
    */
   async execute(capability, input = {}) {
     if (this.mode === 'api') {
+      return { transport: 'api', result: await this._viaApi(capability, input) };
+    }
+
+    // Short-circuit: with no MCP route configured at all there is nothing to
+    // attempt. Previously every call on such a connector threw, logged a
+    // fallback line and incremented the counter — for the connectors with no MCP
+    // surface that is per-call noise scaling with traffic, describing a
+    // degradation that never happened.
+    if (!this._mcpConfigured()) {
+      if (this.mode === 'mcp') {
+        throw new Error(`MCP execution failed for "${capability}" on ${this.connectorId}: no MCP route is configured for this connector.`);
+      }
       return { transport: 'api', result: await this._viaApi(capability, input) };
     }
 
@@ -101,7 +136,8 @@ class DualModeClient {
     return {
       connectorId: this.connectorId,
       mode: this.mode,
-      mcpLive: this._mcpAvailable(),
+      mcpConfigured: this._mcpConfigured(),
+      mcpLive: this._mcpLive(),
       ...this.stats
     };
   }

@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const EMPTY = { records: [] };
 const STATES = ['recording', 'completed', 'failed', 'abandoned'];
@@ -69,7 +70,7 @@ function rowToRecord(row) {
 class TaskRecordStore {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'task_records.json');
+    this.file = options.file || stateFile('task_records.json');
   }
 
   /** Begin recording a run. Name/category may be supplied or inferred at finalize. */

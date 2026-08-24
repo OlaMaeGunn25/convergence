@@ -778,11 +778,8 @@ async function processAuditQueueTick() {
 
     const pkg = await runAuditPipeline(job.domain, { vertical: job.vertical });
     try {
-      const cacheDir = path.join(__dirname, 'audits_cache');
-      if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
-      const safe = job.domain.replace(/[^a-zA-Z0-9.-]/g, '_') + '.json';
-      fs.writeFileSync(path.join(cacheDir, safe), JSON.stringify(pkg, null, 2), 'utf-8');
-    } catch (e) { /* cache write is best-effort */ }
+      writeAuditCache(job.domain, pkg);
+    } catch (e) { /* cache write is best-effort; the helper already logged */ }
 
     await auditQueueStore.completeJob(job.id, true);
     auditLoopFailures = 0;
@@ -921,17 +918,9 @@ app.post('/api/audit', async (req, res) => {
 
     // Save completed audit package permanently to disk
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const cacheDir = path.join(__dirname, 'audits_cache');
-      if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
-      }
-      const safeFilename = scrapedData.domain.replace(/[^a-zA-Z0-9.-]/g, '_') + '.json';
-      fs.writeFileSync(path.join(cacheDir, safeFilename), JSON.stringify(auditPackage, null, 2), 'utf-8');
-      console.log(`[Server] Audit query permanently saved to cache disk: ${safeFilename}`);
+      writeAuditCache(scrapedData.domain, auditPackage);
     } catch (fsErr) {
-      console.error(`[Server] Failed to write audit package cache file:`, fsErr);
+      logger.error(`[Server] Failed to write audit package cache file :: ${fsErr.message}`);
     }
 
     res.json(auditPackage);
@@ -1327,44 +1316,17 @@ app.post('/api/update-post', async (req, res) => {
 });
 
 
-const LOCAL_ANALYTICS_FILE = path.resolve(__dirname, 'config/local_analytics.json');
-
-function loadLocalAnalytics() {
-  if (fs.existsSync(LOCAL_ANALYTICS_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(LOCAL_ANALYTICS_FILE, 'utf8'));
-    } catch (e) {
-      return { pageviews: [], events: [] };
-    }
-  }
-  return { pageviews: [], events: [] };
-}
-
-// Bound the local analytics store so unauthenticated /api/track-event traffic
-// can't grow the file without limit (disk-fill DoS). Each array is capped to the
-// most-recent MAX entries; overflow is rotated to a dated JSONL archive.
-const ANALYTICS_MAX_ENTRIES = parseInt(process.env.ANALYTICS_MAX_ENTRIES, 10) || 5000;
-
-function trimWithArchive(arr, kind) {
-  if (!Array.isArray(arr) || arr.length <= ANALYTICS_MAX_ENTRIES) return arr || [];
-  const overflow = arr.slice(0, arr.length - ANALYTICS_MAX_ENTRIES);
-  try {
-    const logsDir = path.join(__dirname, 'logs');
-    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
-    const date = new Date().toISOString().split('T')[0];
-    const archivePath = path.join(logsDir, `analytics-${kind}-${date}.jsonl`);
-    fs.appendFileSync(archivePath, overflow.map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
-  } catch (e) { /* archiving is best-effort */ }
-  return arr.slice(arr.length - ANALYTICS_MAX_ENTRIES);
-}
-
-function saveLocalAnalytics(data) {
-  data.pageviews = trimWithArchive(data.pageviews, 'pageviews');
-  data.events = trimWithArchive(data.events, 'events');
-  const dir = path.dirname(LOCAL_ANALYTICS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(LOCAL_ANALYTICS_FILE, JSON.stringify(data, null, 2), 'utf8');
-}
+// Analytics persistence is owned entirely by lib/stores/analytics.js. server.js
+// previously declared its own LOCAL_ANALYTICS_FILE and carried a duplicate
+// read/write pair aimed at the SAME file, so one process held two uncoordinated
+// writers. The store's writes are atomic and serialised by a per-path mutex.
+const {
+  loadLocalAnalytics,
+  saveLocalAnalytics,
+  ANALYTICS_MAX_ENTRIES
+} = require('./lib/stores/analytics');
+const { LOCAL_ANALYTICS_FILE } = require('./lib/paths');
+const { writeAuditCache } = require('./lib/stores/audit_cache');
 
 // Endpoint to track custom analytics events locally (clickthrough, landing pageviews)
 app.post('/api/track-event', (req, res) => {

@@ -2,6 +2,16 @@
  * Automated Unit Test Suite for SMB External Audit Engine
  */
 process.env.NODE_ENV = 'test';
+// Runtime state must NEVER land in the repo working tree. Every store resolves
+// its default path through paths.stateFile(), so pointing this at a temp dir
+// keeps a test run hermetic — previously a run wrote ~1MB of governance state,
+// including HITL identities and chat plans, straight into config/.
+// Set before any lib/ require so the stores pick it up at construction.
+if (!process.env.CONVERGENCE_STATE_DIR) {
+  process.env.CONVERGENCE_STATE_DIR = require('path').join(
+    require('os').tmpdir(), `aiwx_test_state_${process.pid}_${Date.now()}`
+  );
+}
 
 const { cleanDomain, scrapeDomain, extractNamesFromText } = require('../lib/scraper');
 const { analyzeFootprint } = require('../lib/analyzer');
@@ -2675,6 +2685,117 @@ async function runTests() {
     assert(modesTool.result.mcpLadder[0].tier === 'vendor_mcp', 'The exposed ladder shows vendor MCP as the priority protocol');
   } catch (e) {
     assert(false, `MCP priority ladder tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 50: Audit remediation — regression pins for the fixes ---
+  try {
+    const jf50 = require('../lib/stores/json_file');
+    const paths50 = require('../lib/paths');
+    const container50 = require('../lib/container');
+    const { DualModeClient: DMC50 } = require('../lib/dual_mode_client');
+    const { McpBootstrapper: MB50 } = require('../lib/mcp_bootstrapper');
+    const auditCache50 = require('../lib/stores/audit_cache');
+    const fs50 = require('fs'); const os50 = require('os'); const pth50 = require('path');
+
+    // A. State dir is overridable, and the test run is using an isolated one.
+    assert(typeof paths50.stateFile === 'function', 'paths exposes stateFile()');
+    assert(paths50.STATE_DIR === pth50.resolve(process.env.CONVERGENCE_STATE_DIR), 'STATE_DIR honours CONVERGENCE_STATE_DIR');
+    assert(!paths50.STATE_DIR.startsWith(paths50.APP_ROOT + pth50.sep + 'config'), 'The test run is NOT writing state into the repo config/ directory');
+    const { TaskModel: TM50 } = require('../lib/task_model');
+    assert(new TM50().file.startsWith(paths50.STATE_DIR), 'Stores default their file into STATE_DIR, not a hard-coded config/ path');
+
+    // B. json_file: chain entries are evicted once settled (was an unbounded map)
+    const lf50 = pth50.join(os50.tmpdir(), `aiwx_lock50_${Date.now()}.json`);
+    await jf50.mutate(lf50, { rows: [] }, () => ({ value: { rows: [1] }, result: 1 }));
+    await new Promise(r => setImmediate(r));
+    assert(jf50._pendingChains.has(pth50.resolve(lf50)) === false, 'A settled lock chain is evicted rather than retained forever');
+
+    // C. Concurrent mutate() calls do not lose writes
+    const cf50 = pth50.join(os50.tmpdir(), `aiwx_conc50_${Date.now()}.json`);
+    await Promise.all(Array.from({ length: 20 }, (_, i) =>
+      jf50.mutate(cf50, { rows: [] }, (store) => {
+        const rows = Array.isArray(store.rows) ? store.rows : [];
+        rows.push(i);
+        return { value: { rows }, result: i };
+      })
+    ));
+    assert(jf50.readSync(cf50, { rows: [] }).rows.length === 20, 'Twenty concurrent mutations all persist (no lost updates)');
+    try { fs50.unlinkSync(lf50); fs50.unlinkSync(cf50); } catch (e) {}
+
+    // D. readSyncUnlocked is named for the hazard, alias kept for read-only callers
+    assert(typeof jf50.readSyncUnlocked === 'function', 'The unlocked read is named readSyncUnlocked');
+    assert(jf50.readSync === jf50.readSyncUnlocked, 'readSync remains a back-compatible alias');
+
+    // E. Atomic write leaves no temp file behind, and the sweeper is available
+    const tf50 = pth50.join(os50.tmpdir(), `aiwx_atomic50_${Date.now()}.json`);
+    jf50.writeAtomicSync(tf50, { ok: true });
+    const strays = fs50.readdirSync(os50.tmpdir()).filter(n => /^\..*aiwx_atomic50.*\.tmp$/.test(n));
+    assert(strays.length === 0, 'A successful atomic write leaves no .tmp file behind');
+    assert(typeof jf50.sweepOrphanedTemps === 'function', 'A sweeper exists for temps orphaned by a crash');
+    try { fs50.unlinkSync(tf50); } catch (e) {}
+
+    // F. Legacy stores now write through the locked/atomic path
+    for (const mod of ['alerts', 'analytics', 'audit_queue', 'schedule']) {
+      const src = fs50.readFileSync(pth50.join(__dirname, '..', 'lib', 'stores', `${mod}.js`), 'utf8');
+      assert(/require\('\.\/json_file'\)/.test(src), `stores/${mod}.js persists through json_file (locked + atomic)`);
+    }
+    const anal50 = require('../lib/stores/analytics');
+    assert(typeof anal50.updateLocalAnalytics === 'function', 'Analytics exposes a locked read-modify-write');
+    const aq50 = require('../lib/stores/audit_queue');
+    assert(typeof aq50.updateAuditQueue === 'function', 'The audit queue exposes a locked read-modify-write');
+
+    // G. server.js no longer carries its own analytics implementation
+    const serverSrc = fs50.readFileSync(pth50.join(__dirname, '..', 'server.js'), 'utf8');
+    assert(!/function saveLocalAnalytics/.test(serverSrc), 'server.js no longer defines a duplicate analytics writer');
+    assert(/require\('\.\/lib\/stores\/analytics'\)/.test(serverSrc), 'server.js delegates analytics to the owning store');
+    assert(!/^ {6}const path = require\('path'\);$/m.test(serverSrc), 'server.js no longer shadows its module-level path import');
+    assert(!/replace\(\/\[\^a-zA-Z0-9\.-\]\/g/.test(serverSrc), 'The triplicated cache-write logic is gone from server.js');
+
+    // H. Cache-write helper: one implementation, traversal still impossible
+    assert(auditCache50.cacheFilenameFor('../../etc/passwd') === '.._.._etc_passwd.json', 'Path separators are stripped from cache filenames');
+    assert(!auditCache50.cacheFilenameFor('a/b\\c').includes('/'), 'No separator survives sanitisation');
+
+    // I. Composition root is separable from the tool catalogue
+    assert(typeof container50.build === 'function' && typeof container50.getDefault === 'function', 'A composition root exists');
+    const isolated = container50.build({ taskModel: new TM50({ file: pth50.join(os50.tmpdir(), `aiwx_c50_${Date.now()}.json`) }) });
+    assert(isolated.taskModel !== container50.getDefault().taskModel, 'build() yields an isolated graph, not the shared one');
+    assert(!!isolated.installation && !!isolated.hitlOnboarding, 'The isolated graph is fully wired');
+    try { isolated.mcpBootstrapper.dispose(); } catch (e) {}
+    const trSrc = fs50.readFileSync(pth50.join(__dirname, '..', 'lib', 'tool_registry.js'), 'utf8');
+    assert(/require\('\.\/container'\)/.test(trSrc), 'tool_registry sources its services from the container');
+    assert(!/new KnowledgeBase\(/.test(trSrc), 'tool_registry no longer constructs services itself');
+
+    // J. auto mode with NO MCP route does not report a phantom degradation
+    const noMcpLogs = [];
+    const noMcp = new DMC50({ connectorId: 'slack', mode: 'auto', mcp: null, apiAdapter: { ping: async () => ({ ok: 1 }) }, logger: m => noMcpLogs.push(m) });
+    for (let i = 0; i < 3; i++) await noMcp.execute('ping', {});
+    assert(noMcpLogs.length === 0, 'A connector with no MCP route logs no fallback lines');
+    assert(noMcp.status().fallbacks === 0, 'fallbacks counts real degradations only, not absent MCP');
+    assert(noMcp.status().mcpConfigured === false && noMcp.status().apiCalls === 3, 'Calls still serve over the native API');
+    let strictNoMcp = null;
+    try { await new DMC50({ connectorId: 'slack', mode: 'mcp', mcp: null, apiAdapter: {} }).execute('ping', {}); }
+    catch (e) { strictNoMcp = e.message; }
+    assert(strictNoMcp && /no MCP route is configured/.test(strictNoMcp), 'Strict mcp with no route fails explicitly rather than silently using the API');
+
+    // K. A verified-but-unroutable SSE server must not claim to be servable
+    const boot50 = new MB50({ logger: () => {} });
+    try {
+      boot50._servers.set('sse_probe', { transport: 'sse', spec: { url: 'https://example.invalid' }, dead: false, servable: false });
+      assert(boot50.isRunning('sse_probe') === false, 'isRunning() is false for a transport that cannot route calls');
+      assert(boot50.isRegistered('sse_probe') === true, 'The entry is still registered for status/cleanup purposes');
+      assert(boot50.listRunning().find(s => s.id === 'sse_probe').servable === false, 'listRunning reports servability honestly');
+      const sseClient = new DMC50({ connectorId: 'x', mode: 'auto', mcp: { bootstrapper: boot50, serverId: 'sse_probe' }, apiAdapter: { ping: async () => ({ viaApi: true }) } });
+      const served = await sseClient.execute('ping', {});
+      assert(served.transport === 'api', 'A non-servable MCP entry routes to the API rather than into a guaranteed failure');
+    } finally { boot50.dispose(); }
+
+    // L. One shared process-exit hook, not one per bootstrapper
+    const before50 = process.listenerCount('exit');
+    const boots = Array.from({ length: 5 }, () => new MB50({ logger: () => {} }));
+    assert(process.listenerCount('exit') === before50, 'Five bootstrappers add zero additional exit listeners');
+    boots.forEach(b => b.dispose());
+  } catch (e) {
+    assert(false, `Audit remediation tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

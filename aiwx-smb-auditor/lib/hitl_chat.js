@@ -24,6 +24,7 @@ const taskRequest = require('./task_request');
 const industry = require('./industry_practices');
 const precommit = require('./precommit');
 const { reengineerPrompt } = require('./graph_of_thought');
+const { stateFile } = require('./paths');
 
 const EMPTY = { plans: [] };
 
@@ -43,7 +44,7 @@ function rowToPlan(row) {
 class ChatSession {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'chat_plans.json');
+    this.file = options.file || stateFile('chat_plans.json');
     this.connectionRegistry = options.connectionRegistry || null;
     this.taskModel = options.taskModel || null;
     this.attributionLog = options.attributionLog || null;

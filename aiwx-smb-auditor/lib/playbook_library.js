@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const EMPTY = { playbooks: [] };
 const REVISION_REASONS = ['hitl_correction', 'step_failure', 'course_correction', 'optimization', 'manual'];
@@ -40,7 +41,7 @@ function rowToPlaybook(row) {
 class PlaybookLibrary {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'playbooks.json');
+    this.file = options.file || stateFile('playbooks.json');
   }
 
   /** Promote a completed task record into a v1 playbook (or reuse the match). */

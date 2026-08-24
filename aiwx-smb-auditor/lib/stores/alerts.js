@@ -4,11 +4,17 @@
  * Persisted social-engagement alerts. Seeds a demo dataset on first run so the
  * dashboard is never empty, and rotates anything past the 100-alert cap into a
  * dated archive under logs/.
+ *
+ * Writes go through json_file's atomic replace + per-path mutex. This store did
+ * bare readFileSync/writeFileSync long after that hardening landed beside it,
+ * so two handlers replying to alerts concurrently could lose one another's
+ * writes or truncate the file.
  */
 
 const fs = require('fs');
 const path = require('path');
 const logger = require('../logger');
+const jsonFile = require('./json_file');
 const { ALERTS_FILE, LOGS_DIR } = require('../paths');
 
 const SEED_ALERTS = [
@@ -70,15 +76,15 @@ function buildSeedAlerts() {
 function loadAlerts() {
   if (!fs.existsSync(ALERTS_FILE)) {
     const initialAlerts = buildSeedAlerts();
-    const configDir = path.dirname(ALERTS_FILE);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-    }
-    fs.writeFileSync(ALERTS_FILE, JSON.stringify(initialAlerts, null, 2));
+    // Atomic seed: a reader can never observe a partially-written seed file.
+    jsonFile.writeAtomicSync(ALERTS_FILE, initialAlerts);
     return initialAlerts;
   }
   try {
-    return JSON.parse(fs.readFileSync(ALERTS_FILE, 'utf8'));
+    const raw = fs.readFileSync(ALERTS_FILE, 'utf8');
+    if (!raw.trim()) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     logger.warn(`[Alerts] Could not parse ${ALERTS_FILE}; starting from an empty alert list.`);
     return [];
@@ -100,7 +106,26 @@ function saveAlerts(alerts) {
       logger.error(`[Alerts] Failed to archive overflow alerts :: ${archiveErr.stack || archiveErr.message}`);
     }
   }
-  fs.writeFileSync(ALERTS_FILE, JSON.stringify(alerts, null, 2));
+  const promise = jsonFile.mutate(ALERTS_FILE, [], () => ({ value: alerts, result: alerts }));
+  // Preserve the original synchronous-looking contract for existing callers,
+  // which neither await nor inspect the return value.
+  if (promise && typeof promise.catch === 'function') {
+    promise.catch(e => logger.error(`[Alerts] Failed to persist alerts :: ${e.message}`));
+  }
+  return alerts;
 }
 
-module.exports = { loadAlerts, saveAlerts };
+/**
+ * Read-modify-write under the lock. Preferred over load→mutate→save when the
+ * new value depends on the current one — that pair is a lost-update race if two
+ * reply handlers interleave.
+ */
+function updateAlerts(mutator) {
+  return jsonFile.mutate(ALERTS_FILE, [], (store) => {
+    const current = Array.isArray(store) ? store : [];
+    const next = mutator(current) || current;
+    return { value: next, result: next };
+  });
+}
+
+module.exports = { loadAlerts, saveAlerts, updateAlerts };

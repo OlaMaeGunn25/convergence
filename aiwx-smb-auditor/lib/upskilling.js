@@ -27,6 +27,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 // ── ROLE-KEYED CURRICULUM (no PII, no tenant, no company assessment) ──────────
 const CURRICULA = {
@@ -155,7 +156,7 @@ function rowToEnrollment(row) {
 class UpskillingEnrollment {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'upskilling_enrollment.json');
+    this.file = options.file || stateFile('upskilling_enrollment.json');
   }
 
   /** Enrol a HITL using only their ROLE — no personal profile required. */

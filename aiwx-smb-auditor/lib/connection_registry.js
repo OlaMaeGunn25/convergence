@@ -27,6 +27,7 @@ const jsonFile = require('./stores/json_file');
 const catalog = require('./connectors/catalog');
 const preconditions = require('./preconditions');
 const connectionModes = require('./connection_modes');
+const { stateFile } = require('./paths');
 
 // `preconditions_pending` is a first-class state, not a flavour of not_connected.
 // Some systems — Epic most obviously — cannot be connected on demand: the tenant
@@ -76,7 +77,7 @@ function rowToConn(row) {
 class ConnectionRegistry {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'connections.json');
+    this.file = options.file || stateFile('connections.json');
     // DMC: optional MCP runtime. Absent (tests, minimal deployments) means MCP
     // is treated as unavailable — 'auto' falls back to the API and says why,
     // 'mcp' errors. Never a silent pretend-success.
@@ -264,6 +265,15 @@ class ConnectionRegistry {
               const started = await this.mcpBootstrapper.start(
                 Object.assign({ id: `${connectorId}_${tenantId || 'default'}_${rung.tier}` }, rung)
               );
+              // A rung that verifies but cannot route tool calls is NOT a
+              // landing place. SSE endpoints verify by handshake while routing
+              // remains a seam; treating that as success would mark the
+              // connection 'mcp' and then fail every call made through it.
+              if (started.servable === false) {
+                await this.mcpBootstrapper.stop(started.id);
+                failures.push(`${rung.tier}: verified but tool routing is not yet supported on this transport`);
+                continue;
+              }
               transport = 'mcp';
               conn.mcpServerId = started.id;
               conn.mcpTier = rung.tier;

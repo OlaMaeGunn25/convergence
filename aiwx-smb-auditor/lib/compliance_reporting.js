@@ -12,6 +12,7 @@
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const EMPTY = { evidence: [] };
 
@@ -23,7 +24,7 @@ function csvEscape(v) {
 class ComplianceReporting {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'compliance_evidence.json');
+    this.file = options.file || stateFile('compliance_evidence.json');
   }
 
   /** Append an immutable evidence record (the Compliance→Reporting handoff). */

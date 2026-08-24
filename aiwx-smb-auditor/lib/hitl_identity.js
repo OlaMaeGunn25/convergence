@@ -15,6 +15,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 // Free/consumer domains can never be an authorized HITL — corporate identity is
 // required for attribution + non-repudiation (IDN-02).
@@ -75,7 +76,7 @@ function rowToHitl(row) {
 class HitlRegistry {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'hitl_users.json');
+    this.file = options.file || stateFile('hitl_users.json');
   }
 
   /** Onboard a HITL (Onboarding agent, HLC-01). Enforces the domain-email rule. */

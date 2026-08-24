@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const TYPES = ['prompt', 'output'];
 
@@ -40,7 +41,7 @@ function rowToRecord(row) {
 class AttributionLog {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'attributions.json');
+    this.file = options.file || stateFile('attributions.json');
   }
 
   /**

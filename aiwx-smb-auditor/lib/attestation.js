@@ -15,6 +15,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const EMPTY = { attestations: [] };
 const KINDS = ['delivery', 'qa'];
@@ -22,7 +23,7 @@ const KINDS = ['delivery', 'qa'];
 class AttestationLog {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'attestations.json');
+    this.file = options.file || stateFile('attestations.json');
   }
 
   async record({ taskId, kind, actor = null, agentId = null, verdict = null, note = null }) {

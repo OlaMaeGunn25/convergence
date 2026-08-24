@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const SOURCES = ['installation', 'post_install'];
 const EMPTY = { instances: [] };
@@ -29,7 +30,7 @@ const EMPTY = { instances: [] };
 class HitlOnboarding {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'hitl_onboarding.json');
+    this.file = options.file || stateFile('hitl_onboarding.json');
     this.hitlRegistry = options.hitlRegistry || null;
     this.enrollment = options.enrollment || null;
   }

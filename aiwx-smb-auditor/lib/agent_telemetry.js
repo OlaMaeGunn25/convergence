@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const DEFAULT_MAX = 1000;
 const EMPTY = { events: [] };
@@ -21,7 +22,7 @@ const EMPTY = { events: [] };
 class TelemetryStream {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'agent_telemetry.json');
+    this.file = options.file || stateFile('agent_telemetry.json');
     this.max = options.max || DEFAULT_MAX;
   }
 

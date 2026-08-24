@@ -17,13 +17,14 @@ const { AgentRegistry } = require('./agent_model');
 const { KnowledgeBase } = require('./knowledge_ingest');
 const businessOnboarding = require('./business_onboarding');
 const systemEvaluator = require('./system_evaluator');
+const { stateFile } = require('./paths');
 
 const EMPTY = { installations: [] };
 
 class Installation {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'installations.json');
+    this.file = options.file || stateFile('installations.json');
     this.agents = options.agentRegistry || new AgentRegistry(options.agentOptions || {});
     this.connections = options.connectionRegistry || null;
     this.knowledgeBase = options.knowledgeBase || new KnowledgeBase(options.knowledgeOptions || {});

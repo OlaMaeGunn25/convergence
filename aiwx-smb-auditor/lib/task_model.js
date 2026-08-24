@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows, rpc } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const STATES = ['proposed', 'negotiating', 'pending_approval', 'approved', 'executing', 'done', 'failed', 'rejected', 'cancelled'];
 const TERMINAL = new Set(['done', 'failed', 'cancelled']);
@@ -73,7 +74,7 @@ function rowToTask(row) {
 class TaskModel {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'tasks.json');
+    this.file = options.file || stateFile('tasks.json');
   }
 
   /** Create a task (defaults to the `proposed` state). */

@@ -23,6 +23,7 @@ const { parsePublishResult } = require('./publisher');
 const { sendNotification } = require('./notify');
 const { recordAudit } = require('./audit');
 const { runAuditPipeline } = require('./audit_runner');
+const { writeAuditCache } = require('./stores/audit_cache');
 
 const MAX_BACKOFF_MS = 15 * 60 * 1000;
 
@@ -52,10 +53,8 @@ async function processAuditQueueTick() {
   try {
     const pkg = await runAuditPipeline(job.domain, { vertical: job.vertical });
     try {
-      if (!fs.existsSync(AUDITS_CACHE_DIR)) fs.mkdirSync(AUDITS_CACHE_DIR, { recursive: true });
-      const safe = job.domain.replace(/[^a-zA-Z0-9.-]/g, '_') + '.json';
-      fs.writeFileSync(path.join(AUDITS_CACHE_DIR, safe), JSON.stringify(pkg, null, 2), 'utf-8');
-    } catch (e) { /* cache write is best-effort */ }
+      writeAuditCache(job.domain, pkg);
+    } catch (e) { /* cache write is best-effort; the helper already logged */ }
 
     const fresh = loadAuditQueue();
     const fj = fresh.jobs.find(j => j.id === job.id);

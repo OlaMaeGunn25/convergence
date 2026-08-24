@@ -19,6 +19,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows, updateRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
+const { stateFile } = require('./paths');
 
 const TYPES = ['pto', 'assignment_status', 'manager_approval', 'complaint', 'wellbeing'];
 const CONFIDENTIAL_TYPES = new Set(['complaint']);
@@ -38,7 +39,7 @@ function rowToReq(row) {
 class HumanCompanion {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'hr_requests.json');
+    this.file = options.file || stateFile('hr_requests.json');
     // Optional HR system of record (e.g. the Gusto connector). The Companion owns
     // the employee-facing record; filing it into the HR system is a separate,
     // approval-gated step so the human stays in control (HRC-04 + CTL-02).

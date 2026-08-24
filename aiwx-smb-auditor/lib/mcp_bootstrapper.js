@@ -29,6 +29,26 @@ const crypto = require('crypto');
 const DEFAULT_HANDSHAKE_MS = 10_000;
 const DEFAULT_CALL_MS = 10_000;
 
+/**
+ * Every live bootstrapper, drained by a SINGLE process-exit hook. One hook for
+ * the process rather than one per instance: the previous per-instance listener
+ * accumulated on `process` and was only removed if dispose() happened to be
+ * called.
+ */
+const LIVE_BOOTSTRAPPERS = new Set();
+let exitHookInstalled = false;
+
+function ensureExitHook() {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  process.once('exit', () => {
+    for (const b of LIVE_BOOTSTRAPPERS) {
+      try { b.stopAllSync(); } catch (e) { /* exiting anyway */ }
+    }
+    LIVE_BOOTSTRAPPERS.clear();
+  });
+}
+
 /** Resolve env refs (names) → child env. Missing refs reported by NAME only. */
 function resolveEnvRefs(envRefs = [], baseEnv = process.env) {
   const child = {};
@@ -48,8 +68,11 @@ class McpBootstrapper {
     this.env = options.env || process.env;
     this._servers = new Map(); // id -> { transport, child, pending, nextId, spec }
     // A crashed agent session must not leave orphaned MCP children behind.
-    this._exitHook = () => this.stopAllSync();
-    process.once('exit', this._exitHook);
+    // Instances register into a module-level set drained by ONE process hook —
+    // a per-instance process.once('exit') listener leaked a listener per
+    // bootstrapper and tripped MaxListenersExceeded once enough were created.
+    LIVE_BOOTSTRAPPERS.add(this);
+    ensureExitHook();
   }
 
   /**
@@ -128,8 +151,13 @@ class McpBootstrapper {
       if (!ctype.includes('text/event-stream')) throw new Error(`endpoint is not an event stream (${ctype || 'no content-type'})`);
       // Handshake verified; we do not hold the stream open here.
       ac.abort();
-      this._servers.set(id, { transport: 'sse', spec: { url: spec.url }, dead: false });
-      return { id, transport: 'sse', serverInfo: null };
+      // `servable: false` is the honest state. Verifying the endpoint proves it
+      // EXISTS, not that we can route tool calls to it — SSE routing is still a
+      // seam (see callTool). Marking it servable made isRunning() report a
+      // capability the transport does not have, so a strict-mcp connection could
+      // verify at connect time and then fail every single call.
+      this._servers.set(id, { transport: 'sse', spec: { url: spec.url }, dead: false, servable: false });
+      return { id, transport: 'sse', serverInfo: null, servable: false };
     } catch (e) {
       throw new Error(`MCP handshake failed: ${e.name === 'AbortError' ? 'timeout' : e.message}`);
     } finally {
@@ -190,13 +218,27 @@ class McpBootstrapper {
     return this._rpc(entry, 'tools/call', { name, arguments: args }, timeoutMs || this.callTimeoutMs);
   }
 
+  /**
+   * Can this server actually serve a tool call right now? Deliberately stricter
+   * than "an entry exists": a verified-but-unroutable SSE endpoint answers false,
+   * so callers in `auto` mode fall through to the next rung instead of routing
+   * into a guaranteed failure.
+   */
   isRunning(id) {
+    const e = this._servers.get(id);
+    return !!(e && !e.dead && e.servable !== false);
+  }
+
+  /** Is an entry registered at all, servable or not? (status boards, cleanup) */
+  isRegistered(id) {
     const e = this._servers.get(id);
     return !!(e && !e.dead);
   }
 
   listRunning() {
-    return [...this._servers.entries()].map(([id, e]) => ({ id, transport: e.transport, dead: !!e.dead }));
+    return [...this._servers.entries()].map(([id, e]) => ({
+      id, transport: e.transport, dead: !!e.dead, servable: e.servable !== false
+    }));
   }
 
   /** Stop one server and release its entry. */
@@ -224,10 +266,10 @@ class McpBootstrapper {
     }
   }
 
-  /** Detach the exit hook (used by tests to avoid cross-suite leakage). */
+  /** Detach from the shared exit hook (used by tests to avoid cross-suite leakage). */
   dispose() {
     this.stopAllSync();
-    process.removeListener('exit', this._exitHook);
+    LIVE_BOOTSTRAPPERS.delete(this);
   }
 }
 

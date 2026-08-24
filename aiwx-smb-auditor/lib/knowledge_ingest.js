@@ -21,6 +21,7 @@ const path = require('path');
 const { isSupabaseConfigured, insertRow, selectRows } = require('./supabase');
 const jsonFile = require('./stores/json_file');
 const injectionGuard = require('./injection_guard');
+const { stateFile } = require('./paths');
 
 const SOURCES = ['connector_read', 'upload', 'on_prem_crawl', 'audit_scour'];
 const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'for', 'on', 'is', 'are', 'with', 'by', 'at', 'as', 'be', 'this', 'that', 'it', 'from', 'must', 'shall', 'any', 'all']);
@@ -45,7 +46,7 @@ const EMPTY = { chunks: [] };
 class KnowledgeBase {
   constructor(options = {}) {
     this.usingSupabase = isSupabaseConfigured();
-    this.file = options.file || path.join(__dirname, '..', 'config', 'knowledge_base.json');
+    this.file = options.file || stateFile('knowledge_base.json');
     // Optional vector-embedding backend (Dify.ai / pgvector). When present, chunks
     // are upserted to it on ingest and semantic queries route through it; otherwise
     // the local hybrid search is used. See lib/embeddings.js.
