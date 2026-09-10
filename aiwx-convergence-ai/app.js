@@ -93,7 +93,10 @@ const VERTICALS = {
     professional: { name: "Professional Services", icon: "fa-briefcase", placeholder: "Time Ledger Logging, Client Memos, Invoice Creation" },
     nonprofit: { name: "Non-Profit Organizations", icon: "fa-hand-holding-heart", placeholder: "Donor Outreach, Volunteer Rostering, Registration Routing" },
     events: { name: "Event Planning & Management", icon: "fa-calendar-check", placeholder: "Vendor Bookings, Scheduling Rosters, Client Onboarding" },
-    event_rental: { name: "Event Rentals (Ingested)", icon: "fa-tents", placeholder: "Inventory tracking, payment match, client SMS confirmation" }
+    event_rental: { name: "Event Rentals (Ingested)", icon: "fa-tents", placeholder: "Inventory tracking, payment match, client SMS confirmation" },
+    // Reseller vertical: this tenant operationalises OTHER businesses on the
+    // platform, so its workflows are engagement delivery rather than trade ops.
+    ai_consultancy: { name: "AI Strategy & Automation Consultancy", icon: "fa-diagram-project", placeholder: "Client Discovery, Deployment Runbook, Skills Library, Engagement Handover" }
 };
 
 // Apply rebranding dynamics instantly

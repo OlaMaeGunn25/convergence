@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.12.1** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.13.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,41 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.13.0 — 2026-08-24
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+**New vertical: AI Strategy & Automation Consultancy (`ai_consultancy`)** — the
+15th, and structurally unlike the other fourteen: a reseller whose clients are
+themselves Convergence tenants. It therefore acts as a PROCESSOR of client data
+and a DEPLOYER of AI into other businesses, so it carries duties the operating
+verticals do not — sub-processor disclosure, FTC substantiation for AI claims,
+and AI-deployer obligations where a delivered system makes consequential
+decisions. Five screening rules back the declared profile, plus seven practices.
+
+- **Skills library** (9 skills across Discovery / Deployment / Operate /
+  Handover / Sales). Every skill names the registry tool behind it and the
+  proficiency that demonstrates it, so competence is checkable rather than
+  asserted. A test pins that every named tool actually exists.
+- **Prompt frameworks** (5): discovery interview, SOP extraction, automation-
+  candidate assessment, client change brief, incident triage. Starting shapes,
+  not a bypass — each still runs through Graph-of-Thought re-engineering.
+- **Real-time deployment runbook** (10 ordered steps). Each names its tools and
+  the gate that must clear; `fromStep` resumes mid-deployment. Steps that block
+  the next are marked, including the required business address and the
+  client-employed-approver rule.
+- **Guidance path**: answers FIRST from the runbook and skills, and only
+  escalates on request — an escalation that blocks the consultant on a reply
+  they may not need is worse than the documentation they already had. Escalation
+  yields a governed task descriptor requiring a company-domain identity.
+- **Explicit LLM choice**: `get_llm_providers` surfaces all four providers with
+  the model served at each cost tier, marking self-hosted as sovereign. Claude
+  IDs refreshed to the current generation. Provider choice never overrides
+  risk-based escalation.
+- Google Workspace/Calendar, Microsoft 365, QuickBooks, Xero, Slack and HubSpot
+  gain consultancy affinity while staying universally available.
+- 132 governed tools. Gateway 925/925, hub 61/61.
 
 ## v0.12.1 — 2026-08-16
 

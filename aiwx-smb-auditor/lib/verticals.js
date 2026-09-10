@@ -1,7 +1,7 @@
 /**
  * Vertical Registry + Compliance Overlays (Phase 6, VRT)
  * ======================================================
- * The canonical 14 business verticals (mirrors the deployment hub's 14-vertical
+ * The canonical 15 business verticals (mirrors the deployment hub's vertical
  * lock). Everything in the agentic layer — the 13-agent roster, comprehension,
  * knowledge/practice, and the governance gates — instantiates per vertical upon
  * connection to that vertical's tools (VRT-01). Each vertical carries a
@@ -24,7 +24,17 @@ const VERTICALS = [
   { id: 'professional', name: 'Professional Services', compliance: ['Professional-Licensing', 'FTC-Act-5', 'Client-Confidentiality'] },
   { id: 'nonprofit', name: 'Non-Profit Organizations', compliance: ['Charitable-Solicitation', 'IRC-501c3', 'IRS-Form-990', 'Substantiation-170f'] },
   { id: 'events', name: 'Event Planning & Management', compliance: ['ADA-Title-III', 'BOTS-Act', 'Alcohol-Licensing', 'Liability-Waiver'] },
-  { id: 'event_rental', name: 'Event Rental & Equipment', compliance: ['CPSC-Product-Safety', 'Amusement-Device', 'Rental-Deposit', 'ADA-Title-III'] }
+  { id: 'event_rental', name: 'Event Rental & Equipment', compliance: ['CPSC-Product-Safety', 'Amusement-Device', 'Rental-Deposit', 'ADA-Title-III'] },
+  // The reseller vertical. Structurally unlike the other fourteen: its clients
+  // are themselves Convergence tenants, so this consultancy acts as a PROCESSOR
+  // of its clients' data and as a DEPLOYER of AI systems into other people's
+  // businesses. Both of those carry duties the operating verticals do not have.
+  {
+    id: 'ai_consultancy',
+    name: 'AI Strategy & Automation Consultancy',
+    compliance: ['Client-Confidentiality', 'DPA-Subprocessor', 'FTC-Act-5-AI-Claims', 'State-Privacy', 'AI-Deployer-Duty'],
+    reseller: true
+  }
 ];
 
 const byId = new Map(VERTICALS.map(v => [v.id, v]));

@@ -42,7 +42,7 @@ const CONNECTORS = [
   {
     id: 'hubspot', name: 'HubSpot', category: 'CRM & Marketing',
     kind: 'api', auth: 'oauth2', envKeys: ['HUBSPOT_ACCESS_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['hubspot', 'hs-scripts', 'hs-analytics', 'hsforms'],
     capabilities: ['list_contacts', 'list_deals', 'list_companies'],
     destructiveCapabilities: ['create_contact', 'update_deal'],
@@ -62,7 +62,7 @@ const CONNECTORS = [
   {
     id: 'quickbooks', name: 'QuickBooks Online', category: 'Accounting & Finance',
     kind: 'api', auth: 'oauth2', envKeys: ['QUICKBOOKS_CLIENT_ID', 'QUICKBOOKS_CLIENT_SECRET', 'QUICKBOOKS_ACCESS_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['quickbooks', 'intuit', 'qbo'],
     capabilities: ['list_invoices', 'list_customers', 'list_payments'],
     destructiveCapabilities: ['create_invoice', 'record_payment'],
@@ -72,7 +72,7 @@ const CONNECTORS = [
   {
     id: 'xero', name: 'Xero', category: 'Accounting & Finance',
     kind: 'api', auth: 'oauth2', envKeys: ['XERO_CLIENT_ID', 'XERO_CLIENT_SECRET', 'XERO_ACCESS_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['xero'],
     capabilities: ['list_invoices', 'list_contacts', 'list_bank_transactions'],
     destructiveCapabilities: ['create_invoice'],
@@ -102,7 +102,7 @@ const CONNECTORS = [
   {
     id: 'google_calendar', name: 'Google Calendar', category: 'Scheduling',
     kind: 'mcp', auth: 'oauth2', envKeys: ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_CALENDAR_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['google calendar', 'calendar.google', 'gcal'],
     capabilities: ['list_events', 'list_calendars', 'suggest_time'],
     destructiveCapabilities: ['create_event', 'delete_event'],
@@ -122,7 +122,7 @@ const CONNECTORS = [
   {
     id: 'google_workspace', name: 'Google Workspace (Gmail/Drive)', category: 'Email & Documents',
     kind: 'mcp', auth: 'oauth2', envKeys: ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_WORKSPACE_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['google workspace', 'gmail', 'gsuite', 'workspace.google', 'aspmx.l.google'],
     capabilities: ['search_files', 'read_file', 'list_recent_files'],
     destructiveCapabilities: ['create_file', 'send_email'],
@@ -132,7 +132,7 @@ const CONNECTORS = [
   {
     id: 'microsoft365', name: 'Microsoft 365', category: 'Email & Documents',
     kind: 'api', auth: 'oauth2', envKeys: ['MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_GRAPH_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['office365', 'outlook', 'microsoft 365', 'sharepoint', 'onmicrosoft'],
     capabilities: ['list_messages', 'list_events', 'search_files'],
     destructiveCapabilities: ['send_email', 'create_event'],
@@ -142,7 +142,7 @@ const CONNECTORS = [
   {
     id: 'slack', name: 'Slack', category: 'Team Communication',
     kind: 'mcp', auth: 'oauth2', envKeys: ['SLACK_BOT_TOKEN'],
-    vertical: 'universal',
+    vertical: ['universal', 'ai_consultancy'],
     matchSignals: ['slack', 'slack.com'],
     capabilities: ['list_channels', 'read_messages'],
     destructiveCapabilities: ['post_message'],

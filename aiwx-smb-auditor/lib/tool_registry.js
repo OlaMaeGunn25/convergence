@@ -66,6 +66,7 @@ const businessOnboarding = require('./business_onboarding');
 const versionInfo = require('./version');
 const preconditions = require('./preconditions');
 const epic = require('./connectors/epic');
+const consultancy = require('./consultancy_playbooks');
 
 const connectionModes = require('./connection_modes');
 const container = require('./container');
@@ -387,6 +388,63 @@ register({
     actor: ctx.actor || null,
     config: input.config || {},
     connectionMode: input.connectionMode || 'api'
+  })
+});
+
+// --- AI consultancy vertical: skills, prompts, runbook, guidance (CON) ---
+register({
+  name: 'get_consultancy_skills',
+  title: 'Consultancy skills library',
+  description: 'The skills a consultant needs per engagement phase (Discovery, Deployment, Operate, Handover, Sales), each naming the concrete platform capability behind it and the proficiency that demonstrates it. Filter by phase.',
+  inputSchema: z.object({ phase: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => ({ vertical: consultancy.VERTICAL, skills: consultancy.skills(input || {}) })
+});
+
+register({
+  name: 'get_prompt_frameworks',
+  title: 'Consultancy prompt frameworks',
+  description: 'Reusable prompt structures for engagement work — discovery interviews, SOP extraction, automation-candidate assessment, client change briefs, incident triage. These are starting shapes: every prompt entering the system is still re-engineered through Graph-of-Thought, so a framework is not a bypass.',
+  inputSchema: z.object({ id: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => ({ vertical: consultancy.VERTICAL, frameworks: consultancy.promptFrameworks(input || {}) })
+});
+
+register({
+  name: 'get_deployment_runbook',
+  title: 'Real-time client deployment runbook',
+  description: 'The ordered, real-time instructions for standing a client up on the platform: ten steps across Prepare, Discover, Connect, Install, Operate and Handover. Each step names the tools that perform it and the gate that must clear before the next. Pass fromStep to get the remainder from where you are.',
+  inputSchema: z.object({ fromStep: z.number().optional(), phase: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => consultancy.runbook(input || {})
+});
+
+register({
+  name: 'request_guidance',
+  title: 'Ask for guidance mid-engagement',
+  description: 'A consultant who is stuck gets the relevant runbook step, skills and prompt frameworks back IMMEDIATELY. Set escalate to also receive an escalation descriptor addressed to a human — a descriptor only: submit it with create_task to raise it. Answering first is deliberate, so a consultant is never blocked waiting on a reply they may not need.',
+  inputSchema: z.object({
+    question: z.string(),
+    atStep: z.number().optional(),
+    topic: z.string().optional(),
+    escalate: z.boolean().optional(),
+    requestedBy: z.string().optional()
+  }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input, ctx) => consultancy.requestGuidance(Object.assign({}, input, {
+    requestedBy: input.requestedBy || ctx.hitlId || null
+  }))
+});
+
+register({
+  name: 'get_llm_providers',
+  title: 'LLM provider and model choice',
+  description: 'The model providers a tenant can be configured against — Gemini, OpenAI, Claude, or self-hosted — with the model served at each cost tier. The self-hosted option is marked sovereign: inference never leaves infrastructure the client controls. Hosted providers are sub-processors and must be disclosed to the client before their data reaches one.',
+  inputSchema: z.object({}),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: () => ({
+    providers: modelRouter.providerChoices(),
+    routing: 'Selection sets the provider; the cascade router still picks the tier per call by confidence and risk, escalating destructive or high-risk work to the premium tier regardless of cost preference.'
   })
 });
 

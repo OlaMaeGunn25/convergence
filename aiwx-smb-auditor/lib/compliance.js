@@ -84,6 +84,13 @@ const REG_CORPUS = {
     { level: 'state', code: 'Alcohol-Licensing', title: 'Event alcohol service and licensing', appliesTo: ['*'] },
     { level: 'state', code: 'Liability-Waiver', title: 'Enforceability limits on participant liability waivers', appliesTo: ['*'] }
   ],
+  ai_consultancy: [
+    { level: 'state', code: 'Client-Confidentiality', title: 'Confidentiality of client business data handled during an engagement', appliesTo: ['*'] },
+    { level: 'state', code: 'DPA-Subprocessor', title: 'Data processing agreement and sub-processor disclosure — the consultancy processes client data on the client documented instruction', appliesTo: ['*'] },
+    { level: 'federal', code: 'FTC-Act-5-AI-Claims', title: 'Substantiation for AI capability and outcome claims; deceptive AI marketing is an unfair practice', appliesTo: ['*'] },
+    { level: 'state', code: 'AI-Deployer-Duty', title: 'Deployer obligations where a delivered system makes consequential decisions (impact assessment, notice, human review)', appliesTo: ['*'] },
+    { level: 'state', code: 'State-Privacy', title: 'US state consumer privacy carried through to every client deployment', appliesTo: ['*'] }
+  ],
   event_rental: [
     { level: 'federal', code: 'CPSC-Product-Safety', title: 'Consumer product safety and recall obligations', appliesTo: ['*'] },
     { level: 'state', code: 'Amusement-Device', title: 'Inflatable and amusement device inspection and operation rules', appliesTo: ['*'] },

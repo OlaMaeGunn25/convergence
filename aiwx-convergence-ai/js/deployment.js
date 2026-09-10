@@ -15,7 +15,8 @@ const VERTICALS = {
     professional: { name: "Professional Services" },
     nonprofit: { name: "Non-Profit Organizations" },
     events: { name: "Event Planning & Management" },
-    event_rental: { name: "Event Rental & Equipment" }
+    event_rental: { name: "Event Rental & Equipment" },
+    ai_consultancy: { name: "AI Strategy & Automation Consultancy" }
 };
 
 export function switchTab(tabId, element) {

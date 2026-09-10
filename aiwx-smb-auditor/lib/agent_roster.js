@@ -37,7 +37,11 @@ const ROLES = {
     // it runs the interview, detects the system from its parameters, offers the
     // mode choice (api / mcp / auto), and triggers the governed build.
     tools: ['list_connectors', 'get_connection_status', 'provision_roster',
-      'get_connection_interview', 'detect_system', 'get_connection_modes', 'connect_system']
+      'get_connection_interview', 'detect_system', 'get_connection_modes', 'connect_system',
+      // Reseller vertical: the onboarding agent walks a consultant through a
+      // client stand-up, so it holds the runbook and the guidance path.
+      'get_deployment_runbook', 'request_guidance', 'get_consultancy_skills',
+      'get_prompt_frameworks', 'get_llm_providers']
   },
   systems_configurator: {
     title: 'Systems Configurator (System-State Eval/Config)',
@@ -50,6 +54,7 @@ const ROLES = {
       // Preconditions are connection work: establishing what must be true before
       // a system can be bound at all.
       'get_connection_preconditions', 'epic_list_organizations',
+      'get_deployment_runbook', 'get_llm_providers',
       'get_connection_interview', 'detect_system', 'get_connection_modes',
       // The explicit handoff to the Onboarding Agent: scour findings become
       // connection.proposal tasks rather than a verbal convention.
@@ -59,7 +64,8 @@ const ROLES = {
     title: 'Knowledge Compilation Agent',
     plane: PLANES.BUSINESS,
     duty: 'Compiles one company knowledge base from RAG scour + upload + connector-read + system manifests, for the Orchestrator to ground task assignment.',
-    tools: ['ingest_source', 'compile_knowledge_base', 'search_knowledge_base', 'correlate_task', 'search_scholar']
+    tools: ['ingest_source', 'compile_knowledge_base', 'search_knowledge_base', 'correlate_task', 'search_scholar',
+      'get_consultancy_skills', 'get_prompt_frameworks']
   },
   compliance: {
     title: 'Compliance Agent',

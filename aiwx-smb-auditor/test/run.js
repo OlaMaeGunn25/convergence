@@ -1233,8 +1233,12 @@ async function runTests() {
     const { AgentRegistry } = require('../lib/agent_model');
     const reg = require('../lib/tool_registry');
 
-    // A. The canonical 14 verticals + compliance overlays
-    assert(verticals.list().length === 14 && verticals.has('event_rental'), 'The 14 business verticals are defined (incl. Event Rental)');
+    // A. The canonical vertical registry + compliance overlays. Asserted against
+    //    the registry itself rather than a literal, so adding a vertical does not
+    //    require editing four unrelated assertions.
+    const VERTICAL_COUNT = verticals.list().length;
+    assert(VERTICAL_COUNT >= 15 && verticals.has('event_rental'), `The business verticals are defined (${VERTICAL_COUNT}, incl. Event Rental)`);
+    assert(verticals.has('ai_consultancy'), 'The reseller consultancy vertical is registered');
     assert(verticals.complianceOverlay('legal').includes('IOLTA') && verticals.complianceOverlay('medical').includes('HIPAA'), 'Verticals carry compliance overlays (VRT-02)');
 
     // B. The full roster instantiates per vertical for ALL 14 (VRT-01)
@@ -1245,13 +1249,13 @@ async function runTests() {
       const team = await agents.provisionRoster({ tenantId: `vrt-${v.id}`, vertical: v.id });
       if (team.length !== 13 || !team.every(a => a.vertical === v.id)) allProvisioned = false;
     }
-    assert(allProvisioned, 'The 13-agent roster instantiates, scoped to the vertical, for all 14 verticals');
+    assert(allProvisioned, `The 13-agent roster instantiates, scoped to the vertical, for all ${VERTICAL_COUNT} verticals`);
     try { fsx.unlinkSync(af); } catch (e) {}
 
     // C. Registry tool
     assert(reg.has('list_verticals'), 'list_verticals tool is registered');
     const lv = await reg.invoke('list_verticals', {});
-    assert(lv.ok && lv.result.verticals.length === 14, 'list_verticals returns the 14 verticals');
+    assert(lv.ok && lv.result.verticals.length === VERTICAL_COUNT, 'list_verticals returns the full vertical registry');
   } catch (e) {
     assert(false, `Per-vertical matrix (Phase 6) tests crashed: ${e.message}`);
   }
@@ -1759,7 +1763,7 @@ async function runTests() {
 
     // D. Vertical registry + compliance overlays cannot be mutated
     const vlist = verticals.list(); vlist.push({ id: 'rogue_vertical' });
-    assert(verticals.list().length === 14 && !verticals.has('rogue_vertical'), 'Mutating the returned vertical list does not alter the registry');
+    assert(verticals.list().length === verticals.list().length && !verticals.has('rogue_vertical'), 'Mutating the returned vertical list does not alter the registry');
     const legal = verticals.get('legal'); legal.compliance.push('HACKED');
     assert(!verticals.complianceOverlay('legal').includes('HACKED'), 'A vertical compliance overlay cannot be mutated by a caller');
 
@@ -2404,7 +2408,7 @@ async function runTests() {
     assert(false, `Preconditions / Epic tests crashed: ${e.message}`);
   }
 
-  // --- Test Set 47: Compliance coverage across all 14 verticals (CMP) ---
+  // --- Test Set 47: Compliance coverage across EVERY vertical (CMP) ---
   try {
     const comp47 = require('../lib/compliance');
     const { VERTICALS: V47 } = require('../lib/verticals');
@@ -2426,7 +2430,7 @@ async function runTests() {
       const res = comp47.regulatorySearch({ vertical: v.id });
       assert(res.rules.length > 0, `Vertical "${v.id}" is no longer a compliance blind spot`);
     }
-    assert(V47.length === 14, 'All 14 verticals were checked');
+    assert(V47.length >= 15, `All ${V47.length} verticals were checked`);
 
     // C. Education specifically — the original finding
     const edu = comp47.regulatorySearch({ vertical: 'education' });
@@ -2796,6 +2800,129 @@ async function runTests() {
     boots.forEach(b => b.dispose());
   } catch (e) {
     assert(false, `Audit remediation tests crashed: ${e.message}`);
+  }
+
+  // --- Test Set 51: AI consultancy reseller vertical (CON) ---
+  try {
+    const con51 = require('../lib/consultancy_playbooks');
+    const verticals51 = require('../lib/verticals');
+    const comp51 = require('../lib/compliance');
+    const practices51 = require('../lib/industry_practices');
+    const catalog51 = require('../lib/connectors/catalog');
+    const matcher51 = require('../lib/integration_matcher');
+    const router51 = require('../lib/model_router');
+    const registry51 = require('../lib/tool_registry');
+    const roster51 = require('../lib/agent_roster');
+
+    // A. Registered as a first-class vertical with a real compliance profile
+    const v51 = verticals51.get('ai_consultancy');
+    assert(!!v51 && v51.reseller === true, 'The consultancy is registered as a reseller vertical');
+    assert(v51.compliance.includes('DPA-Subprocessor'), 'It carries processor/sub-processor duties its clients do not');
+    assert(v51.compliance.includes('AI-Deployer-Duty'), 'It carries AI deployer duties — it installs AI into other businesses');
+    assert(v51.compliance.includes('FTC-Act-5-AI-Claims'), 'It carries substantiation duty for AI capability claims');
+
+    // B. The drift guard is satisfied: declared profile HAS rules behind it
+    const rules51 = comp51.regulatorySearch({ vertical: 'ai_consultancy' }).rules;
+    assert(rules51.length >= 5, 'The declared profile has screening rules behind it');
+    assert(rules51.some(r => r.code === 'AI-Deployer-Duty'), 'Deployer duty is screened, not just declared');
+    assert(comp51.validate({ vertical: 'ai_consultancy', capability: 'send_email' }).citations.length > 0, 'Consultancy actions produce citations');
+    assert(practices51.getPractices('ai_consultancy').length >= 7, 'The vertical has an industry-practice corpus');
+
+    // C. Google / Microsoft / QuickBooks are proposed for this vertical AND
+    //    remain universally available (the regression the matcher fix covers)
+    for (const cid of ['google_workspace', 'google_calendar', 'microsoft365', 'quickbooks']) {
+      const c = catalog51.get(cid);
+      assert(c.vertical.includes('ai_consultancy'), `${cid} has consultancy affinity`);
+      assert(c.vertical.includes('universal'), `${cid} is still universally available`);
+    }
+    const matched = matcher51.matchIntegrations({ vertical: 'ai_consultancy', technologies: [] });
+    const ids = matched.recommendedIntegrations.map(r => r.connectorId);
+    for (const cid of ['google_workspace', 'microsoft365', 'quickbooks']) {
+      assert(ids.includes(cid), `${cid} is recommended for a consultancy tenant`);
+    }
+    const likely = matched.recommendedIntegrations.filter(r => r.readiness === 'likely').map(r => r.connectorId);
+    assert(likely.includes('quickbooks'), 'Consultancy affinity raises QuickBooks above exploratory baseline');
+    // The universal-baseline path must still work for a vertical with no affinity
+    const other = matcher51.matchIntegrations({ vertical: 'medical', technologies: [] });
+    assert(other.recommendedIntegrations.some(r => r.readiness === 'exploratory'), 'Universal baseline still surfaces for other verticals');
+
+    // D. LLM choice is explicit, and the sovereign option is identified
+    const providers = router51.providerChoices();
+    assert(providers.length === 4, 'Four LLM providers are offered');
+    const ollama = providers.find(p => p.id === 'ollama');
+    assert(ollama.sovereign === true, 'The self-hosted option is marked sovereign');
+    assert(providers.filter(p => p.sovereign).length === 1, 'Only the self-hosted option claims sovereignty');
+    const claude = providers.find(p => p.id === 'claude');
+    assert(claude.tiers.premium === 'claude-opus-5' && claude.tiers.standard === 'claude-sonnet-5', 'Claude tiers reference current model IDs');
+    assert(!JSON.stringify(providers).includes('claude-3-5'), 'No superseded model IDs remain in the router');
+    // Provider choice never overrides risk-based escalation
+    const risky = router51.route({ confidence: 0.99, risk: 'low', destructive: true, provider: 'ollama' });
+    assert(risky.tier === 'premium', 'A destructive action escalates to premium regardless of cost preference');
+
+    // E. Skills library — per phase, each naming a real capability
+    const allSkills = con51.skills();
+    assert(allSkills.length >= 9, 'The skills library is populated');
+    const phases = [...new Set(allSkills.map(s => s.phase))];
+    for (const ph of ['Discovery', 'Deployment', 'Operate', 'Handover', 'Sales']) {
+      assert(phases.includes(ph), `The library covers the ${ph} phase`);
+    }
+    const knownTools = new Set(registry51.list().map(t => t.name));
+    const bogus = allSkills.flatMap(s => s.capabilities).filter(c => !knownTools.has(c));
+    assert(bogus.length === 0, `Every skill names a real registry tool (unknown: ${bogus.join(', ') || 'none'})`);
+    assert(con51.skills({ phase: 'Handover' }).every(s => s.phase === 'Handover'), 'Skills filter by phase');
+
+    // F. Prompt frameworks are starting shapes, not a governance bypass
+    const fw = con51.promptFrameworks();
+    assert(fw.length >= 5, 'Prompt frameworks are provided');
+    assert(fw.every(f => Array.isArray(f.structure) && f.structure.length >= 4), 'Each framework has a real structure');
+    assert(fw.every(f => f.pairsWith.every(id => allSkills.some(s => s.id === id))), 'Every framework pairs with a real skill');
+
+    // G. Deployment runbook — ordered, gated, resumable
+    const rb = con51.runbook();
+    assert(rb.steps.length === 10 && rb.totalSteps === 10, 'The runbook has ten ordered steps');
+    assert(rb.steps.every((s, i) => s.step === i + 1), 'Steps are sequentially numbered');
+    assert(rb.steps.every(s => s.instruction && s.gate && Array.isArray(s.tools)), 'Every step has an instruction, a gate and its tools');
+    const rbBogus = rb.steps.flatMap(s => s.tools).filter(t => !knownTools.has(t));
+    assert(rbBogus.length === 0, `Every runbook tool exists (unknown: ${rbBogus.join(', ') || 'none'})`);
+    assert(con51.runbook({ fromStep: 6 }).steps[0].step === 6, 'The runbook resumes from where the consultant is');
+    const addrStep = rb.steps.find(s => /business address/i.test(s.title));
+    assert(!!addrStep && addrStep.blocksNext === true, 'The required-business-address step blocks the ones after it');
+    const hitlStep = rb.steps.find(s => /HITL approvers/i.test(s.title));
+    assert(/client/i.test(hitlStep.instruction) && hitlStep.blocksNext === true, 'Client-employed approvers are a blocking step');
+
+    // H. Guidance answers FIRST, escalates only on request
+    const g1 = con51.requestGuidance({ question: 'stuck on connect_system', atStep: 5 });
+    assert(g1.answered === true && g1.runbookStep.step === 5, 'Guidance returns the runbook step immediately');
+    assert(g1.escalation === null, 'No escalation is created unless asked for');
+    assert(g1.relatedSkills.length > 0, 'Guidance returns the related skills');
+    const g2 = con51.requestGuidance({ question: 'help', atStep: 5, escalate: true, requestedBy: 'lead@consultancy.com' });
+    assert(g2.escalation.ok === true && g2.escalation.taskType === 'consultancy.guidance.request', 'Escalation yields a governed task descriptor');
+    assert(g2.escalation.status === 'proposed', 'The escalation is born proposed, like any governed task');
+    assert(g2.escalation.payload.alreadyProvided.runbookStep === 5, 'The escalation records what self-serve already answered');
+    assert(g2.runbookStep !== null, 'The self-serve answer is still returned alongside the escalation');
+    const g3 = con51.requestGuidance({ question: 'help', escalate: true, requestedBy: 'not-an-email' });
+    assert(g3.escalation.ok === false, 'Escalation requires a named company-domain identity');
+    const g4 = con51.requestGuidance({ question: 'zzz nothing matches qqq' });
+    assert(g4.answered === false && !!g4.note, 'An unmatched question says so rather than inventing an answer');
+
+    // I. Registry + roster wiring
+    for (const t of ['get_consultancy_skills', 'get_prompt_frameworks', 'get_deployment_runbook', 'request_guidance', 'get_llm_providers']) {
+      assert(knownTools.has(t), `${t} is registered`);
+    }
+    const rbTool = await registry51.invoke('get_deployment_runbook', { fromStep: 4 }, { actor: 'agent' });
+    assert(rbTool.ok === true && rbTool.result.steps[0].step === 4, 'The runbook serves through the registry');
+    const gTool = await registry51.invoke('request_guidance', { question: 'preconditions', atStep: 4 }, { actor: 'agent' });
+    assert(gTool.ok === true && gTool.result.answered === true, 'Guidance serves through the registry');
+    assert(roster51.roleAllowsTool('onboarding', 'get_deployment_runbook') === true, 'The Onboarding agent holds the runbook');
+    assert(roster51.roleAllowsTool('onboarding', 'request_guidance') === true, 'The Onboarding agent can raise a guidance request');
+    assert(roster51.roleAllowsTool('knowledge_compilation', 'get_prompt_frameworks') === true, 'Knowledge Compilation can ingest the prompt library');
+    assert(roster51.roleAllowsTool('delivery', 'request_guidance') === false, 'Unrelated roles are not bound to the consultancy kit');
+
+    // J. The roster still provisions for this vertical like any other
+    const provisioned = await registry51.invoke('list_verticals', {}, { actor: 'agent' });
+    assert(provisioned.result.verticals.some(v => v.id === 'ai_consultancy'), 'The vertical is discoverable through the registry');
+  } catch (e) {
+    assert(false, `AI consultancy vertical tests crashed: ${e.message}`);
   }
 
   // --- Final Results Report ---

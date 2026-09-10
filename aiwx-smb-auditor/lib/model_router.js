@@ -13,12 +13,38 @@
  * both directions — fewer tokens AND a cheaper model where safe.
  */
 
+const PROVIDERS = ['gemini', 'openai', 'claude', 'ollama'];
+
 const TIERS = {
   local: { rank: 0, providers: { ollama: 'llama3' } },
-  cheap: { rank: 1, providers: { gemini: 'gemini-2.5-flash', openai: 'gpt-4o-mini', claude: 'claude-3-5-haiku', ollama: 'llama3' } },
-  standard: { rank: 2, providers: { gemini: 'gemini-2.5-flash', openai: 'gpt-4o', claude: 'claude-3-5-sonnet', ollama: 'mistral' } },
-  premium: { rank: 3, providers: { gemini: 'gemini-2.5-pro', openai: 'gpt-4o', claude: 'claude-3-5-sonnet', ollama: 'mistral' } }
+  cheap: { rank: 1, providers: { gemini: 'gemini-2.5-flash', openai: 'gpt-4o-mini', claude: 'claude-haiku-4-5', ollama: 'llama3' } },
+  standard: { rank: 2, providers: { gemini: 'gemini-2.5-flash', openai: 'gpt-4o', claude: 'claude-sonnet-5', ollama: 'mistral' } },
+  premium: { rank: 3, providers: { gemini: 'gemini-2.5-pro', openai: 'gpt-4o', claude: 'claude-opus-5', ollama: 'mistral' } }
 };
+
+/**
+ * The provider/model choice offered to a tenant, as data.
+ *
+ * Served to the operations hub so a reseller can present the decision to a
+ * client rather than making it silently on their behalf. `sovereign` marks the
+ * option where inference never leaves the client's own infrastructure — the
+ * question a regulated client asks first, and the reason a local tier exists at
+ * all.
+ */
+function providerChoices() {
+  return PROVIDERS.map(id => ({
+    id,
+    label: { gemini: 'Google Gemini', openai: 'OpenAI', claude: 'Anthropic Claude', ollama: 'Self-hosted (Ollama)' }[id],
+    sovereign: id === 'ollama',
+    tiers: Object.entries(TIERS).reduce((acc, [tier, def]) => {
+      if (def.providers[id]) acc[tier] = def.providers[id];
+      return acc;
+    }, {}),
+    note: id === 'ollama'
+      ? 'Runs on infrastructure you control; no prompt or client data leaves it. Available at every tier the local model can serve.'
+      : 'Hosted provider. Its terms and sub-processor status must be disclosed to the client before their data reaches it.'
+  }));
+}
 
 function modelFor(tier, provider) {
   const t = TIERS[tier] || TIERS.standard;
@@ -55,4 +81,4 @@ function route({ confidence = 1, risk = 'low', destructive = false, provider = '
   return { tier, model: modelFor(tier, p), provider: p, escalated: tier === 'premium', routeToHitl, rationale };
 }
 
-module.exports = { route, TIERS, modelFor };
+module.exports = { route, TIERS, modelFor, providerChoices, PROVIDERS };

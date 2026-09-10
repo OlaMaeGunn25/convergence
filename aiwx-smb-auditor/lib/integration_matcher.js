@@ -52,8 +52,13 @@ function matchIntegrations({ technologies = [], vertical = '', businessName = ''
   for (const c of catalog.list()) {
     const techMatches = c.matchSignals.filter(s => techBlob.includes(s.toLowerCase()));
     const contextMatches = c.matchSignals.filter(s => contextBlob.includes(s.toLowerCase()));
-    const verticalAffinity = Array.isArray(c.vertical) &&
-      c.vertical.some(x => x.toLowerCase() === (vertical || '').toLowerCase());
+    // `vertical` is either the string 'universal' or a list that MAY contain
+    // 'universal' alongside specific verticals — a connector can be broadly
+    // available and still have affinity for one vertical.
+    const verticalList = Array.isArray(c.vertical) ? c.vertical : [c.vertical];
+    const isUniversal = verticalList.some(x => String(x).toLowerCase() === 'universal');
+    const verticalAffinity = verticalList.some(x =>
+      String(x).toLowerCase() === String(vertical || '').toLowerCase() && String(x).toLowerCase() !== 'universal');
 
     let readiness = null, priority = 99, matchedOn = [];
     if (techMatches.length) {
@@ -61,7 +66,7 @@ function matchIntegrations({ technologies = [], vertical = '', businessName = ''
     } else if (contextMatches.length || verticalAffinity) {
       readiness = 'likely'; priority = 2;
       matchedOn = contextMatches.length ? contextMatches : [`vertical:${vertical}`];
-    } else if (c.vertical === 'universal' && HIGH_VALUE_UNIVERSAL.has(c.id)) {
+    } else if (isUniversal && HIGH_VALUE_UNIVERSAL.has(c.id)) {
       readiness = 'exploratory'; priority = 3; matchedOn = ['universal-baseline'];
     }
     if (!readiness) continue;

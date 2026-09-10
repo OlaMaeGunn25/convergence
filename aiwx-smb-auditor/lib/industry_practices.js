@@ -11,6 +11,15 @@
  */
 
 const PRACTICES = {
+  ai_consultancy: [
+    { id: 'disc-01', title: 'Discovery before deployment', detail: 'Map the actual client process and system of record before proposing automation. A deployment onto an unmapped process automates the confusion.' },
+    { id: 'disc-02', title: 'Name the system of record', detail: 'Every engagement identifies which system holds the truth for each data class. Two systems claiming the same truth is the defect to find in discovery, not in production.' },
+    { id: 'gov-01', title: 'Governance before autonomy', detail: 'Connect and observe before delegating. An autonomy grant issued before the client has watched the agent work is a grant issued without evidence.' },
+    { id: 'gov-02', title: 'The client owns the approval', detail: 'A HITL approver must be a named client employee, not the consultancy. Approving on behalf of a client transfers their accountability to you.' },
+    { id: 'claim-01', title: 'Substantiate every capability claim', detail: 'Any outcome figure quoted to a prospect must trace to a measured deployment. Unsubstantiated AI claims are an FTC Act §5 exposure for the consultancy, not the client.' },
+    { id: 'data-01', title: 'Sub-processor disclosure', detail: 'Disclose every sub-processor in the delivered stack — model providers included — before any client data reaches it.' },
+    { id: 'exit-01', title: 'Leave an exit', detail: 'Document how the client operates the deployment without you. An engagement that cannot be handed over is a dependency, not a delivery.' }
+  ],
   legal: [
     { id: 'legal-conflict-check', title: 'Conflict-of-interest check before intake', description: 'Screen new clients against existing matters and parties before opening a matter.', appliesTo: ['create_matter', 'list_contacts'] },
     { id: 'legal-trust-segregation', title: 'Trust funds segregation (IOLTA)', description: 'Client trust funds are held separately, never commingled; every trust transaction is recorded and reconciled.', appliesTo: ['record_trust_transaction'] },
