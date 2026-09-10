@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiWorXmiths Nexus™ — AI Readiness & Dollar ROI Diagnostic</title>
+  <meta name="description" content="Official AiWorXmiths AI Opportunity & Dollar ROI Diagnostic. Discover your company's AI Readiness Index (0-100), identify operational bottlenecks, and calculate your projected 12-month dollar ROI.">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="AiWorXmiths Nexus™ — AI Readiness & ROI Quantum Scorecard">
+  <meta property="og:description" content="Problems Solved. Growth Built. 60-second operational diagnostic for SMBs and enterprise leaders.">
+  
+  <!-- Google Fonts: Helvetica alternative for web & Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       AiWorXmiths Official Brand System (v1.0 - July 2026 Specification)
+       ========================================================================== */
+    :root {
+      /* Primary Brand Palette */
+      --deep-navy: #002354;
+      --electric-blue: #009EE6;
+      --bright-blue: #0086EF;
+      --core-blue: #0673E0;
+      --navy-depth: #001A3F;
+      --slate: #3D5573;
+      --body-ink: #12294A;
+      --light-bg: #F7F9FC;
+      --panel-tint: #E9F5FD;
+      --line-color: #C9D6E4;
+      
+      /* Status & Callout Accents */
+      --critical-red: #B3261E;
+      --critical-bg: #FBEAE8;
+      --result-green: #0E7A4E;
+      --result-bg: #E8F5EE;
+      --stat-card-bg: #0A3060;
+      --stat-label: #9FC2E8;
+
+      /* UI Dimensions */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --radius-pill: 9999px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, 'Inter', Arial, sans-serif;
+      background-color: var(--light-bg);
+      color: var(--body-ink);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ==========================================================================
+       1. Header & Official Brand Wordmark
+       ========================================================================== */
+    header {
+      background: var(--navy-depth);
+      border-bottom: 2px solid var(--electric-blue);
+      padding: 18px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Wordmark Formula: Helvetica Bold, Capital X +12% Electric Blue, Sparkles */
+    .brand-block {
+      text-decoration: none;
+      display: inline-flex;
+      flex-direction: column;
+    }
+    .wordmark {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      color: #FFFFFF;
+      letter-spacing: -0.3px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+    .wordmark .x-blue {
+      color: var(--electric-blue);
+      font-size: 1.14em;
+      display: inline-block;
+      margin: 0 -0.5px;
+      transform: translateY(-0.5px);
+    }
+    .sparkle-group {
+      display: inline-flex;
+      position: relative;
+      margin-left: 6px;
+      width: 18px;
+      height: 20px;
+    }
+    .sparkle-lg {
+      color: var(--electric-blue);
+      font-size: 14px;
+      position: absolute;
+      top: -3px;
+      left: 0;
+      line-height: 1;
+    }
+    .sparkle-sm {
+      color: var(--bright-blue);
+      font-size: 9px;
+      position: absolute;
+      bottom: -1px;
+      right: 0;
+      line-height: 1;
+    }
+    .tagline {
+      font-size: 8.5px;
+      font-weight: 400;
+      color: #9FC2E8;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .confidential-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--electric-blue);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border: 1px solid var(--electric-blue);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 158, 230, 0.08);
+    }
+
+    /* ==========================================================================
+       2. Hero Banner (Navy Depth Base + Grid Overlay Formula)
+       ========================================================================== */
+    .hero-banner {
+      background: linear-gradient(180deg, var(--deep-navy) 0%, var(--navy-depth) 100%);
+      color: #FFFFFF;
+      padding: 60px 0 50px;
+      position: relative;
+      border-bottom: 3px solid var(--electric-blue);
+    }
+    .hero-banner::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: linear-gradient(to right, rgba(10, 52, 104, 0.25) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(10, 52, 104, 0.25) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 40px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--electric-blue);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hero-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    .hero-subtitle {
+      font-size: 18px;
+      color: var(--electric-blue);
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+    .hero-desc {
+      font-size: 14.5px;
+      color: #B8D2EE;
+      line-height: 1.55;
+      max-width: 580px;
+      margin-bottom: 24px;
+    }
+    
+    /* Life-Like Hero Media Feature */
+    .hero-image-card {
+      background: var(--navy-depth);
+      border: 1px solid rgba(0, 158, 230, 0.3);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+    .hero-image-card img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      display: block;
+    }
+    .hero-image-caption {
+      background: rgba(0, 26, 63, 0.95);
+      border-top: 2px solid var(--electric-blue);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #B8D2EE;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hero-image-caption strong {
+      color: #FFFFFF;
+    }
+
+    /* Stat Band (Formula: 4 rounded #0A3060 cards with Electric Blue numbers) */
+    .stat-band {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 36px;
+    }
+    .stat-card {
+      background: var(--stat-card-bg);
+      border: 1px solid rgba(0, 158, 230, 0.25);
+      border-radius: 6px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--electric-blue);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: var(--stat-label);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ==========================================================================
+       3. Main Diagnostic Engine Section
+       ========================================================================== */
+    .diagnostic-section {
+      padding: 60px 0 80px;
+    }
+    .section-header {
+      margin-bottom: 36px;
+    }
+    .section-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--bright-blue);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .section-heading {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      display: inline-block;
+      position: relative;
+      padding-bottom: 8px;
+    }
+    .section-heading::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--electric-blue);
+    }
+
+    /* Mode Switcher Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--line-color);
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line-color);
+      background: #FFFFFF;
+      color: var(--slate);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn.active {
+      background: var(--deep-navy);
+      color: #FFFFFF;
+      border-color: var(--deep-navy);
+    }
+
+    /* Domain Scanner Card */
+    .audit-box {
+      background: #FFFFFF;
+      border: 1px solid var(--line-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: 0 4px 16px rgba(0, 35, 84, 0.05);
+    }
+    .scanner-form-row {
+      display: flex;
+      gap: 12px;
+      max-width: 720px;
+    }
+    .input-domain {
+      flex: 1;
+      font-family: inherit;
+      font-size: 14.5px;
+      padding: 12px 16px;
+      border: 1px solid var(--line-color);
+      border-radius: var(--radius-sm);
+      color: var(--body-ink);
+      background: #FFFFFF;
+      outline: none;
+    }
+    .input-domain:focus {
+      border-color: var(--electric-blue);
+      box-shadow: 0 0 0 3px rgba(0, 158, 230, 0.15);
+    }
+    .btn-action {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      background: var(--electric-blue);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 24px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.15s;
+    }
+    .btn-action:hover {
+      background: #0088cc;
+    }
+
+    /* Vertical Archetype Grid (With Authentic Life-Like Imagery) */
+    .archetype-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+    .archetype-card {
+      background: #FFFFFF;
+      border: 1px solid var(--line-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .archetype-card:hover, .archetype-card.selected {
+      border-color: var(--electric-blue);
+      box-shadow: 0 4px 14px rgba(0, 158, 230, 0.2);
+    }
+    .archetype-card.selected {
+      border-left: 3px solid var(--electric-blue);
+    }
+    .archetype-img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      display: block;
+    }
+    .archetype-body {
+      padding: 10px 12px;
+    }
+    .archetype-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      margin-bottom: 2px;
+    }
+    .archetype-desc {
+      font-size: 11px;
+      color: var(--slate);
+    }
+
+    /* Sliders */
+    .slider-container {
+      background: var(--light-bg);
+      border: 1px solid var(--line-color);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin: 18px 0;
+    }
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--deep-navy);
+    }
+    .slider-val {
+      color: var(--electric-blue);
+      font-size: 15px;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--electric-blue);
+      cursor: pointer;
+    }
+
+    /* Live Terminal Bar */
+    .terminal-progress {
+      display: none;
+      background: var(--navy-depth);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-top: 20px;
+      color: #FFFFFF;
+    }
+    .progress-line {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--electric-blue);
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      font-family: monospace;
+      font-size: 12px;
+      color: #9FC2E8;
+    }
+
+    /* ==========================================================================
+       4. Teaser Results & Official Brand Callout Components
+       ========================================================================== */
+    .results-wrapper {
+      display: none;
+      margin-top: 36px;
+      border-top: 1px solid var(--line-color);
+      padding-top: 32px;
+    }
+    .results-hero-grid {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .score-box {
+      background: var(--deep-navy);
+      border: 2px solid var(--electric-blue);
+      border-radius: var(--radius-md);
+      padding: 24px 16px;
+      text-align: center;
+      color: #FFFFFF;
+    }
+    .score-number {
+      font-size: 54px;
+      font-weight: 700;
+      color: var(--electric-blue);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .score-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--stat-label);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .roi-panel {
+      background: #FFFFFF;
+      border: 1px solid var(--line-color);
+      border-left: 4px solid var(--electric-blue);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .roi-headline {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--bright-blue);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .roi-dollar {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      margin-bottom: 4px;
+    }
+    .roi-sub {
+      font-size: 13.5px;
+      color: var(--slate);
+    }
+
+    /* Official Brand Components from Spec */
+    /* Component: Architect's Note */
+    .architect-note {
+      background: var(--panel-tint);
+      border-left: 3pt solid var(--electric-blue);
+      padding: 14px 18px;
+      margin: 16px 0;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .architect-note-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .architect-note-body {
+      font-size: 13px;
+      color: var(--body-ink);
+    }
+
+    /* Component: Critical Callout */
+    .critical-callout {
+      background: var(--critical-bg);
+      border-left: 3pt solid var(--critical-red);
+      padding: 14px 18px;
+      margin: 12px 0;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .critical-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--critical-red);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .critical-body {
+      font-size: 13px;
+      color: #5C1D18;
+    }
+
+    /* Component: Numbered Card */
+    .numbered-card {
+      background: #FFFFFF;
+      border: 1px solid var(--line-color);
+      border-left: 3pt solid var(--electric-blue);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .numbered-digit {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--electric-blue);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .numbered-content h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      margin-bottom: 3px;
+    }
+    .numbered-content p {
+      font-size: 12.5px;
+      color: var(--slate);
+      margin-bottom: 4px;
+    }
+    .bullet-lead {
+      font-size: 12px;
+      color: var(--deep-navy);
+      font-weight: 600;
+    }
+    .bullet-diamond {
+      color: var(--electric-blue);
+      margin-right: 4px;
+    }
+
+    /* Unlock Action Banner */
+    .unlock-banner {
+      background: var(--navy-depth);
+      border-top: 3px solid var(--electric-blue);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      color: #FFFFFF;
+      text-align: center;
+      margin-top: 28px;
+    }
+    .unlock-banner h3 {
+      font-size: 19px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+    .unlock-banner p {
+      font-size: 13.5px;
+      color: #B8D2EE;
+      max-width: 620px;
+      margin: 0 auto 18px;
+    }
+
+    /* ==========================================================================
+       5. GHL Modal & Email Delivery Screen
+       ========================================================================== */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 26, 63, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-window {
+      background: #FFFFFF;
+      border-radius: var(--radius-md);
+      border-top: 4px solid var(--electric-blue);
+      width: 100%;
+      max-width: 520px;
+      padding: 32px;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      color: var(--slate);
+      cursor: pointer;
+    }
+    .form-group {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--deep-navy);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Result Callout in Modal (Confirm View) */
+    .modal-confirm-view {
+      display: none;
+      text-align: center;
+    }
+    .result-callout {
+      background: var(--result-bg);
+      border-left: 3pt solid var(--result-green);
+      padding: 16px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      text-align: left;
+      margin: 18px 0;
+    }
+    .result-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--result-green);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .result-body {
+      font-size: 13px;
+      color: #084c31;
+    }
+
+    /* ==========================================================================
+       6. Footer (Official Brand Furniture Specification)
+       ========================================================================== */
+    footer {
+      background: #FFFFFF;
+      border-top: 0.5pt solid var(--line-color);
+      padding: 24px 0;
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .footer-right {
+      color: #6E93BF;
+      font-size: 11.5px;
+    }
+    .footer-right a {
+      color: var(--core-blue);
+      text-decoration: none;
+    }
+
+    @media (max-width: 860px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .stat-band { grid-template-columns: repeat(2, 1fr); }
+      .results-hero-grid { grid-template-columns: 1fr; }
+      .scanner-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Official Header -->
+  <header>
+    <div class="container nav-inner">
+      <a href="/" class="brand-block">
+        <div class="wordmark">
+          AiWor<span class="x-blue">X</span>miths
+          <span class="sparkle-group">
+            <span class="sparkle-lg">✦</span>
+            <span class="sparkle-sm">✦</span>
+          </span>
+        </div>
+        <div class="tagline">Problems Solved. Growth Built.</div>
+      </a>
+      <div class="confidential-badge">CONFIDENTIAL · REPORT SPEC v1.0</div>
+    </div>
+  </header>
+
+  <!-- Hero Section with Deep Navy + Life-Like Imagery -->
+  <section class="hero-banner">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-eyebrow">
+            ◆ Section 1 · Executive Opportunity Audit
+          </div>
+          <h1 class="hero-title">
+            AI Readiness & Dollar ROI Diagnostic
+          </h1>
+          <div class="hero-subtitle">
+            Identify Automation Vulnerabilities & Quantify Reclaimed Capacity
+          </div>
+          <p class="hero-desc">
+            An official intelligence product for enterprise operators and growing businesses. Discover your company's AI Readiness Index (0–100), pinpoint data-silo leakages, and simulate 12-month labor yields under a Human-in-the-Loop cloud architecture.
+          </p>
+        </div>
+
+        <!-- Life-Like Feature Photography -->
+        <div class="hero-image-card">
+          <img src="/lead_architect_presenting_1779798767831.png" alt="AiWorXmiths Lead Systems Architect Presenting Strategy">
+          <div class="hero-image-caption">
+            <div><strong>AiWorXmiths Architecture Team</strong> · Scoping Session</div>
+            <div style="color:var(--electric-blue); font-weight:700;">Zero SaaS Tax</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Official Stat Band (Formula: 4 Rounded #0A3060 Cards) -->
+      <div class="stat-band">
+        <div class="stat-card">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Private Cloud VPC</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">72%</div>
+          <div class="stat-label">Repetitive Hours Saved</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">$0</div>
+          <div class="stat-label">Third-Party SaaS Tax</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">90-Day</div>
+          <div class="stat-label">HITL Workforce Transition</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Diagnostic Workspace -->
+  <section class="diagnostic-section">
+    <div class="container">
+      
+      <div class="section-header">
+        <div class="section-eyebrow">Section 2 · Interactive Assessment</div>
+        <h2 class="section-heading">Operational Diagnostic Engine</h2>
+      </div>
+
+      <div class="audit-box">
+        
+        <!-- Mode Tabs -->
+        <div class="mode-tabs">
+          <button id="tabDomain" class="tab-btn active" onclick="switchTab('domain')">◆ Automated Domain Scanner</button>
+          <button id="tabQuiz" class="tab-btn" onclick="switchTab('quiz')">◆ 60-Second Operational Audit</button>
+        </div>
+
+        <!-- Mode 1: Domain Scanner -->
+        <div id="viewDomain">
+          <p style="font-size:13.5px; color:var(--slate); margin-bottom:14px;">
+            Enter your company URL to run a live technical audit analyzing your external tech stack, SSL headers, and intake latency:
+          </p>
+          <div class="scanner-form-row">
+            <input type="text" id="targetDomain" class="input-domain" placeholder="e.g. yourcompany.com" autocomplete="off">
+            <button id="btnRunDomainScan" class="btn-action" onclick="executeDomainScan()">
+              Run Technical Audit →
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 2: Interactive Archetype Quiz with Life-Like Team Photos -->
+        <div id="viewQuiz" style="display:none;">
+          <p style="font-size:13.5px; color:var(--slate); margin-bottom:12px;">
+            Select your industry operational profile and key workflow bottlenecks:
+          </p>
+          
+          <!-- Life-Like Professional Profiles -->
+          <div class="archetype-grid">
+            <div class="archetype-card selected" onclick="selectVertical(this, 'Legal & Law Firms')">
+              <img src="/african_american_female_lawyer.png" class="archetype-img" alt="Legal Operations">
+              <div class="archetype-body">
+                <div class="archetype-title">Legal & Law Practice</div>
+                <div class="archetype-desc">Client intake & discovery lag</div>
+              </div>
+            </div>
+            <div class="archetype-card" onclick="selectVertical(this, 'Accounting & Financial')">
+              <img src="/african_american_male_advisor.png" class="archetype-img" alt="Financial & Advisory">
+              <div class="archetype-body">
+                <div class="archetype-title">Financial & Advisory</div>
+                <div class="archetype-desc">Ledger & reconciliation audits</div>
+              </div>
+            </div>
+            <div class="archetype-card" onclick="selectVertical(this, 'Healthcare & Medical')">
+              <img src="/native_american_female_dentist.png" class="archetype-img" alt="Healthcare Practice">
+              <div class="archetype-body">
+                <div class="archetype-title">Healthcare & Medical</div>
+                <div class="archetype-desc">HIPAA booking & record sync</div>
+              </div>
+            </div>
+            <div class="archetype-card" onclick="selectVertical(this, 'Professional Services')">
+              <img src="/east_asian_male_founder.png" class="archetype-img" alt="Consulting & Tech">
+              <div class="archetype-body">
+                <div class="archetype-title">Professional Services</div>
+                <div class="archetype-desc">Operations & CRM disconnect</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Multipliers -->
+          <div class="slider-container">
+            <div class="slider-row">
+              <span>Operational Staff Count:</span>
+              <span id="labelTeamSize" class="slider-val">6 Team Members</span>
+            </div>
+            <input type="range" id="sliderTeamSize" min="1" max="50" value="6" oninput="updateCalculations()">
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-row">
+              <span>Weekly Repetitive Admin Hours Per Staff:</span>
+              <span id="labelHoursSpent" class="slider-val">14 Hours / Wk</span>
+            </div>
+            <input type="range" id="sliderHoursSpent" min="4" max="30" value="14" oninput="updateCalculations()">
+          </div>
+
+          <button class="btn-action" style="width:100%; justify-content:center;" onclick="executeQuizDiagnostic()">
+            Calculate Quantified ROI Model →
+          </button>
+        </div>
+
+        <!-- Terminal Progress Simulation -->
+        <div id="scanProgress" class="terminal-progress">
+          <div class="progress-line">
+            <div id="progressBar" class="progress-fill"></div>
+          </div>
+          <div id="progressLog" class="progress-text">[Audit Engine] Connecting to secure inspection agent...</div>
+        </div>
+
+        <!-- Teaser Results View Formatted to Official Brand Components -->
+        <div id="resultsView" class="results-wrapper">
+          
+          <div class="results-hero-grid">
+            <div class="score-box">
+              <div id="displayScore" class="score-number">70</div>
+              <div class="score-label">AI Readiness Index (0-100)</div>
+            </div>
+            
+            <div class="roi-panel">
+              <div class="roi-headline">Projected 12-Month Economic Opportunity</div>
+              <div id="displayRoi" class="roi-dollar">$459,000</div>
+              <div class="roi-sub">
+                ◆ <strong id="displayHours" style="color:var(--deep-navy);">5,400 Labor Hours Reclaimed</strong> annually under a Human-in-the-Loop automation topology.
+              </div>
+            </div>
+          </div>
+
+          <!-- Architect's Note Callout Component -->
+          <div class="architect-note">
+            <div class="architect-note-title">Architect's Note · Human-in-the-Loop Transition</div>
+            <div class="architect-note-body">
+              Systems are engineered not to replace staff, but to eliminate repetitive administrative friction. Administrative coordinators transition into Growth Auditors overseeing automated exception queues with zero third-party platform tax.
+            </div>
+          </div>
+
+          <!-- Critical Vulnerability Gaps (Numbered Cards Component) -->
+          <div style="margin: 24px 0 16px;">
+            <div style="font-size:12px; font-weight:700; color:var(--bright-blue); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">
+              Audited Operational Headwinds
+            </div>
+            <div id="gapsContainer">
+              <!-- Dynamically populated numbered cards -->
+            </div>
+          </div>
+
+          <!-- Unlock Executive Blueprint Banner -->
+          <div class="unlock-banner">
+            <h3>Download Your Complete 12-Page Executive AI Blueprint</h3>
+            <p>
+              Includes full technical architecture diagrams, custom cloud VPC configuration, and the 90-Day Workforce Upskilling Transition Roadmap.
+            </p>
+            <button class="btn-action" style="margin:0 auto; background:var(--electric-blue);" onclick="openLeadGateModal()">
+              Request Official Executive Dossier (PDF) →
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- GHL Gated Capture Modal -->
+  <div id="gateModal" class="modal-backdrop">
+    <div class="modal-window">
+      <button class="modal-close-btn" onclick="closeLeadGateModal()">×</button>
+      
+      <div id="formContainer">
+        <div style="font-size:11px; font-weight:700; color:var(--bright-blue); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px;">
+          Official Executive Delivery
+        </div>
+        <h3 style="font-size:20px; font-weight:700; color:var(--deep-navy); margin-bottom:6px;">
+          Dispatch Executive AI Blueprint
+        </h3>
+        <p style="font-size:12.5px; color:var(--slate); margin-bottom:20px;">
+          Your 12-page bespoke audit is delivered directly to your work email to ensure deliverability and privacy.
+        </p>
+
+        <form id="leadCaptureForm" onsubmit="submitLeadCapture(event)">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="leadName" class="input-domain" style="width:100%;" required placeholder="Jane Doe">
+          </div>
+          <div class="form-group">
+            <label>Work Email * (Asset delivered here)</label>
+            <input type="email" id="leadEmail" class="input-domain" style="width:100%;" required placeholder="jane@company.com">
+          </div>
+          <div class="form-group">
+            <label>Phone / Direct Line</label>
+            <input type="tel" id="leadPhone" class="input-domain" style="width:100%;" placeholder="+1 (555) 000-0000">
+          </div>
+          <button type="submit" id="btnSubmitLead" class="btn-action" style="width:100%; justify-content:center; margin-top:8px;">
+            Dispatch Executive Report →
+          </button>
+        </form>
+
+        <div style="font-size:10.5px; color:var(--slate); text-align:center; margin-top:14px;">
+          ◆ Protected under HIPAA & SOC2 private cloud perimeter standards.
+        </div>
+      </div>
+
+      <!-- Result Callout Component on Confirmation -->
+      <div id="confirmContainer" class="modal-confirm-view">
+        <div class="result-callout">
+          <div class="result-title">Result · Asset Dispatched</div>
+          <div class="result-body">
+            Your customized 12-page executive dossier has been routed to <strong id="confirmEmail">your email</strong>. Please verify your inbox within 2 minutes.
+          </div>
+        </div>
+
+        <div class="architect-note" style="text-align:left; margin-bottom:20px;">
+          <div class="architect-note-title">Next Step · Free Clarity Call</div>
+          <div class="architect-note-body">
+            Map your exact cloud workflows with our Lead Architect (Mon–Fri, 11 AM–3 PM Eastern).
+          </div>
+        </div>
+
+        <a href="https://links.aiworxmiths.com/widget/bookings/ai-agent-calendar-free-consult" target="_blank" class="btn-action" style="width:100%; justify-content:center; text-decoration:none;">
+          Schedule 30-Min Clarity Call →
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Official Brand Footer Specification -->
+  <footer>
+    <div class="container footer-row">
+      <div class="footer-left">
+        <strong>AiWorXmiths</strong> | Problems Solved. Growth Built. · <em>Confidential</em>
+      </div>
+      <div class="footer-right">
+        <a href="https://aiworxmiths.com">aiworxmiths.com</a> | <a href="mailto:aiworxmiths@gmail.com">aiworxmiths@gmail.com</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/lead_magnet_ui.js"></script>
+</body>
+</html>
