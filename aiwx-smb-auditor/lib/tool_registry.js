@@ -67,6 +67,9 @@ const versionInfo = require('./version');
 const preconditions = require('./preconditions');
 const epic = require('./connectors/epic');
 const consultancy = require('./consultancy_playbooks');
+const apiIngestion = require('./api_ingestion');
+const mcpCatalog = require('./mcp_catalog');
+const ingestedApis = new apiIngestion.IngestedApiStore();
 
 const connectionModes = require('./connection_modes');
 const container = require('./container');
@@ -413,8 +416,12 @@ register({
 register({
   name: 'get_deployment_runbook',
   title: 'Real-time client deployment runbook',
-  description: 'The ordered, real-time instructions for standing a client up on the platform: ten steps across Prepare, Discover, Connect, Install, Operate and Handover. Each step names the tools that perform it and the gate that must clear before the next. Pass fromStep to get the remainder from where you are.',
-  inputSchema: z.object({ fromStep: z.number().optional(), phase: z.string().optional() }),
+  description: 'The ordered, real-time instructions for standing a client up on the platform: ten steps across Prepare, Discover, Connect, Install, Operate and Handover. Each step names the tools that perform it and the gate that must clear before the next. Pass fromStep to get the remainder from where you are, and variant of managed_service for engagements where the consultancy holds the approver role under a time-boxed, disclosed agreement — compliance-floor actions are never transferred even then.',
+  inputSchema: z.object({
+    fromStep: z.number().optional(),
+    phase: z.string().optional(),
+    variant: z.enum(['standard', 'managed_service']).optional()
+  }),
   annotations: { readOnly: true, destructive: false, openWorld: false },
   handler: (input) => consultancy.runbook(input || {})
 });
@@ -446,6 +453,60 @@ register({
     providers: modelRouter.providerChoices(),
     routing: 'Selection sets the provider; the cascade router still picks the tier per call by confidence and risk, escalating destructive or high-risk work to the premium tier regardless of cost preference.'
   })
+});
+
+// --- Pre-loaded MCP connections + API ingestion (MCPC / ING-API) ---
+register({
+  name: 'list_mcp_connections',
+  title: 'Pre-loaded MCP connections available to select',
+  description: 'Every MCP connection a tenant can select, for any vertical. Three sources: vendor (the system publishes its own MCP server), wrapper (a catalog connector served over MCP by the spun-up API→MCP wrapper), and ingested (an API ingested from its own description and served generically). A pre-loaded entry is an OFFER, never a connection — selecting one still runs the connection builder, its preconditions and its approval gate.',
+  inputSchema: z.object({ vertical: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => {
+    const vertical = input.vertical || null;
+    const entries = mcpCatalog.list({ vertical, ingestedApis: ingestedApis.list({ vertical }) });
+    return {
+      vertical,
+      total: entries.length,
+      bySource: entries.reduce((acc, e) => { acc[e.source] = (acc[e.source] || 0) + 1; return acc; }, {}),
+      connections: entries
+    };
+  }
+});
+
+register({
+  name: 'ingest_api_to_mcp',
+  title: 'Ingest an API and serve it over MCP',
+  description: 'Turn any documented REST API into a governed MCP surface. Accepts an OpenAPI 3 document or a minimal { operations: [...] } descriptor. Operations are classified by HTTP method — GET/HEAD read, everything else destructive and approval-gated. The base URL is refused if it is loopback, private, link-local or an internal address (an ingested spec must not become a request-forgery primitive), plain HTTP is refused, and every description is neutralised through the injection guard before it becomes a tool description. Ingestion produces a PROPOSAL and connects nothing.',
+  inputSchema: z.object({
+    name: z.string(),
+    baseUrl: z.string().optional(),
+    spec: z.record(z.any()),
+    credentialRefs: z.array(z.string()).optional(),
+    authHeader: z.string().optional(),
+    verticals: z.array(z.string()).optional()
+  }),
+  annotations: { readOnly: false, destructive: false, requiresApproval: true, openWorld: false },
+  handler: async (input, ctx) => {
+    const res = apiIngestion.ingest(Object.assign({}, input, { actor: ctx.actor || null }));
+    if (!res.ok) return res;
+    await ingestedApis.save(res.api);
+    return {
+      ok: true,
+      api: res.api,
+      mcp: 'Selectable via list_mcp_connections and servable over MCP by the wrapper.',
+      nextStep: 'Connect it with connect_system once its credential reference is populated.'
+    };
+  }
+});
+
+register({
+  name: 'list_ingested_apis',
+  title: 'APIs ingested into the MCP layer',
+  description: 'Every API ingested from its own description, with its operation counts and how many of those are destructive. Carries credential REFERENCES only.',
+  inputSchema: z.object({ vertical: z.string().optional() }),
+  annotations: { readOnly: true, destructive: false, openWorld: false },
+  handler: (input) => ({ apis: ingestedApis.list({ vertical: input.vertical || null }) })
 });
 
 // --- Dual-mode connection framework (DMC) ---

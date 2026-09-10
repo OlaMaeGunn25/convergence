@@ -263,18 +263,84 @@ function promptFrameworks({ id = null } = {}) {
 }
 
 /**
+ * MANAGED-SERVICE VARIANT
+ * =======================
+ * The default runbook requires client-employed approvers from step 7, because
+ * approving on a client's behalf transfers their accountability to the
+ * consultancy. That is the right default and the wrong absolute: under a managed
+ * service the client has deliberately BOUGHT that transfer.
+ *
+ * So the variant permits it, and prices it in constraints rather than pretending
+ * it is the same arrangement:
+ *
+ *   - It is time-boxed. An open-ended arrangement is indistinguishable from the
+ *     client having no approver at all.
+ *   - It is disclosed in writing, naming the consultancy staff who will approve.
+ *   - The client keeps a named approver who can override and revoke at any time,
+ *     without the consultancy's cooperation.
+ *   - COMPLIANCE-FLOOR ACTIONS ARE NEVER TRANSFERRED. Trust transactions,
+ *     payroll, termination, owner skip trace, writing to a health record — these
+ *     stay with the client regardless of the contract, because they are the
+ *     actions whose consequences a service agreement cannot absorb.
+ *   - Handover is planned from the start, not at the end.
+ */
+const MANAGED_SERVICE_OVERRIDES = {
+  7: {
+    title: 'Assign approvers under the managed-service agreement',
+    instruction: 'Consultancy staff may hold the approver role for the agreed term. Record the term, the named consultancy approvers, and the client approver who retains override. The client-side approver is mandatory even here — a deployment with no client approver has no route back to the client if the relationship ends.',
+    gate: 'Managed-service term recorded, consultancy approvers named in writing, and at least one client approver active with override rights.',
+    managedServiceOnly: true
+  },
+  9: {
+    title: 'Grant autonomy within the managed-service term',
+    instruction: 'Grants may be issued by the consultancy for the agreed term, but never beyond it: an expiry is set on every grant so authority lapses with the contract rather than outliving it. Compliance-floor actions still require a live client approval and cannot be delegated under the agreement.',
+    gate: 'Every grant carries an expiry no later than the managed-service term end; no compliance-floor action is delegated.',
+    managedServiceOnly: true
+  }
+};
+
+const MANAGED_SERVICE_EXTRA = [
+  {
+    step: 11, phase: 'Handover', title: 'Plan the exit at the start, not the end',
+    instruction: 'Record the date the managed-service term ends and what must be true on that date: client approvers trained, grants expiring, evidence exported. A managed service without a written exit becomes a dependency by default rather than by choice.',
+    tools: ['export_compliance_evidence', 'list_autonomy_grants', 'list_hitl'],
+    gate: 'An exit date and readiness checklist exist and the client has agreed them.',
+    blocksNext: false,
+    managedServiceOnly: true
+  }
+];
+
+const VARIANTS = ['standard', 'managed_service'];
+
+/**
  * The deployment runbook. `fromStep` returns the remainder, which is what a
  * consultant mid-deployment actually wants.
+ *
+ * @param variant 'standard' (default) | 'managed_service'
  */
-function runbook({ fromStep = null, phase = null } = {}) {
-  let rows = RUNBOOK;
+function runbook({ fromStep = null, phase = null, variant = 'standard' } = {}) {
+  const v = VARIANTS.includes(variant) ? variant : 'standard';
+
+  let rows = RUNBOOK.map(step => {
+    const override = v === 'managed_service' ? MANAGED_SERVICE_OVERRIDES[step.step] : null;
+    return override ? Object.assign({}, step, override) : step;
+  });
+  if (v === 'managed_service') rows = rows.concat(MANAGED_SERVICE_EXTRA);
+
+  const total = rows.length;
   if (fromStep != null) rows = rows.filter(r => r.step >= Number(fromStep));
   if (phase) rows = rows.filter(r => r.phase.toLowerCase() === String(phase).toLowerCase());
+
   return {
     vertical: VERTICAL,
-    totalSteps: RUNBOOK.length,
+    variant: v,
+    variants: VARIANTS.slice(),
+    totalSteps: total,
     steps: copy(rows),
-    note: 'Steps marked blocksNext must clear before the following step is attempted. Nothing here bypasses a governance gate; the runbook orders the work, the gates still decide.'
+    note: 'Steps marked blocksNext must clear before the following step is attempted. Nothing here bypasses a governance gate; the runbook orders the work, the gates still decide.',
+    variantNote: v === 'managed_service'
+      ? 'Managed service: the consultancy may hold the approver role for an agreed, time-boxed and disclosed term. The client retains a named approver with override, and compliance-floor actions are never transferred.'
+      : 'Standard: approvers are the client’s own employees. Approving on their behalf transfers their accountability to the consultancy.'
   };
 }
 
@@ -353,6 +419,8 @@ function requestGuidance({ question = '', atStep = null, topic = null, escalate 
 
 module.exports = {
   VERTICAL,
+  VARIANTS,
+  MANAGED_SERVICE_OVERRIDES,
   SKILLS,
   PROMPT_FRAMEWORKS,
   RUNBOOK,

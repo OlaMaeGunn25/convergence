@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.13.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.14.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,45 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.14.0 — 2026-08-24
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+**API to MCP.** Any documented REST API can now be ingested from its own
+description (OpenAPI 3 or a minimal operation list) and served over the Model
+Context Protocol by the generic wrapper. That is what extends MCP past the four
+hand-written connectors: `list_mcp_connections` now returns selectable entries
+for **every vertical**, from three sources — `vendor` (the system publishes its
+own server), `wrapper` (a catalog connector with a native module), and
+`ingested` (anything a tenant has ingested).
+
+Ingestion treats a supplied spec as the untrusted input it is:
+
+- **SSRF refused.** Loopback, RFC1918, CGNAT, link-local (including the
+  169.254.169.254 cloud metadata address), internal TLDs and plain HTTP are all
+  rejected. An ingested spec must not become a request-forgery primitive aimed
+  at internal services from the gateway's network position.
+- **Injection neutralised AND reported.** Operation descriptions become tool
+  descriptions an agent reads, so a spec saying "ignore previous instructions"
+  is a supply-chain injection. Text is neutralised through the guard and the
+  operator is told which flag fired — a fix caught during build, where the
+  neutralisation worked but the reporting silently evaluated to false.
+- **Classified by method.** GET/HEAD are reads; everything else is destructive
+  and approval-gated, re-checked inside the wrapper independently of the
+  registry gate. Ingestion produces a proposal and connects nothing (I1).
+- Credentials remain references; a raw-looking secret is refused where a NAME
+  belongs.
+
+**Managed-service runbook variant.** The standard runbook requires
+client-employed approvers because approving on a client's behalf transfers their
+accountability. Under a managed service the client has bought that transfer, so
+the variant permits it and prices it in constraints: time-boxed, disclosed in
+writing, a client approver retains override, every autonomy grant expires with
+the contract term, an exit is planned at the start — and compliance-floor
+actions are never transferred regardless of the agreement.
+
+135 governed tools. Gateway 1009/1009, hub 61/61.
 
 ## v0.13.0 — 2026-08-24
 

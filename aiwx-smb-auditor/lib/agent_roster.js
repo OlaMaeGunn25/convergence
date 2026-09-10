@@ -41,7 +41,8 @@ const ROLES = {
       // Reseller vertical: the onboarding agent walks a consultant through a
       // client stand-up, so it holds the runbook and the guidance path.
       'get_deployment_runbook', 'request_guidance', 'get_consultancy_skills',
-      'get_prompt_frameworks', 'get_llm_providers']
+      'get_prompt_frameworks', 'get_llm_providers',
+      'list_mcp_connections', 'list_ingested_apis']
   },
   systems_configurator: {
     title: 'Systems Configurator (System-State Eval/Config)',
@@ -55,6 +56,8 @@ const ROLES = {
       // a system can be bound at all.
       'get_connection_preconditions', 'epic_list_organizations',
       'get_deployment_runbook', 'get_llm_providers',
+      // Pre-loaded MCP selection + API→MCP ingestion is connection work.
+      'list_mcp_connections', 'ingest_api_to_mcp', 'list_ingested_apis',
       'get_connection_interview', 'detect_system', 'get_connection_modes',
       // The explicit handoff to the Onboarding Agent: scour findings become
       // connection.proposal tasks rather than a verbal convention.

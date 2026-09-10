@@ -64,10 +64,22 @@ function modesFor(connectorId) {
  * The raw native API adapter is deliberately NOT on this ladder: it is the
  * fallback FLOOR beneath it (auto mode only), not a peer protocol.
  */
-function mcpLadderFor(connectorId) {
+function mcpLadderFor(connectorId, { ingestedApi = null } = {}) {
   const ladder = [];
   const vendor = mcpConfigFor(connectorId);
   if (vendor) ladder.push(Object.assign({ tier: 'vendor_mcp' }, vendor));
+  // An ingested API is servable over MCP by the same wrapper, which is what
+  // extends the ladder past the four hand-written connectors to anything a
+  // tenant has ingested.
+  if (ingestedApi && ingestedApi.mcpServable) {
+    ladder.push({
+      tier: 'api_wrapper_mcp',
+      transport: 'stdio',
+      command: process.execPath,
+      args: [path.join(__dirname, 'mcp_api_wrapper.js'), '--ingested', ingestedApi.id],
+      envRefs: (ingestedApi.credentialRefs || []).slice(0, 1)
+    });
+  }
   if (WRAPPABLE.includes(connectorId)) {
     ladder.push({
       tier: 'api_wrapper_mcp',
