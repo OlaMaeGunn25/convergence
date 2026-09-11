@@ -1,6 +1,6 @@
 # CONVERGENCE-Ai — Product Roadmap & Release History
 
-**Current version: v0.14.0** — feature-complete for pilot, pre-cloud-deployment.
+**Current version: v0.15.0** — feature-complete for pilot, pre-cloud-deployment.
 
 Versioning starts at this release. Earlier work is in git history but was not
 versioned, and reconstructing release boundaries after the fact would mean
@@ -18,6 +18,43 @@ Scheme is semantic versioning applied to the product:
 This file is the source of truth. The published product documentation mirrors it.
 
 ---
+
+## v0.15.0 — 2026-09-11
+
+**Status:** running locally and in CI; not yet deployed to cloud.
+
+**Agentic security layer, ported in from `OlaMaeGunn25/aiworxmiths-ai-consultants`.**
+That repo carried a parallel copy of the Convergence hub under
+`public/admin/convergence/`, deployed via Lovable and run locally. It is being
+retired in favour of this repo, and its security layer would have been lost in
+the redeployment — this repo had no `security/` tree, no policies and no gate.
+
+Ported byte-identical (16 files), original authorship preserved:
+
+- `security/opa/` — four Rego policies with tests: BOLA principal-to-object,
+  egress allowlist blocking metadata/SSRF hosts, default-deny tool authorization
+- `security/supabase/` — RLS policies and the semantic-gateway reference
+- `security/{model-armor,shieldgemma,binary-authorization,ci}/` — the GCP-shaped
+  manifests, kept as the reference the AWS equivalents are derived from
+- `aiwx-convergence-ai/js/security_guardrails.js` — per-vertical 4-tier
+  declarations with an enforcement matrix already covering lovable-supabase, GCP
+  and AWS, so the retarget is configuration rather than a rewrite
+- `aiwx-convergence-ai/js/finance_agent.js` — finance/tax practice registry
+- `docs/AGENTIC_SECURITY_{ARCHITECTURE,GOT_PROMPTS}.md`
+
+Adapted, minimally:
+- The coverage gate's two read paths moved from `public/admin/convergence/` to
+  `aiwx-convergence-ai/`. Nothing else in it changed.
+- **`ai_consultancy` guardrail declaration added.** The gate caught its absence
+  on the first run, which is exactly what it exists for. Held at ELEVATED rather
+  than standard, with a new `processor_deployer` compliance floor: a consultancy
+  holds data belonging to OTHER businesses, several in regulated verticals, so a
+  failure there is a cross-client exposure rather than a single-tenant one.
+- Both gates wired into GitHub Actions as a `security` job. Only the two GATES
+  travelled from the source Cloud Build config; the image scan, cosign and Cloud
+  Run deploy steps are GCP deployment plumbing and this repo targets AWS.
+
+Gateway 1029/1029, hub 61/61, guardrail coverage 15/15.
 
 ## v0.14.0 — 2026-08-24
 

@@ -3082,6 +3082,62 @@ async function runTests() {
     assert(false, `API→MCP / pre-loaded MCP / managed-service tests crashed: ${e.message}`);
   }
 
+  // --- Test Set 53: Agentic security layer (ported) — coverage invariant ---
+  try {
+    const fs53 = require('fs'); const pth53 = require('path');
+    const repo53 = pth53.join(__dirname, '..', '..');
+    const { VERTICALS: V53 } = require('../lib/verticals');
+
+    // A. The ported artifacts are present in THIS repo, not just documented.
+    for (const f of [
+      'security/opa/bola_guard.rego', 'security/opa/bola_guard_test.rego',
+      'security/opa/egress_policy.rego', 'security/opa/tool_authorization.rego',
+      'security/supabase/rls_policies.sql', 'security/supabase/semantic_gateway.ts',
+      'security/scripts/check_guardrail_coverage.mjs',
+      'aiwx-convergence-ai/js/security_guardrails.js',
+      'docs/AGENTIC_SECURITY_ARCHITECTURE.md'
+    ]) {
+      assert(fs53.existsSync(pth53.join(repo53, f)), `Ported artifact present: ${f}`);
+    }
+
+    // B. THE INVARIANT (SGoT-5): every vertical has a guardrail declaration.
+    //    Asserted here as well as in CI so it fails in the same place as every
+    //    other governance invariant, rather than only on a push.
+    const guardSrc = fs53.readFileSync(pth53.join(repo53, 'aiwx-convergence-ai/js/security_guardrails.js'), 'utf8');
+    const block = guardSrc.match(/export const SECURITY_GUARDRAILS\s*=\s*\{([\s\S]*?)\n\};/);
+    assert(!!block, 'SECURITY_GUARDRAILS is declared');
+    const covered = new Set([...block[1].matchAll(/^\s+([a-z_]+):\s*tier\(/gm)].map(m => m[1]));
+    const uncovered = V53.map(v => v.id).filter(id => !covered.has(id));
+    assert(uncovered.length === 0, `Every vertical has a guardrail declaration (uncovered: ${uncovered.join(', ') || 'none'})`);
+    assert(covered.size === V53.length, `Guardrail count matches the vertical registry (${covered.size} = ${V53.length})`);
+
+    // C. The reseller vertical is ELEVATED, not standard — it holds other
+    //    businesses' data, so a failure there is cross-client.
+    const consult = block[1].match(/ai_consultancy:\s*tier\(TAU\.(\w+),\s*FLOOR\.(\w+)/);
+    assert(!!consult, 'ai_consultancy has a guardrail declaration');
+    assert(consult[1] === 'elevated' || consult[1] === 'strict', 'The reseller vertical is held above the standard threshold');
+    assert(consult[2] === 'processor_deployer', 'It carries the processor/deployer compliance floor');
+
+    // D. The tier contract is intact for every vertical (all four tiers present).
+    const guardMod = guardSrc.match(/function tier\([\s\S]*?\n\}/);
+    assert(!!guardMod && /tier1[\s\S]*tier2[\s\S]*tier3[\s\S]*tier4/.test(guardMod[0]), 'The tier() contract declares all four tiers');
+
+    // E. The coverage gate itself points at THIS repo's paths after the port.
+    const gateSrc = fs53.readFileSync(pth53.join(repo53, 'security/scripts/check_guardrail_coverage.mjs'), 'utf8');
+    assert(/aiwx-convergence-ai\/app\.js/.test(gateSrc), 'The gate reads the hub app.js at its canonical path');
+    // Only READ paths matter. The header comment legitimately names the source
+    // repo's layout to explain what the port changed, and that history is worth
+    // keeping — so match the join() call rather than the string anywhere.
+    assert(!/join\(root,\s*"public\/admin\/convergence/.test(gateSrc), 'No stale source-repo read paths remain in the gate');
+
+    // F. CI actually runs the gates (a gate nobody runs is documentation).
+    const ci53 = fs53.readFileSync(pth53.join(repo53, '.github/workflows/ci.yml'), 'utf8');
+    assert(/check_guardrail_coverage\.mjs/.test(ci53), 'CI runs the guardrail coverage gate');
+    assert(/opa[\s\S]{0,80}test security\/opa/.test(ci53), 'CI runs the OPA policy tests');
+  } catch (e) {
+    assert(false, `Agentic security layer tests crashed: ${e.message}`);
+  }
+
   // --- Final Results Report ---
   console.log(`================================================================`);
   console.log(`📊 Test Results: ${passedTests} passed, ${failedTests} failed.`);

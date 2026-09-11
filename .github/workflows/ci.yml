@@ -32,6 +32,31 @@ jobs:
         working-directory: aiwx-smb-auditor
         run: node test/run.js
 
+  security:
+    name: Security policy gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Ported from the source repo's Cloud Build config. Only the two GATES
+      # travel: the remaining steps there (image scan, cosign, Cloud Run deploy)
+      # are GCP deployment plumbing, and this repo targets AWS. The gates are
+      # what must fail a build; the deploy mechanics are a separate decision.
+      - name: OPA policy tests
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w openpolicyagent/opa:latest \
+            test security/opa -v
+
+      # SGoT-5: no vertical may run with a partial defense stack. This is the
+      # check that caught ai_consultancy having no declaration when the 15th
+      # vertical was added — it is meant to fail on a real gap, so it is wired
+      # as a gate rather than an advisory step.
+      - name: Per-vertical guardrail coverage
+        run: node security/scripts/check_guardrail_coverage.mjs
+
   docker:
     name: Docker image build + smoke test
     runs-on: ubuntu-latest

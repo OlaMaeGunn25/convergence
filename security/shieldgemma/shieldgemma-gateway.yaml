@@ -1,0 +1,42 @@
+# ShieldGemma gateway config — Tier 1 safety classifier
+# Open-weights text-to-text classifier (2B/9B) run in SCORING MODE: outputs p = P(violates
+# policy). Action = BLOCK if p >= tau else ALLOW. Thresholds are POLICY, tunable per vertical
+# without a redeploy, and must mirror js/security_guardrails.js and semantic_gateway.ts.
+# [VERIFY] serving details against the ShieldGemma model card at implementation time.
+
+model:
+  name: shieldgemma
+  size: "9b"            # 2b for latency-sensitive paths; 9b for high-stakes verticals
+  mode: scoring         # predict probability of the next token being Yes/No
+
+# Harm taxonomy (text). Custom per-vertical policies extend this.
+harm_categories:
+  - harassment
+  - hate_speech
+  - sexually_explicit
+  - dangerous_content
+
+# Per-vertical thresholds tau. Lower = stricter. High-stakes verticals get the tightest floor.
+thresholds:
+  medical:    0.20
+  legal:      0.20
+  finance:    0.20
+  realestate: 0.30
+  default:    0.40
+
+# Custom safety policies layered on top of the base taxonomy, per vertical.
+custom_policies:
+  legal:
+    - "Do not release any legal proposition that is not citation-grounded and good-law."
+  realestate:
+    - "Do not produce content that steers on a protected class (Fair Housing)."
+    - "Do not present an automated valuation as an appraisal."
+  finance:
+    - "Do not initiate or approve any movement of money."
+  medical:
+    - "Do not emit PHI to an unauthorized recipient."
+
+enforcement:
+  direction: [prompt, response]   # screen both
+  on_violation: route_to_hitl     # block + queue for human review; never silently pass
+  fail_closed: true               # if the classifier is unreachable, block

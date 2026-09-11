@@ -1,6 +1,6 @@
 {
   "name": "aiwx-smb-auditor",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "SMB External Audit Engine & Workforce AI HITL Transition Planner",
   "main": "server.js",
   "scripts": {

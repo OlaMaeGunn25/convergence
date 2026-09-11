@@ -1,0 +1,33 @@
+# Binary Authorization policy — Tier 4 deploy admission (GCP target)
+# Only images carrying ALL required attestations from trusted attestors may run. Unsigned or
+# unattested images are refused at deploy. AWS equivalent: Kyverno/OPA Gatekeeper admission on
+# EKS verifying the same cosign signatures + attestations (see security/README.md).
+# [VERIFY] attestor resource names/project against your environment.
+
+# Nothing deploys by default unless it clears the required attestations.
+defaultAdmissionRule:
+  evaluationMode: REQUIRE_ATTESTATION
+  enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
+  requireAttestationsBy:
+    - projects/PROJECT_ID/attestors/gemini-code-review   # PR reviewed, no open critical finding
+    - projects/PROJECT_ID/attestors/vuln-scan            # container + dependency scan passed
+    - projects/PROJECT_ID/attestors/opa-policy-tests      # security/opa tests passed
+    - projects/PROJECT_ID/attestors/build-provenance      # SLSA-style provenance + SBOM
+
+# Production clusters inherit the strict default; no per-cluster relaxation.
+clusterAdmissionRules:
+  us-central1.convergence-prod:
+    evaluationMode: REQUIRE_ATTESTATION
+    enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
+    requireAttestationsBy:
+      - projects/PROJECT_ID/attestors/gemini-code-review
+      - projects/PROJECT_ID/attestors/vuln-scan
+      - projects/PROJECT_ID/attestors/opa-policy-tests
+      - projects/PROJECT_ID/attestors/build-provenance
+
+# Only Google-managed system images bypass (platform components, not app code).
+admissionWhitelistPatterns:
+  - namePattern: gcr.io/gke-release/*
+  - namePattern: gcr.io/google-containers/*
+
+globalPolicyEvaluationMode: ENABLE

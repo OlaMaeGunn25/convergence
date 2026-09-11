@@ -1,0 +1,39 @@
+# Model Armor template — Tier 1 semantic prompt firewall (GCP target)
+# Applied by the Agent Gateway on GCP; on the current Lovable/Supabase deployment the
+# semantic_gateway.ts edge function calls the Model Armor API with the equivalent settings.
+# [VERIFY] field names against current Model Armor docs (filter version alias, floor settings).
+
+apiVersion: modelarmor.googleapis.com/v1
+kind: Template
+metadata:
+  name: convergence-agent-guardrail
+  location: us-central1
+spec:
+  # Prompt-injection & jailbreak detection — filter v3 (Latest alias), tuned to cut false positives.
+  piAndJailbreakFilterSettings:
+    filterEnforcement: ENABLED
+    confidenceLevel: LOW_AND_ABOVE      # block low-confidence and up (strict posture)
+  # Malicious URL detection in prompts and responses.
+  maliciousUriFilterSettings:
+    filterEnforcement: ENABLED
+  # Sensitive Data Protection — redact/block 150+ PII infotypes on egress.
+  sdpSettings:
+    basicConfig:
+      filterEnforcement: ENABLED
+    # advancedConfig: reference a DLP inspect/deidentify template per vertical (see guardrails).
+  # Responsible-AI content categories (applied both directions).
+  raiSettings:
+    raiFilters:
+      - filterType: DANGEROUS
+        confidenceLevel: LOW_AND_ABOVE
+      - filterType: HARASSMENT
+        confidenceLevel: MEDIUM_AND_ABOVE
+      - filterType: HATE_SPEECH
+        confidenceLevel: MEDIUM_AND_ABOVE
+      - filterType: SEXUALLY_EXPLICIT
+        confidenceLevel: LOW_AND_ABOVE
+  # Both prompt and response are screened; PII never returns to the client unmasked.
+  templateMetadata:
+    logSanitizeOperations: true
+    enforceOnPrompt: true
+    enforceOnResponse: true
